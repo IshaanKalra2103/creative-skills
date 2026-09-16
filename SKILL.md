@@ -5,6 +5,8 @@ description: Make procedural isometric illustrations with a risograph print look
 
 # Riso Rooms
 
+Source: inspired by Kevin Ngo's "a small light, room by room" — https://x.com/kevin_t_ngo/status/2100238648218427563 (https://a-small-light-three.vercel.app/). A full worked scene lives in `examples/listening-room.html`; read it before drawing a detailed room.
+
 A single `index.html`: a zero-dependency canvas engine plus scene code. Every mark is code — no images, no libraries. The look comes from four rules the engine enforces; your job is composition and storytelling.
 
 ## The four rules of the look
