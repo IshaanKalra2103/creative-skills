@@ -32,6 +32,7 @@ One engine (`assets/engine.js`, no libraries) turns a **config** into the whole 
 - Flat fills, hard edges, no shadows or blur. Paper background, never pure white.
 - Every layer shares one symmetry and one centre. Motion comes from morph, zoom and spin only; tiles never move independently.
 - Morphs ease in and out (the engine's cubic). A small `wobble` during the morph (±0.1 rad) keeps it from feeling mechanical. Don't go bigger than that.
+- Grain is optional (`grain: { amount, size, fps, blend }`). It adds a print/film texture over everything: 0.15–0.25 with `overlay` at 12 fps reads as risograph paper, and above 0.35 it starts to muddy the halftone phase. Leave it off when the user wants crisp vector output.
 - The thin dark `outline` flashes only on the plain circle just before the rings open. Keep it at about 2% of R.
 - Seamless or it's broken: verify t=0 and t≈loop−0.05 look the same.
 - Don't fork the engine per loop. If a loop needs something new (another lattice, per-tile phase offsets), add it to the engine contract, update the header comment, and keep both existing files working.

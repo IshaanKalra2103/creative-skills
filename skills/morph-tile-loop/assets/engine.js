@@ -20,6 +20,9 @@
 //             tiny: flat colour used when the tile is < 3 px (defaults to the first stop).
 //   outline   optional { color, width: (ch) => fraction of R }  stroke on a circle of radius R
 //   wobble    optional (ch) => radians added to every tile's rotation
+//   grain     optional { amount: 0..1 (0.15 subtle, 0.35 heavy), size: px per grain (1–2),
+//             fps: how often the grain re-rolls (12 = film-like, 0 = static), blend: canvas
+//             composite op ('overlay' default, 'soft-light' gentler, 'multiply' darkens) }
 //
 // Globals for loop files: lerp, clamp, ease.
 // URL: ?t=3.2 freezes a frame, ?speed=0.5. Keys: space pauses.
@@ -114,6 +117,35 @@ function defineLoop(cfg) {
     }
   }
 
+  // grain: a few pre-rolled noise tiles, stamped over the frame at a random offset
+  const grain = cfg.grain && Object.assign({ amount: 0.18, size: 1, fps: 12, blend: 'overlay' }, cfg.grain);
+  const grainTiles = [];
+  if (grain) {
+    for (let k = 0; k < 4; k++) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 256;
+      const g = c.getContext('2d'), img = g.createImageData(256, 256), d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const v = Math.random() * 255;
+        d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+      }
+      g.putImageData(img, 0, 0);
+      grainTiles.push(ctx.createPattern(c, 'repeat'));
+    }
+  }
+  function drawGrain(s) {
+    const step = grain.fps ? Math.floor(s * grain.fps) : 0;
+    const pat = grainTiles[step % grainTiles.length];
+    const ox = (step * 97) % 256, oy = (step * 57) % 256;
+    ctx.setTransform(grain.size, 0, 0, grain.size, -ox, -oy);
+    ctx.globalCompositeOperation = grain.blend;
+    ctx.globalAlpha = grain.amount;
+    ctx.fillStyle = pat;
+    ctx.fillRect(0, 0, (canvas.width + 512) / grain.size, (canvas.height + 512) / grain.size);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+
   function frame(s) {
     const { ch, z, rot } = state(s);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -146,6 +178,7 @@ function defineLoop(cfg) {
         tile(r, ch, rot + wob);
       }
     }
+    if (grain) drawGrain(s);
   }
 
   const q = new URLSearchParams(location.search);
