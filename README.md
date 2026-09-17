@@ -1,4 +1,4 @@
-# skills
+# creative-skills
 
 [Claude Code](https://claude.com/claude-code) skills I've made. Each one lives in `skills/<name>/` and is self-contained: a `SKILL.md` plus templates, examples and references.
 
@@ -14,7 +14,7 @@
 Clone once, then link the skills you want:
 
 ```sh
-git clone https://github.com/IshaanKalra2103/riso-rooms ~/src/claude-skills
+git clone https://github.com/IshaanKalra2103/creative-skills ~/src/claude-skills
 ln -s ~/src/claude-skills/skills/riso-rooms ~/.claude/skills/riso-rooms
 ln -s ~/src/claude-skills/skills/logo-intro ~/.claude/skills/logo-intro
 ln -s ~/src/claude-skills/skills/hand-drawn-canvas-animation ~/.claude/skills/hand-drawn-canvas-animation
