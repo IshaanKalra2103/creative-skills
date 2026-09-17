@@ -1,37 +1,53 @@
-# riso-rooms
+# skills
 
-A [Claude Code](https://claude.com/claude-code) skill for making **isometric illustrations that look risograph-printed**: cutaway rooms, gardens and little worlds drawn entirely in code on one HTML canvas. It uses halftone inks that mix where they overlap, slightly misaligned color plates, wobbly hand-drawn lines and small looping animations. You can pan and zoom the scene.
+[Claude Code](https://claude.com/claude-code) skills I've made. Each one lives in `skills/<name>/` and is self-contained: a `SKILL.md` plus templates, examples and references.
 
-![A late-night listening room drawn with riso-rooms](assets/listening-room.png)
-
-*`examples/listening-room.html`: records spinning, string lights twinkling, a dancer, a cat. Every mark is drawn in code.*
+| skill | what it does |
+|---|---|
+| [riso-rooms](skills/riso-rooms) | Isometric illustrations that look risograph-printed: cutaway rooms with halftone inks, misaligned plates and wobbly lines, drawn in code on a canvas you can pan and zoom. |
+| [logo-intro](skills/logo-intro) | A kinetic name/logo intro in plain JS: atom rings, hyperspace warp, flash, letters popping in with doodles, a boiling highlight box, a wipe to a sparkle. |
 
 ## Install
 
+Clone once, then link the skills you want:
+
 ```sh
-git clone https://github.com/IshaanKalra2103/riso-rooms ~/.claude/skills/riso-rooms
+git clone https://github.com/IshaanKalra2103/riso-rooms ~/src/claude-skills
+ln -s ~/src/claude-skills/skills/riso-rooms ~/.claude/skills/riso-rooms
+ln -s ~/src/claude-skills/skills/logo-intro ~/.claude/skills/logo-intro
 ```
 
-Then in Claude Code, ask for an isometric riso-style scene or run `/riso-rooms`.
+Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
 
-## What's inside
+---
+
+## riso-rooms
+
+![A late-night listening room drawn with riso-rooms](skills/riso-rooms/assets/listening-room.png)
+
+*`examples/listening-room.html`: records spinning, string lights twinkling, a dancer, a cat. Every mark is drawn in code.*
 
 - `SKILL.md`: the rules for the look, the workflow (plan rooms → block out → screenshot → add clutter → animate), and guidance on scale, density and tone.
-- `template/index.html`: a zero-dependency engine plus two example rooms. Open it in a browser (or run `python3 -m http.server`).
+- `template/index.html`: a zero-dependency engine plus two example rooms.
 - `examples/listening-room.html`: a full single-room scene (the image above).
 - `references/api.md`: the drawing API (boxes, walls, windows, bookcases, lamps, plants, people in 6 poses, light, steam…).
 
 **Controls:** drag or scroll to pan and zoom, pinch on touch, WASD to move, `0` to fit, `P` to save a PNG, double-click a room to fly to it.
-
 **URL options:** `?room=<id>`, `&zoom=N`, `?frame=N` (freeze time), `?still` (no idle tour).
 
-## Use without Claude
+Inspired by Kevin Ngo's ["a small light, room by room"](https://a-small-light-three.vercel.app/) ([tweet](https://x.com/kevin_t_ngo/status/2100238648218427563)). The engine and scenes here are original code.
 
-The template is a normal HTML file. Replace everything below the `SCENE — edit below` comment with your own `room({...})` calls.
+## logo-intro
 
-## Source & inspiration
+![Stages of the logo intro](skills/logo-intro/assets/frames.png)
 
-Inspired by Kevin Ngo's ["a small light, room by room"](https://a-small-light-three.vercel.app/): 25 mini rooms, each with Claude keeping people company, made with Claude Opus 5 ([tweet](https://x.com/kevin_t_ngo/status/2100238648218427563)). This skill reuses the ideas behind the look (isometric rooms, halftone inks, misaligned color plates, redrawing at 12 fps). The engine and scenes here are original code.
+- `SKILL.md`: the stage timeline, how to retime or cut stages, the rules of the look, and how to check it with frozen-frame screenshots.
+- `template/index.html`: the whole animation (~350 lines of canvas JS, no libraries).
+
+**Controls:** click or space to replay.
+**URL options:** `?name=ada`, `&accent=0` (which letter gets the box), `&yellow=ff5a36&blue=00a37a` (any palette key, hex without `#`), `&speed=0.8`, `?t=9` (freeze time).
+
+Made by rebuilding a reference motion-graphics intro frame by frame in JavaScript.
 
 ## License
 
