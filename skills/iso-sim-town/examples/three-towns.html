@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iso Town: three towns</title>
+</head>
+<body>
+<script src="../assets/engine.js"></script>
+<script>
+'use strict';
+// Three towns: a brownstone city with traffic, a snowy Christmas village, a Victorian park.
+
+const R0 = mulberry(5);
+const CITY_STYLES = [
+  { wall: '#7c4a35', trim: '#dccaa6', roof: 'flat', roofCol: '#6b5b52', win: 'arch', brick: true, stoop: true, door: true },
+  { wall: '#a9442f', trim: '#efe5d0', roof: 'flat', roofCol: '#8e8883', win: 'rect', brick: true, fire: true },
+  { wall: '#e0cfac', trim: '#fff5df', roof: 'flat', roofCol: '#b7a88f', win: 'tall', door: true, doorCol: '#2c3f2b' },
+  { wall: '#b5793e', trim: '#e6cc9c', roof: 'pyramid', roofCol: '#5e3f25', rh: 30, win: 'tall', brick: true, door: true },
+  { wall: '#8a3a2c', trim: '#e9e0cc', roof: 'flat', roofCol: '#3d6f4a', win: 'rect', brick: true, ivy: R0() < .5 },
+  { wall: '#d9a28a', trim: '#f4e3d3', roof: 'flat', roofCol: '#8b5d4c', win: 'rect', brick: true, flowers: true },
+  { wall: '#c3452f', trim: '#f3ead6', roof: 'mansard', roofCol: '#3e7d52', rh: 16, win: 'arch', brick: true, door: true, stoop: true },
+  { wall: '#ebe3cf', trim: '#ffffff', roof: 'flat', roofCol: '#a39b8d', win: 'arch', shutters: '#2f5d3a', door: true },
+];
+const SHOPS = ['#c9302c', '#e0822d', '#2b7a4b', '#e3b53a', '#7b2d6b'];
+
+function cityBuilding(m, R, i, j, w, d) {
+  const st = pick(R, CITY_STYLES), floors = 3 + Math.floor(R() * 5);
+  const o = { kind: 'bld', i, j, w, d, h: floors * 17 + 5, ...st };
+  if (R() < .35 && !st.stoop) { o.shop = pick(R, SHOPS); o.sign = pick(R, SHOPS); }
+  if (o.roof === 'flat' && R() < .18 && w * d >= 4) o.tank = true;
+  if (R() < .08) o.ivy = true;
+  return addObj(m, o);
+}
+function genCity() {
+  const N = 40, Pd = 10, m = newMap('city', N), R = mulberry(42);
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const u = i % Pd, v = j % Pd;
+    m.tiles[i * N + j] = (u < 2 || v < 2) ? T.R : (u === 2 || u === 9 || v === 2 || v === 9) ? T.W : T.G;
+  }
+  for (let bi = 0; bi < 4; bi++) for (let bj = 0; bj < 4; bj++) {
+    const a = bi * Pd + 3, b = bj * Pd + 3, r = R();
+    if ((bi === 1 && bj === 2) || (bi === 3 && bj === 0)) { // park block
+      for (let x = 0; x < 6; x++) for (let y = 0; y < 6; y++) if (x === 2 || x === 3 || y === 2 || y === 3) m.tiles[(a + x) * N + b + y] = T.Z;
+      addObj(m, { kind: 'fountain', i: a + 2, j: b + 2, w: 2, d: 2 });
+      for (const [x, y] of [[0, 0], [4, 0], [0, 4], [4, 4], [5, 1], [1, 5], [5, 5]]) addObj(m, { kind: 'tree', i: a + x, j: b + y, scale: .9 + R() * .3 });
+      addObj(m, { kind: 'bench', i: a + 2, j: b + 1 }); addObj(m, { kind: 'bench', i: a + 3, j: b + 4 });
+      addObj(m, { kind: 'statue', i: a + 1, j: b + 2 }); addObj(m, { kind: 'lamp', i: a + 4, j: b + 2 }); addObj(m, { kind: 'lamp', i: a + 1, j: b + 3 });
+      for (let n = 0; n < 6; n++) addObj(m, { kind: R() < .5 ? 'bush' : 'pot', i: a + Math.floor(R() * 6), j: b + Math.floor(R() * 6) });
+      continue;
+    }
+    const alongA = r < .5;
+    const strips = R() < .55 ? [[0, 2], [2, 2, 'yard'], [4, 2]] : [[0, 3], [3, 3]];
+    for (const [s0, depth, yard] of strips) {
+      if (yard) {
+        for (let x = 0; x < 6; x++) { const ti = alongA ? a + x : b + s0, tj = alongA ? b + s0 : a + x; for (let q = 0; q < 2; q++) { const i2 = alongA ? ti : ti + q, j2 = alongA ? tj + q : tj; if (R() < .45) addObj(m, { kind: 'tree', i: i2, j: j2, scale: .8 + R() * .35 }); else if (R() < .25) addObj(m, { kind: 'bush', i: i2, j: j2 }); } }
+        continue;
+      }
+      let x = 0;
+      while (x < 6) {
+        const wdt = Math.min(6 - x, pick(R, [1, 2, 2, 2, 3]));
+        if (alongA) cityBuilding(m, R, a + x, b + s0, wdt, depth); else cityBuilding(m, R, a + s0, b + x, depth, wdt);
+        x += wdt;
+      }
+    }
+  }
+  // street furniture on sidewalks
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    if (tileAt(m, i, j) !== T.W) continue;
+    const u = i % Pd, v = j % Pd, corner = (u === 2 || u === 9) && (v === 2 || v === 9), h = hash(i, j, 77);
+    if (corner) { if (h < .75) addObj(m, { kind: 'lamp', i, j }); }
+    else if (h < .07) addObj(m, { kind: 'tree', i, j, scale: .75 });
+    else if (h < .09) addObj(m, { kind: 'hydrant', i, j });
+    else if (h < .105) addObj(m, { kind: 'busstop', i, j });
+    else if (h < .12) addObj(m, { kind: 'pot', i, j });
+  }
+  // traffic
+  const carCols = ['#f2c230', '#f2c230', '#f2c230', '#2f5a33', '#c73a32', '#e9e9e4', '#2f5f9e', '#3b3f45'];
+  for (let k = 0; k < 4; k++) for (const axis of ['a', 'b']) for (const [lo, dir] of [[.5, -1], [1.5, 1]]) {
+    const lane = k * Pd + lo; let pos = R() * N;
+    const n = 2 + Math.floor(R() * 2);
+    for (let q = 0; q < n; q++) {
+      const col = pick(R, carCols);
+      m.cars.push({ axis, lane, dir: axis === 'a' ? dir : -dir, pos: pos % N, v: 0, speed: 1.5 + R() * .5, col, taxi: col === '#f2c230', jeep: col === '#2f5a33' });
+      pos += N / n + R() * 2;
+    }
+  }
+  for (let bi = 0; bi < 4; bi++) for (let bj = 0; bj < 4; bj++) {
+    const x0 = bi * Pd + 2.5, y0 = bj * Pd + 2.5, x1 = bi * Pd + 9.5, y1 = bj * Pd + 9.5;
+    for (let n = 0; n < 3; n++) loopPed(m, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], R);
+  }
+  m.cam = { x: P(20, 17).x, y: P(20, 17).y };
+  return m;
+}
+
+function genWinter() {
+  const N = 30, Pd = 10, m = newMap('winter', N), R = mulberry(1225);
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const u = i % Pd, v = j % Pd; m.tiles[i * N + j] = (u < 2 || v < 2) ? T.K : T.S;
+  }
+  for (let i = 12; i < 20; i++) for (let j = 12; j < 20; j++) m.tiles[i * N + j] = T.Z;
+  addObj(m, { kind: 'xmas', i: 15, j: 15, w: 2, d: 2 });
+  for (const [i, j] of [[13, 13], [18, 13], [13, 18], [18, 18]]) addObj(m, { kind: 'lamp', i, j, snow: true });
+  for (const [i, j] of [[15, 12], [12, 15], [15, 19], [19, 16]]) addObj(m, { kind: 'bench', i, j, snow: true });
+  addObj(m, { kind: 'fountain', i: 12, j: 18 });
+  const snowRoof = '#eef4fa';
+  const HOUSES = [
+    { wall: '#8f5230', trim: '#fff7ee', roof: 'gable', roofCol: snowRoof, snow: true, warm: true, lights: true, icing: true, door: true, wreath: true, win: 'rect', fh: 16 },
+    { wall: '#efe2c6', trim: '#4a2d1e', roof: 'gable', roofCol: snowRoof, snow: true, timber: true, warm: true, door: true, win: 'rect', cell: 12 },
+    { wall: '#b3312b', trim: '#ffffff', roof: 'gable', roofCol: snowRoof, snow: true, brick: true, warm: true, lights: true, door: true, wreath: true, shutters: '#2e5d34', win: 'arch' },
+    { wall: '#a0633a', trim: '#fff2e0', roof: 'gable', roofCol: snowRoof, snow: true, icing: true, warm: true, door: true, win: 'arch', lights: true },
+  ];
+  addObj(m, { kind: 'bld', i: 23, j: 3, w: 2, d: 2, h: 118, wall: '#a24f2d', trim: '#ecdcbc', brick: true, roof: 'pyramid', roofCol: snowRoof, rh: 46, snow: true, clock: true, win: 'arch', fh: 22, spire: true, lights: true, door: true, wreath: true });
+  addObj(m, { kind: 'bld', i: 13, j: 3, w: 4, d: 3, h: 64, wall: '#9b3a2a', trim: '#f0e0c0', brick: true, roof: 'gable', roofCol: snowRoof, rh: 44, snow: true, lights: true, warm: true, win: 'arch', door: true, wreath: true, fh: 20 });
+  for (let bi = 0; bi < 3; bi++) for (let bj = 0; bj < 3; bj++) {
+    if (bi === 1 && bj === 1) continue;
+    const a = bi * Pd + 2, b = bj * Pd + 2;
+    for (let tries = 0; tries < 40; tries++) {
+      const w = pick(R, [2, 2, 3]), d = pick(R, [2, 2, 3]), i = a + Math.floor(R() * (8 - w)), j = b + Math.floor(R() * (8 - d));
+      let ok = true; for (let x = i - 1; x <= i + w; x++) for (let y = j - 1; y <= j + d; y++) if (m.occ[x * N + y]) ok = false;
+      if (!ok || !free(m, i, j, w, d)) continue;
+      addObj(m, { kind: 'bld', i, j, w, d, h: 30 + Math.floor(R() * 3) * 10, rh: 22 + R() * 14, ...pick(R, HOUSES) });
+    }
+    for (let n = 0; n < 12; n++) {
+      const i = a + Math.floor(R() * 8), j = b + Math.floor(R() * 8), r = R();
+      addObj(m, r < .45 ? { kind: 'conifer', i, j, snow: true, scale: .8 + R() * .4 } : r < .6 ? { kind: 'snowman', i, j } : r < .75 ? { kind: 'lamp', i, j, snow: true } : r < .88 ? { kind: 'bench', i, j, snow: true } : { kind: 'tree', i, j, snow: true, scale: .9 });
+    }
+  }
+  for (let bi = 0; bi < 2; bi++) for (let bj = 0; bj < 2; bj++) {
+    const x0 = bi * Pd + 1, y0 = bj * Pd + 1, x1 = x0 + Pd, y1 = y0 + Pd;
+    for (let n = 0; n < 3; n++) loopPed(m, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], R, .8);
+  }
+  for (let n = 0; n < 6; n++) loopPed(m, [[12.5, 12.5], [19.5, 12.5], [19.5, 19.5], [12.5, 19.5]], R, .6);
+  m.cam = { x: P(15, 14).x, y: P(15, 14).y };
+  return m;
+}
+
+function genPark() {
+  const N = 30, m = newMap('park', N), R = mulberry(77);
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    let t = T.G;
+    if (j === 14 || j === 15) t = T.Z;
+    if ((i === 14 || i === 15) && j < 14) t = T.Z;
+    if (Math.hypot(i + .5 - 15, j + .5 - 15) < 2.6) t = T.Z;
+    m.tiles[i * N + j] = t;
+  }
+  addObj(m, { kind: 'fountain', i: 14, j: 14, w: 2, d: 2 });
+  addObj(m, { kind: 'bld', i: 18, j: 5, w: 4, d: 3, h: 66, wall: '#d9a38a', trim: '#f4e6d6', brick: true, roof: 'mansard', roofCol: '#6c2a2b', rh: 22, win: 'tall', door: true, stoop: true, ivy: true, ivyFlowers: '#8b5cc4', fh: 20, spire: true });
+  for (let a = 1; a < N; a += 4) { addObj(m, { kind: 'lamp', i: a, j: 13 }); addObj(m, { kind: 'lamp', i: a + 2, j: 16 }); }
+  for (let b = 1; b < 12; b += 4) { addObj(m, { kind: 'lamp', i: 13, j: b }); addObj(m, { kind: 'lamp', i: 16, j: b + 2 }); }
+  for (const [i, j] of [[7, 13], [22, 16], [13, 6], [4, 16]]) addObj(m, { kind: 'statue', i, j });
+  for (const [i, j] of [[10, 13], [18, 16], [16, 9], [25, 13]]) addObj(m, { kind: 'bench', i, j });
+  for (const [i, j] of [[12, 12], [17, 12], [17, 17], [12, 17], [11, 16], [19, 13]]) addObj(m, { kind: 'pot', i, j });
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    if (tileAt(m, i, j) !== T.G || m.occ[i * N + j]) continue;
+    const r = hash(i, j, 5);
+    if (r < .3) addObj(m, { kind: 'tree', i, j, scale: .9 + R() * .45 });
+    else if (r < .36) addObj(m, { kind: 'bush', i, j });
+    else if (r < .38) addObj(m, { kind: 'conifer', i, j });
+  }
+  for (let n = 0; n < 10; n++) loopPed(m, [[.5, 14.6 + (R() - .5) * .8], [29.5, 14.6 + (R() - .5) * .8]], R, .7);
+  for (let n = 0; n < 5; n++) loopPed(m, [[14.6 + (R() - .5) * .8, .5], [14.6 + (R() - .5) * .8, 13]], R, .7);
+  m.cam = { x: P(15, 13).x, y: P(15, 13).y };
+  return m;
+}
+
+
+defineTowns([
+  { name: 'Brownstone Heights', gen: genCity },
+  { name: 'Holly Hollow', gen: genWinter },
+  { name: 'Victoria Park', gen: genPark },
+]);
+</script>
+</body>
+</html>

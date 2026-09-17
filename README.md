@@ -9,6 +9,7 @@
 | [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | 10–30 s films where every frame is drawn in Canvas 2D JavaScript: ink on warm paper, riso halftones, screen prints or graphite, rendered to mp4 with a generated Web Audio score. |
 | [ink-abstraction](skills/ink-abstraction) | A 12-panel pen-and-ink abstraction sheet of any subject in vanilla JS: hatched sketch → black masses → cross-stitch grid → patterned cells → a few lines and one knot. |
 | [morph-tile-loop](skills/morph-tile-loop) | Seamless geometric loops in vanilla JS: a dot opens into layered rings, morphs into a gradient star, zooms out over an endless lattice into halftone, and dives back in. |
+| [iso-sim-town](skills/iso-sim-town) | A playable late-90s isometric sim town in vanilla JS: pre-rendered-looking buildings, baked shadows, dithered 256-colour pixels, traffic, day/night, a Props window and a Windows 98 UI. |
 
 ## Install
 
@@ -21,6 +22,7 @@ ln -s ~/src/claude-skills/skills/logo-intro ~/.claude/skills/logo-intro
 ln -s ~/src/claude-skills/skills/hand-drawn-canvas-animation ~/.claude/skills/hand-drawn-canvas-animation
 ln -s ~/src/claude-skills/skills/ink-abstraction ~/.claude/skills/ink-abstraction
 ln -s ~/src/claude-skills/skills/morph-tile-loop ~/.claude/skills/morph-tile-loop
+ln -s ~/src/claude-skills/skills/iso-sim-town ~/.claude/skills/iso-sim-town
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -92,6 +94,21 @@ The looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://
 **Controls:** space pauses. **URL options:** `?t=3.2` (freeze time), `?speed=0.5`.
 
 Made by rebuilding a reference motion loop frame by frame in JavaScript.
+
+## iso-sim-town
+
+![Three towns: brownstone city, snowy village, Victorian park, and the village at night](skills/iso-sim-town/assets/three-towns.png)
+
+- `SKILL.md`: the five-stage pipeline behind the pre-rendered look (native 64×32 iso, baked lighting, grain textures, low-res nearest-neighbour upscale, ordered-dither palette), the workflow for laying out a town, and the rules of the look.
+- `assets/engine.js`: renderer, building painter, props, traffic, pedestrians, Props window, bulldozer, day/night, save, generated ambient music and the Win98 UI, no libraries. A town file calls `defineTowns([...])`.
+- `template/index.html`: one brownstone city with taxis, pedestrians and parks.
+- `examples/three-towns.html`: the city plus a snowy Christmas village and a Victorian park.
+- `scripts/shot.sh`: a contact sheet of views with headless Chrome, printing console errors.
+
+**Controls:** drag or WASD to pan, wheel or `+`/`-` to zoom, hard-hat opens Props (click to place), bulldozer removes, moon toggles night, `P` pixel size, `X` dither, `M` or `1`–`9` switch towns.
+**URL options:** `#2` (open town 2), `#2n` (at night).
+
+Made by rebuilding a reference video of an isometric town builder in JavaScript.
 
 ## License
 

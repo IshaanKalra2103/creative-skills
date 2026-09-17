@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iso Town</title>
+</head>
+<body>
+<script src="engine.js"></script>
+<script>
+'use strict';
+// Town definitions. Everything here uses the engine contract at the top of engine.js.
+
+const R0 = mulberry(5);
+const CITY_STYLES = [
+  { wall: '#7c4a35', trim: '#dccaa6', roof: 'flat', roofCol: '#6b5b52', win: 'arch', brick: true, stoop: true, door: true },
+  { wall: '#a9442f', trim: '#efe5d0', roof: 'flat', roofCol: '#8e8883', win: 'rect', brick: true, fire: true },
+  { wall: '#e0cfac', trim: '#fff5df', roof: 'flat', roofCol: '#b7a88f', win: 'tall', door: true, doorCol: '#2c3f2b' },
+  { wall: '#b5793e', trim: '#e6cc9c', roof: 'pyramid', roofCol: '#5e3f25', rh: 30, win: 'tall', brick: true, door: true },
+  { wall: '#8a3a2c', trim: '#e9e0cc', roof: 'flat', roofCol: '#3d6f4a', win: 'rect', brick: true, ivy: R0() < .5 },
+  { wall: '#d9a28a', trim: '#f4e3d3', roof: 'flat', roofCol: '#8b5d4c', win: 'rect', brick: true, flowers: true },
+  { wall: '#c3452f', trim: '#f3ead6', roof: 'mansard', roofCol: '#3e7d52', rh: 16, win: 'arch', brick: true, door: true, stoop: true },
+  { wall: '#ebe3cf', trim: '#ffffff', roof: 'flat', roofCol: '#a39b8d', win: 'arch', shutters: '#2f5d3a', door: true },
+];
+const SHOPS = ['#c9302c', '#e0822d', '#2b7a4b', '#e3b53a', '#7b2d6b'];
+
+function cityBuilding(m, R, i, j, w, d) {
+  const st = pick(R, CITY_STYLES), floors = 3 + Math.floor(R() * 5);
+  const o = { kind: 'bld', i, j, w, d, h: floors * 17 + 5, ...st };
+  if (R() < .35 && !st.stoop) { o.shop = pick(R, SHOPS); o.sign = pick(R, SHOPS); }
+  if (o.roof === 'flat' && R() < .18 && w * d >= 4) o.tank = true;
+  if (R() < .08) o.ivy = true;
+  return addObj(m, o);
+}
+function genCity() {
+  const N = 40, Pd = 10, m = newMap('city', N), R = mulberry(42);
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const u = i % Pd, v = j % Pd;
+    m.tiles[i * N + j] = (u < 2 || v < 2) ? T.R : (u === 2 || u === 9 || v === 2 || v === 9) ? T.W : T.G;
+  }
+  for (let bi = 0; bi < 4; bi++) for (let bj = 0; bj < 4; bj++) {
+    const a = bi * Pd + 3, b = bj * Pd + 3, r = R();
+    if ((bi === 1 && bj === 2) || (bi === 3 && bj === 0)) { // park block
+      for (let x = 0; x < 6; x++) for (let y = 0; y < 6; y++) if (x === 2 || x === 3 || y === 2 || y === 3) m.tiles[(a + x) * N + b + y] = T.Z;
+      addObj(m, { kind: 'fountain', i: a + 2, j: b + 2, w: 2, d: 2 });
+      for (const [x, y] of [[0, 0], [4, 0], [0, 4], [4, 4], [5, 1], [1, 5], [5, 5]]) addObj(m, { kind: 'tree', i: a + x, j: b + y, scale: .9 + R() * .3 });
+      addObj(m, { kind: 'bench', i: a + 2, j: b + 1 }); addObj(m, { kind: 'bench', i: a + 3, j: b + 4 });
+      addObj(m, { kind: 'statue', i: a + 1, j: b + 2 }); addObj(m, { kind: 'lamp', i: a + 4, j: b + 2 }); addObj(m, { kind: 'lamp', i: a + 1, j: b + 3 });
+      for (let n = 0; n < 6; n++) addObj(m, { kind: R() < .5 ? 'bush' : 'pot', i: a + Math.floor(R() * 6), j: b + Math.floor(R() * 6) });
+      continue;
+    }
+    const alongA = r < .5;
+    const strips = R() < .55 ? [[0, 2], [2, 2, 'yard'], [4, 2]] : [[0, 3], [3, 3]];
+    for (const [s0, depth, yard] of strips) {
+      if (yard) {
+        for (let x = 0; x < 6; x++) { const ti = alongA ? a + x : b + s0, tj = alongA ? b + s0 : a + x; for (let q = 0; q < 2; q++) { const i2 = alongA ? ti : ti + q, j2 = alongA ? tj + q : tj; if (R() < .45) addObj(m, { kind: 'tree', i: i2, j: j2, scale: .8 + R() * .35 }); else if (R() < .25) addObj(m, { kind: 'bush', i: i2, j: j2 }); } }
+        continue;
+      }
+      let x = 0;
+      while (x < 6) {
+        const wdt = Math.min(6 - x, pick(R, [1, 2, 2, 2, 3]));
+        if (alongA) cityBuilding(m, R, a + x, b + s0, wdt, depth); else cityBuilding(m, R, a + s0, b + x, depth, wdt);
+        x += wdt;
+      }
+    }
+  }
+  // street furniture on sidewalks
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    if (tileAt(m, i, j) !== T.W) continue;
+    const u = i % Pd, v = j % Pd, corner = (u === 2 || u === 9) && (v === 2 || v === 9), h = hash(i, j, 77);
+    if (corner) { if (h < .75) addObj(m, { kind: 'lamp', i, j }); }
+    else if (h < .07) addObj(m, { kind: 'tree', i, j, scale: .75 });
+    else if (h < .09) addObj(m, { kind: 'hydrant', i, j });
+    else if (h < .105) addObj(m, { kind: 'busstop', i, j });
+    else if (h < .12) addObj(m, { kind: 'pot', i, j });
+  }
+  // traffic
+  const carCols = ['#f2c230', '#f2c230', '#f2c230', '#2f5a33', '#c73a32', '#e9e9e4', '#2f5f9e', '#3b3f45'];
+  for (let k = 0; k < 4; k++) for (const axis of ['a', 'b']) for (const [lo, dir] of [[.5, -1], [1.5, 1]]) {
+    const lane = k * Pd + lo; let pos = R() * N;
+    const n = 2 + Math.floor(R() * 2);
+    for (let q = 0; q < n; q++) {
+      const col = pick(R, carCols);
+      m.cars.push({ axis, lane, dir: axis === 'a' ? dir : -dir, pos: pos % N, v: 0, speed: 1.5 + R() * .5, col, taxi: col === '#f2c230', jeep: col === '#2f5a33' });
+      pos += N / n + R() * 2;
+    }
+  }
+  for (let bi = 0; bi < 4; bi++) for (let bj = 0; bj < 4; bj++) {
+    const x0 = bi * Pd + 2.5, y0 = bj * Pd + 2.5, x1 = bi * Pd + 9.5, y1 = bj * Pd + 9.5;
+    for (let n = 0; n < 3; n++) loopPed(m, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], R);
+  }
+  m.cam = { x: P(20, 17).x, y: P(20, 17).y };
+  return m;
+}
+
+defineTowns([{ name: 'Brownstone Heights', gen: genCity }]);
+</script>
+</body>
+</html>
