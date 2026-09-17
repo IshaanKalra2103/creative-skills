@@ -8,6 +8,7 @@
 | [logo-intro](skills/logo-intro) | A kinetic name/logo intro in plain JS: atom rings, hyperspace warp, flash, letters popping in with doodles, a boiling highlight box, a wipe to a sparkle. |
 | [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | 10–30 s films where every frame is drawn in Canvas 2D JavaScript: ink on warm paper, riso halftones, screen prints or graphite, rendered to mp4 with a generated Web Audio score. |
 | [ink-abstraction](skills/ink-abstraction) | A 12-panel pen-and-ink abstraction sheet of any subject in vanilla JS: hatched sketch → black masses → cross-stitch grid → patterned cells → a few lines and one knot. |
+| [morph-tile-loop](skills/morph-tile-loop) | Seamless geometric loops in vanilla JS: a dot opens into layered rings, morphs into a gradient star, zooms out over an endless lattice into halftone, and dives back in. |
 
 ## Install
 
@@ -19,6 +20,7 @@ ln -s ~/src/claude-skills/skills/riso-rooms ~/.claude/skills/riso-rooms
 ln -s ~/src/claude-skills/skills/logo-intro ~/.claude/skills/logo-intro
 ln -s ~/src/claude-skills/skills/hand-drawn-canvas-animation ~/.claude/skills/hand-drawn-canvas-animation
 ln -s ~/src/claude-skills/skills/ink-abstraction ~/.claude/skills/ink-abstraction
+ln -s ~/src/claude-skills/skills/morph-tile-loop ~/.claude/skills/morph-tile-loop
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -76,6 +78,20 @@ The looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://
 - `examples/`: a grazing bull and a cartoon hot dog. `scripts/shot.sh`: screenshot a sheet with headless Chrome.
 
 **Controls:** click for a new variation, `B` toggles the boil. **URL options:** `?still`, `?seed=N`.
+
+## morph-tile-loop
+
+![Frames from the square-lattice loop](skills/morph-tile-loop/assets/tile-loop.png)
+
+- `SKILL.md`: how the loop works (layered superellipses, keyframed channels, log zoom, symmetric spin), the workflow for matching a reference video, and the rules of the look.
+- `assets/engine.js`: timeline, zoom, square/hex lattice, shape drawing and controls, no libraries. A loop file calls `defineLoop({...})`.
+- `template/index.html`: teal circle → gradient star in a navy square → halftone → back, 8 s.
+- `examples/hex-bloom.html`: a riso palette on a hex lattice with six-point shapes (`assets/hex-bloom.png`).
+- `scripts/shot.sh`: a contact sheet of frozen frames, or `--mp4` for a full render with headless Chrome + ffmpeg.
+
+**Controls:** space pauses. **URL options:** `?t=3.2` (freeze time), `?speed=0.5`.
+
+Made by rebuilding a reference motion loop frame by frame in JavaScript.
 
 ## License
 

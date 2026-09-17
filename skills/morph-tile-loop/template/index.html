@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tile Loop</title>
+</head>
+<body>
+<script src="engine.js"></script>
+<script>
+// Teal circle → gradient star in a navy square → zoom out over the grid →
+// circles → tiny stars → grey halftone → teal dots → dive back in.
+const C = {
+  bg: '#e8e4da', teal: '#0b8f87', navy: '#1d1f7c', dark: '#0e1b30',
+  cream: '#f4efc8', yellow: '#f8e04a', pink: '#e8457c',
+};
+
+defineLoop({
+  loop: 8,
+  bg: C.bg,
+  lattice: { type: 'square', spacing: 0.8, radius: 0.24 },
+  spin: 1 / 4,
+  zoom: { depth: 30, out: [0.8, 7.2], curve: 1.7, back: [7.2, 8], nbrFade: [0.55, 0.9] },
+
+  // g: rings open out of the plain circle.  m: circle → star/square.
+  channels: {
+    g: [[0, 0], [0.2, 0], [0.6, 1], [2.5, 1], [3.0, 0], [4.1, 0], [4.5, 1], [6.6, 1], [7.1, 0]],
+    m: [[0, 0], [0.5, 0], [1.1, 1], [2.1, 1], [2.7, 0], [4.4, 0], [5.0, 1], [6.3, 1], [6.9, 0]],
+  },
+
+  layers: [
+    // navy: circle → square
+    { fill: C.navy, show: c => c.g > 0.001, r: 1, e: c => lerp(1, 0.12, c.m) },
+    // gradient star, turned 45° so its points reach the square's corners
+    { fill: [C.cream, C.yellow, C.pink], tiny: '#e9a05a', show: c => c.g > 0.001,
+      r: c => lerp(0.97, 1.3, c.m) * lerp(1, 0.99, c.g), e: c => lerp(1, 3.6, c.m), rot: Math.PI / 4 },
+    { fill: C.dark, show: c => c.g > 0.001,
+      r: c => lerp(1, lerp(0.8, 1.1, c.m), c.g), e: c => lerp(1, 4.5, c.m), rot: Math.PI / 4 },
+    // teal core: the whole tile when g = 0
+    { fill: C.teal, r: c => lerp(1, lerp(0.64, 0.75, c.m), c.g), e: c => lerp(1, 5.5, c.m), rot: Math.PI / 4 },
+  ],
+
+  outline: { color: C.dark, width: c => 0.02 * Math.sin(Math.PI * clamp(c.g * 1.6)) * (1 - c.m) },
+  wobble: c => 0.09 * Math.sin(Math.PI * c.m) * Math.sin(c.s * 5),
+});
+</script>
+</body>
+</html>
