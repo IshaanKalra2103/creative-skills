@@ -1,6 +1,6 @@
 # The reference films
 
-Four films by Kevin Ngo define the four looks. The notes below are
+Five films by Kevin Ngo define the five looks. The notes below are
 measurements of the published videos, not claims from the posts. Use them to
 match a look closely. Do not copy the films; make your own subject.
 
@@ -10,8 +10,9 @@ match a look closely. Do not copy the films; make your own subject.
 | Flipbook (untitled) | [2099477219877978289](https://x.com/kevin_t_ngo/status/2099477219877978289), 14 Sep 2026 | 28.0 s | 1080², 24 fps, 672 frames | mostly on twos (even 5.3 vs odd 8.0), montage on threes | one cut every 6 frames from 6.5 to 13.9 s (about 30 cards) | riso |
 | Paper boat (untitled) | [2099308402887520495](https://x.com/kevin_t_ngo/status/2099308402887520495), 14 Sep 2026 | 26.0 s | 1080², 24 fps, 624 frames | held frames dominate (250 of 624 near-frozen), motion on twos | ~30 cuts, most 0.25 to 1 s apart between 8.75 and 18 s | screen |
 | Personal website | [2093500169723814093](https://x.com/kevin_t_ngo/status/2093500169723814093), 29 Aug 2026 | 51.5 s | 1080², 30 fps, 1545 frames | a screen recording of a page scrolling: no cadence, no cuts | none; sections divided by torn edges | pencil |
+| Doodles on photos (untitled) | [2100601972902842517](https://x.com/kevin_t_ngo/status/2100601972902842517), 17 Sep 2026 | 34.0 s | 1080², 24 fps, 816 frames | lines draw on at full 24 fps; drawn characters move in held poses of 2 to 6 frames | 15 hard cuts, one every 1.5 to 2.5 s, plus a 4 s gallery | doodle |
 
-Textures do not boil in any of them: on a static shot consecutive frames
+Textures do not boil in any of the first four: on a static shot consecutive frames
 differ by about 1/255, which is codec noise. From the author's replies under
 the fly post: the film is one HTML file, the music was written in code and
 timed to the animation, and slowing it down would lose the animated feel.
@@ -107,7 +108,44 @@ figure inside an enso, and a fade to grey. Sections meet at torn-paper edges.
 Measured palette: cream `#f4efe4` 36%, charcoal `#201f1b` 19%, sage
 `#e0e2d0` 18%, warm grey `#dad2c5`; saturation 0.09.
 
-## What to take from all four
+## Doodles on photos (doodle)
+
+The post says the model searched the web, downloaded images it liked and
+doodled on them, every doodle drawn in JavaScript. Nothing else is published,
+so the method in `doodle.md` is reconstructed from the frames.
+
+Fourteen objects, one per shot, each a cut-out photo on its own pastel sheet
+with a soft contact shadow and a vignette of about 4% towards the corners:
+
+| t, s | paper | object | becomes |
+|---|---|---|---|
+| 0.0 | mint `#d3e6d9` | alarm clock | a bed; it rings, the photo shakes, the cat flies off |
+| 2.5 | rose `#efd2d1` | enamel cup | a hot bath, cat inside behind the rim, a ladder, a rubber duck |
+| 4.5 | butter `#efe4b3` | toaster | a launch pad, the cat rides the toast |
+| 6.5 | sky `#d2dee8` | two waffles | a climbing wall with a summit flag |
+| 8.0 | cream `#ebe5d4` | shoe | a ship: mast, patched sail, bunting, sea drawn over the sole |
+| 10.0 | peach `#eeccb4` | rubber boots | a frog's house in the rain, a flower grows from the other boot |
+| 12.0 | lilac `#ded4e9` | twin-lens camera | a family portrait, flash, a print pinned up |
+| 13.5 | sky | envelope | cargo: two birds fly it, "to: you" |
+| 15.0 | mint | old book | a cliff; a train runs off its top edge into a drawn desert |
+| 17.0 | butter | bakelite radio | a dance floor with a disco ball |
+| 19.5 | rose | stork scissors | a stork carrying a baby |
+| 21.0 | mint | kettle | its steam is a cat-shaped heart, the cat swings on the handle |
+| 23.0 | lilac | flashlight | a cinema of hand shadows with an audience |
+| 25.0 | peach to night `#383750` | stained-glass lamp | a carousel; at 26.0 s the frame goes to night, lines turn white, lamps glow |
+| 27.0 | night | pillow | a bed under a quilt, counting sheep in a thought cloud |
+| 30.0 | sand `#c5ac7b` | all fourteen as thumbnails | gallery and a handwritten signature |
+
+What repeats in every shot: the photo alone for 2 to 6 frames; a first line
+that states the misreading (the mast, the ladder); white-bodied characters so
+they read on the photo; watercolour that arrives after the line and sits off
+it; one or two handwritten words ("ahh~", "wheee!", "click!", "FWEEE!"); a gag
+in the last third where either the drawing or the photo itself moves. Drawings
+go behind the object (ground lines), on it (a lifebuoy on the shoe) and inside
+it (the cat in the cup is cut by the front rim). One cat, one mouse and one
+frog return through the whole film.
+
+## What to take from all of them
 
 - One anchor survives every cut: the fly, the dot, the boat, the thread.
 - Every surface carries its finish, and the finish never changes inside a

@@ -6,7 +6,7 @@
 |---|---|
 | [riso-rooms](skills/riso-rooms) | Isometric illustrations that look risograph-printed: cutaway rooms with halftone inks, misaligned plates and wobbly lines, drawn in code on a canvas you can pan and zoom. |
 | [logo-intro](skills/logo-intro) | A kinetic name/logo intro in plain JS: atom rings, hyperspace warp, flash, letters popping in with doodles, a boiling highlight box, a wipe to a sparkle. |
-| [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | 10–30 s films where every frame is drawn in Canvas 2D JavaScript: ink on warm paper, riso halftones, screen prints or graphite, rendered to mp4 with a generated Web Audio score. |
+| [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | 10–30 s films where every frame is drawn in Canvas 2D JavaScript: ink on warm paper, riso halftones, screen prints, graphite, or brush-pen doodles on cut-out photos, rendered to mp4 with a generated Web Audio score. |
 | [ink-abstraction](skills/ink-abstraction) | A 12-panel pen-and-ink abstraction sheet of any subject in vanilla JS: hatched sketch → black masses → cross-stitch grid → patterned cells → a few lines and one knot. |
 | [morph-tile-loop](skills/morph-tile-loop) | Seamless geometric loops in vanilla JS: a dot opens into layered rings, morphs into a gradient star, zooms out over an endless lattice into halftone, and dives back in. |
 | [iso-sim-town](skills/iso-sim-town) | A playable late-90s isometric sim town in vanilla JS: pre-rendered-looking buildings, baked shadows, dithered 256-colour pixels, traffic, day/night, a Props window and a Windows 98 UI. |
@@ -61,15 +61,17 @@ Made by rebuilding a reference motion-graphics intro frame by frame in JavaScrip
 
 ![One subject through the four looks](skills/hand-drawn-canvas-animation/assets/preview-four-looks.jpg)
 
-- `SKILL.md`: the procedure (brief → beat sheet → palette → puppets → scenes one at a time → full render → score), 12 rules and a review checklist.
-- `assets/core.js` + `assets/film-template.html`: the shared core (palettes, four finishes, marks, lattices, reveals, camera, timeline, player) and the file you copy per film.
-- `examples/`: a 9.5 s fruit-fly ink film and a paper boat through all four looks.
-- `scripts/render.mjs`: a frame grid in seconds, spot frames, full mp4 on twos with a contact sheet. `scripts/wav.mjs`: the score to WAV, headless.
-- `references/`: style rules, palettes, 26 scene recipes, architecture and pitfalls.
+![Doodles on museum photos](skills/hand-drawn-canvas-animation/assets/preview-held-once.jpg)
 
-Needs Node 18+, Chrome and ffmpeg. `cd` into a film folder with `core.js`, `render.mjs`, `wav.mjs` and `package.json`, `npm i`, then `node render.mjs film.html --grid 24`.
+- `SKILL.md`: the procedure (brief → beat sheet → palette → puppets → scenes one at a time → full render → score), the rules and a review checklist.
+- `assets/core.js` + `assets/film-template.html`: the shared core (palettes, finishes, marks, lattices, reveals, photos and doodles, camera, timeline, player) and the file you copy per film.
+- `examples/`: a 9.5 s fruit-fly ink film, a paper boat through four looks, a 22 s doodle film on museum photos and a 31 s night chase.
+- `scripts/render.mjs`: a frame grid in seconds, spot frames, full mp4 on twos with the score muxed in and a contact sheet. `scripts/photo.mjs`: cuts a found photo out of its background and writes a check sheet with a coordinate grid.
+- `references/`: style rules, palettes, 39 scene recipes, the doodle look, architecture and pitfalls.
 
-The looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://x.com/kevin_t_ngo/status/2099858454043349342) and others). The core and scenes are original code.
+Needs Node 18+, Chrome and ffmpeg; the doodle look cuts photos best with `rembg` on PATH. `cd` into a film folder with `core.js`, `render.mjs` and `package.json`, `npm i`, then `node render.mjs film.html --grid 24`.
+
+The looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://x.com/kevin_t_ngo/status/2099858454043349342), [doodles on photos](https://x.com/kevin_t_ngo/status/2100601972902842517) and others). The core and scenes are original code.
 
 ## ink-abstraction
 

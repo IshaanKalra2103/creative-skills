@@ -1,10 +1,10 @@
 // Render a hand-drawn canvas film to PNG frames, an mp4 and a contact sheet.
 //
 // The HTML file must expose window.__drawFrame(i) and window.__NDRAW and accept
-// ?bare=1 (UI hidden, canvas exactly 1080x1080 CSS px). assets/starter.html does.
+// ?bare=1 (UI hidden). Every film built on assets/core.js does.
 //
 // Usage:
-//   node render.mjs film.html                 all drawn frames -> mp4 + contact sheet
+//   node render.mjs film.html                 all drawn frames -> mp4 + contact sheet, and <film>-final.mp4 with the score if the film has one
 //   node render.mjs film.html --grid 24       a sheet of 24 evenly spaced frames, nothing else (look at this first)
 //   node render.mjs film.html --only 0,24,47  just these frames, PNG only (spot check)
 //   node render.mjs film.html --ar 9:16 --width 1080   format and output width (default 1:1, short side 1080)
@@ -45,7 +45,7 @@ const url = pathToFileURL(path.resolve(file)).href + `?bare=1&frame=0&ar=${encod
 const browser = await puppeteer.launch({executablePath: findChrome(), headless: true});
 const save = (file, dataUrl) => writeFileSync(file, Buffer.from(dataUrl.split(',')[1], 'base64'));
 const errors = [];
-let total = 0;
+let total = 0, wavFile = null;
 try {
   const page = await browser.newPage();
   page.on('pageerror', e => errors.push(String(e)));
@@ -69,6 +69,7 @@ try {
     done++;
     process.stdout.write(`\rframe ${k + 1}/${list.length}`);
   }
+  if (!only && !grid && !errors.length) { const b64 = await page.evaluate(() => window.__wav ? window.__wav() : null); if (b64) { wavFile = path.join(outDir, `${name}-score.wav`); writeFileSync(wavFile, Buffer.from(b64, 'base64')); } }   // the score, rendered offline by the page
   if (list.length) console.log(`\nrendered ${done} of ${list.length} requested (${N} drawn frames in the film) in ${((Date.now() - t0) / 1000).toFixed(1)} s -> ${frames}`);
 } finally {
   await browser.close();
@@ -87,3 +88,4 @@ ff(['-framerate', '12', '-i', path.join(frames, '%04d.png'), '-r', '24', '-pix_f
 const rows = Math.ceil(total / 6 / 6);
 ff(['-i', mp4, '-vf', `select=not(mod(n\\,12)),scale=240:-1,tile=6x${rows}`, '-frames:v', '1', sheet]);
 console.log(`mp4: ${mp4}\ncontact sheet: ${sheet}`);
+if (wavFile) { const fin = path.join(outDir, `${name}-final.mp4`); ff(['-i', mp4, '-i', wavFile, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', fin]); console.log(`with sound: ${fin}`); }

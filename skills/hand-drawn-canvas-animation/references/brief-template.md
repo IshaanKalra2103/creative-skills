@@ -7,14 +7,14 @@ the film's HTML as a comment together with the beat sheet.
 BRIEF
 Subject: <one sentence, e.g. "the life of a request inside a 4x RTX 3090 rig">
 Format: <1:1 | 16:9 | 9:16>, output width <1080 | 1920 | 3840>, drawn 12 fps, output 24 fps, <N> seconds
-Look: ink | riso | screen | pencil | mixed (name the cuts where the look changes)
+Look: ink | riso | screen | pencil | doodle (photos of real objects, see doodle.md) | mixed (name the cuts where the look changes)
 Palette: paperInk | risoPop | screenSea | pencilMinimal | blueprintNight
          | makePalette({...}, base) | derivePalette(base, {hue, sat, light}) | duotone(a, b)
 Finish: follows the palette unless stated
 Anchor: <the element that survives every cut: a dot, a puppet, a thread>
 Puppets: <list, 1..3, each with 3..6 pose params>
 Beats (8..14, each 0.25..3 s):
-  1. <what happens> | look <ink/riso/screen/pencil> | camera <static/push-in/follow> | recipe <A..Z> | sound <motif>
+  1. <what happens> | look <ink/riso/screen/pencil/doodle> | camera <static/push-in/follow> | recipe <A..Z> | sound <motif>
   2. ...
 Must include: one establishing shot (A or U), one drawn transition (B, iris or torn section),
               one of C/D/E/O, one POV or gallery (H or P), sign-off (S)

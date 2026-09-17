@@ -1,16 +1,18 @@
-# Style: the four looks, the rules, the vocabulary
+# Style: the looks, the rules, the vocabulary
 
-One core, four looks. All four come from films by the same author and share
+One core, four drawn looks and a fifth that draws on photos (`doodle.md`).
+All come from films by the same author and share
 the bones: paper stock, seeded textures, hard cuts, a drawn cadence, a signed
 ending. They differ in palette, finish and the devices they lean on.
 
-## The four looks
+## The looks
 
 | look | palette | finish | backgrounds | line | texture | signature devices | reference |
 |---|---|---|---|---|---|---|---|
 | **ink** | `paperInk` | `ink` | warm paper with light bands; navy for blueprint interludes | dark wobbly outline 2 to 3 px | hatching along the form, grain, cross-hatch shadows | construction lines, riso scribble on one part, hex lattices, blot wipe, mosaic POV, camera follow | the fruit fly |
 | **riso** | `risoPop` | `riso` | cream stock; purple-navy starfield | crayon strokes with grainy edges | halftone dot screens per ink, overprinted | seed dot in every frame, crayon ripples, iris, 4-cards-per-second montage, badge gallery, duotone beat, hand sign-off | the flipbook |
 | **screen** | `screenSea` | `screen` | cream sky, blue water, one orange desk; starfield at night | thin dark outline only where a shape needs it | a regular dot grid on every flat shape | one constant protagonist through 30 cuts, day and night pairs, origami setup and payoff, squiggle letters | the paper boat |
+| **doodle** | `doodlePastel` through `pastel(name)` | `flat` | one pastel sheet per object with a vignette; navy after `nightfall` | brush pen 3 to 5 px, swelling and tapering, drawing itself on | watercolour washes off the line, white gouache bodies | a cut-out photo as the subject, the object misread as something else, drawings behind, on and inside it, the object reacts, handwritten words, prints on a line at the end | the doodle film, see `doodle.md` |
 | **pencil** | `pencilMinimal` | `pencil` | cream; pale pink and sage sections; warm black section | thin graphite, 0.8 to 1.2 px | almost none: sparse lines, tiny dots | torn-edge sections, walls of squiggle text, pressed plants, sticky notes, a thread down the page, dotted arcs and dot fireworks on black, an enso | the personal website |
 
 A film can live in one look or cut between them. Cutting looks is itself a

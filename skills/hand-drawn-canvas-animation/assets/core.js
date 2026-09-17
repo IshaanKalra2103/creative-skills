@@ -3,14 +3,15 @@
 // hand-drawn canvas core
 // Everything a film needs except the film itself: palettes and colour
 // maths, four surface finishes (ink, riso, screen, pencil), the marks,
-// lattices, reveals, camera, timeline, score plumbing and the player.
+// lattices, reveals, photos with doodles on them, camera, timeline, score
+// plumbing and the player.
 //
 // A film is an HTML file that loads this script, then defines puppets,
 // scenes and a timeline and calls defineFilm({...}). See film-template.html.
 //
 // Sections: CONFIG · COLOUR · PALETTES · RANDOM & EASING · GEOMETRY ·
 // MARKS · FINISHES · LATTICES & PARTICLES · MOTIFS · REVEALS & COMPOSITION ·
-// STYLE SHEETS · TIMELINE & RUNTIME
+// PHOTOS & DOODLES · STYLE SHEETS · TIMELINE & RUNTIME
 // ============================================================
 
 // ===================== CONFIG =====================
@@ -100,6 +101,12 @@ const PALETTES = {
     fills: ['#1a2040', '#22306a', '#2c3a80', '#141a33'], shade: '#8d97c9', light: '#ffffff', blush: '#7fe7ff',
     accents: ['#7fe7ff', '#ff6fd8', '#ffe22b', '#5fe08a'], inks: ['#e8ecff', '#7fe7ff'], finish: 'ink',
   },
+  // doodles on photos: pastel product-shot paper, a near-black brush pen, watercolour fills, white gouache for bodies
+  doodlePastel: {
+    paper: '#efd2d1', paperBand: null, ink: '#23202b', night: '#2c2f5e', chalk: '#f7f3e8', chalkDim: '#a9acd6', guide: 'rgba(0,80,255,.5)',
+    fills: ['#f2a7b3', '#8fc4e8', '#f6d46b', '#9fd3a8', '#f3b27a', '#c3a6e0'], shade: '#6b6577', light: '#fffdf7', blush: '#f28aa0',
+    accents: ['#e8505b', '#3f7fd1', '#f0b429', '#4caf7d'], inks: ['#23202b', '#e8505b'], finish: 'flat',
+  },
 };
 // makePalette: fill missing keys from a base, so a film can say makePalette({fills: [...], finish: 'riso'})
 function makePalette(part = {}, base = 'paperInk') { const b = typeof base === 'string' ? PALETTES[base] : base; return { ...b, ...part }; }
@@ -115,6 +122,9 @@ function duotone(inkA, inkB, paper = '#f0ece2', finish = 'riso') {
     fills: [inkA, inkB, mix(inkA, inkB, .5), tint(inkA, .5), tint(inkB, .5)], shade: inkA, light: paper, blush: inkB, accents: [inkB, inkA, tint(inkB, .4), tint(inkA, .4)], inks: [inkA, inkB], finish });
 }
 let PAL = { ...PALETTES.paperInk };
+// pastel: the doodle palette on another sheet of paper. One sheet per object, changed only on cuts.
+const PASTELS = { rose: '#efd2d1', mint: '#d3e6d9', butter: '#efe4b3', sky: '#d2dee8', cream: '#ebe5d4', peach: '#eeccb4', lilac: '#ded4e9', sand: '#c9b07e', night: '#383750' };   // measured off the reference film
+const pastel = name => makePalette({ paper: PASTELS[name] || name }, 'doodlePastel');
 function usePalette(p) { PAL = typeof p === 'string' ? { ...PALETTES[p] } : { ...p }; return PAL; }
 
 // ===================== RANDOM & EASING =====================
@@ -140,6 +150,13 @@ function bez(p0, p1, p2, p3, t) { const u = 1 - t; return [u * u * u * p0[0] + 3
 function layer(w, h) { const full = w === undefined; w = w ?? W; h = h ?? H; const o = document.createElement('canvas'); o.width = Math.round(w * S); o.height = Math.round(h * S); if (full) _layers.push({ o, get w() { return W; }, get h() { return H; } }); else _layers.push({ o, w, h }); return o; }   // output pixels, logical size w x h
 function cam(c, x, y, zoom, rot = 0) { c.setTransform(S, 0, 0, S, 0, 0); c.translate(W / 2, H / 2); c.scale(zoom, zoom); c.rotate(rot); c.translate(-x, -y); }
 const resetT = c => c.setTransform(S, 0, 0, S, 0, 0);   // identity in logical units
+// view: a camera for a whole shot. setView() once at the top of a scene; backdrop() fills the frame and then applies it, so everything after it
+// (photo, doodles, the night mask) is seen through it. It resets to the full frame at the start of every drawn frame.
+let VIEW = null;
+function setView(v) { VIEW = v && (v.zoom !== undefined || v.x !== undefined || v.y !== undefined || v.rot) ? { x: v.x ?? CX, y: v.y ?? CY, zoom: v.zoom ?? 1, rot: v.rot ?? 0 } : null; }
+const viewT = c => VIEW ? cam(c, VIEW.x, VIEW.y, VIEW.zoom, VIEW.rot) : resetT(c);
+// whip: a horizontal camera offset for motion-matched cuts. Leaves to the right over the last `out` seconds, arrives from the left over the first `inn`.
+function whip(tau, dur, o = {}) { const { inn = .17, out = .17, dist = 520 } = o; return tau < inn ? -dist * Math.pow(1 - tau / inn, 2) : tau > dur - out ? dist * Math.pow((tau - (dur - out)) / out, 2) : 0; }
 const blit = (c, src) => { c.save(); resetT(c); c.drawImage(src, 0, 0, W, H); c.restore(); };   // draw a layer full-frame
 
 // ===================== MARKS =====================
@@ -290,6 +307,108 @@ function badges(c, cards, o = {}) { const { cx = 540, cy = 540, r0 = 40, gap = 1
 // flash: one near-white drawn frame
 function flash(c, color = tint(PAL.paper, .6)) { resetT(c); c.fillStyle = color; c.fillRect(0, 0, W, H); }
 
+// ===================== PHOTOS & DOODLES =====================
+// The fifth look: a found photo of a real object, cut out and set on pastel paper, with ink doodles that
+// turn it into something else (a shoe becomes a ship, a kettle's steam becomes a cat). The photo is the
+// only thing in the frame that is not drawn. Prepare photos with scripts/photo.mjs, which writes photos.js.
+const PHOTOS = {}, _photoLoads = [];
+function registerPhoto(name, meta) { const img = new Image(), ph = PHOTOS[name] = { ...meta, name, img };
+  _photoLoads.push(new Promise(res => { img.onload = res; img.onerror = () => { console.error('photo failed to load: ' + name); res(); }; })); img.src = meta.src; return ph; }
+// place: where a photo sits. x,y = where its pivot goes (the centre unless pivot = [u,v] in photo units), h (or w) = size in logical units, rot in radians.
+// Call it inside the scene; change x, y, rot over time and the object reacts: it shakes, tips over its base, bobs on water.
+function place(name, { x = CX, y = CY, h, w, rot = 0, flip = false, pivot = null } = {}) { const ph = PHOTOS[name]; if (!ph) throw new Error('unknown photo: ' + name + ' (is photos.js loaded after core.js?)');
+  const ar = ph.w / ph.h; if (h === undefined) h = w !== undefined ? w / ar : H * .5; const pl = { name, ph, x, y, w: h * ar, h, rot, flip };
+  if (pivot) { const dx = (pivot[0] - .5) * pl.w * (flip ? -1 : 1), dy = (pivot[1] - .5) * h, ca = Math.cos(rot), sa = Math.sin(rot); pl.x = x - (dx * ca - dy * sa); pl.y = y - (dx * sa + dy * ca); } return pl; }
+// on: a point in photo units (u,v from 0..1, top-left of the cutout, read them off the check sheet grid) mapped into the frame
+function on(pl, u, v) { const dx = (u - .5) * pl.w * (pl.flip ? -1 : 1), dy = (v - .5) * pl.h, ca = Math.cos(pl.rot), sa = Math.sin(pl.rot); return [pl.x + dx * ca - dy * sa, pl.y + dx * sa + dy * ca]; }
+const onAll = (pl, uv) => uv.map(([u, v]) => on(pl, u, v));
+// photo: contact shadow on the paper, then the cutout. shadow: 0 for an object that floats or flies.
+function photo(c, pl, o = {}) { let { shadow = .3, shadowW = .92, al = 1, clip = null, ground = null } = o; c.save(); if (_chalk) { shadow = 0; al = 1; c.globalCompositeOperation = 'destination-out'; }   // chalk pass: the object erases the chalk behind it   // ground = y of the floor, when the object lifts off it
+  if (shadow && !clip) { const q = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, v]) => on(pl, u, v)), xs = q.map(p => p[0]), ys = q.map(p => p[1]), by = ground ?? Math.max(...ys), mx = (Math.min(...xs) + Math.max(...xs)) / 2, rx = (Math.max(...xs) - Math.min(...xs)) / 2 * shadowW, ry = Math.max(10, rx * .13);
+    c.save(); c.translate(mx, by - ry * .35); c.scale(1, ry / rx); const g = c.createRadialGradient(0, 0, rx * .25, 0, 0, rx); g.addColorStop(0, `rgba(30,20,40,${shadow})`); g.addColorStop(1, 'rgba(30,20,40,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, rx, 0, TAU); c.fill(); c.restore(); }
+  if (clip) c.clip(clip); c.translate(pl.x, pl.y); c.rotate(pl.rot); if (pl.flip) c.scale(-1, 1); c.globalAlpha = al; c.imageSmoothingQuality = 'high'; c.drawImage(pl.ph.img, -pl.w / 2, -pl.h / 2, pl.w, pl.h); c.restore(); }
+// photoFront: redraw the part of the photo inside `path` over the doodles, so a drawing can sit inside or behind the object
+const photoFront = (c, pl, path) => photo(c, pl, { clip: path, shadow: 0 });
+// photoSheet: the photo with a labelled grid in photo units, plus the frame grid. Put it in the timeline while you pick anchor points.
+function photoSheet(c, pl) { backdrop(c); photo(c, pl); c.save(); c.font = '15px ui-monospace, Menlo, monospace'; c.lineWidth = 1;
+  for (let k = 0; k <= 10; k++) { const u = k / 10; c.strokeStyle = k % 5 ? 'rgba(0,80,255,.35)' : 'rgba(0,80,255,.85)'; c.beginPath(); c.moveTo(...on(pl, u, 0)); c.lineTo(...on(pl, u, 1)); c.moveTo(...on(pl, 0, u)); c.lineTo(...on(pl, 1, u)); c.stroke();
+    c.fillStyle = '#0038b8'; const a = on(pl, u, 0), b = on(pl, 0, u); c.fillText(u.toFixed(1), a[0] - 10, a[1] - 8); c.fillText(u.toFixed(1), b[0] - 34, b[1] + 5); }
+  c.fillStyle = 'rgba(200,40,40,.8)'; for (let x = 0; x <= W; x += 180) c.fillText(String(x), x + 3, 16); for (let y = 180; y <= H; y += 180) c.fillText(String(y), 3, y - 4); c.restore(); }
+// backdrop: pastel paper the way a product shot sees it, lighter in the middle, darker at the corners
+function backdrop(c, base = PAL.paper, o = {}) { if (_chalk) { viewT(c); return; } const { vignette = .16, spot = .3, seed = 5 } = o; paper(c, base, null, seed); c.save(); resetT(c); const R = Math.hypot(W, H) / 2;
+  let g = c.createRadialGradient(CX, CY * .9, 0, CX, CY * .9, R * .8); g.addColorStop(0, alpha(tint(base, .7), spot)); g.addColorStop(1, alpha(tint(base, .7), 0)); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  g = c.createRadialGradient(CX, CY, R * .55, CX, CY, R * 1.05); g.addColorStop(0, alpha(shade(base, .55), 0)); g.addColorStop(1, alpha(shade(base, .55), vignette)); c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore(); viewT(c); }
+// nightfall: the whole frame, photo included, goes to night (multiply). glow: a light on top of it (screen).
+function nightfall(c, k = 1, color = PAL.night) { if (k <= 0 || _chalk) return; c.save(); resetT(c); c.globalCompositeOperation = 'multiply'; c.globalAlpha = clamp(k, 0, 1); c.fillStyle = color; c.fillRect(0, 0, W, H); c.restore(); }
+// chalkPalette: the same palette after nightfall. Lines go chalk, bodies go dark, washes stop multiplying (they would vanish on navy).
+const chalkPalette = (pal = PAL) => makePalette({ ink: pal.chalk, light: mix(pal.night, pal.chalk, .2), washBlend: 'source-over' }, pal);
+function glow(c, x, y, r, color = '#ffd77a', k = 1) { if (k <= 0 || r <= 0 || _chalk) return; c.save(); c.globalCompositeOperation = 'screen'; const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, alpha(color, .9 * k)); g.addColorStop(.35, alpha(color, .35 * k)); g.addColorStop(1, alpha(color, 0)); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.restore(); }
+// nightShot: a shot in the dark with pools of light that move. body(c) draws the whole shot once in ink (backdrop, photo, doodles); inside a pool
+// it stays as drawn, in colour. Outside, everything is multiplied to night and the same doodles are drawn again in chalk, masked to the dark, so a
+// line is ink where the light falls and chalk where it does not. Set the palette BEFORE calling it, never inside body.
+//   nightShot(c, c => { backdrop(c); photo(c, pl); pen(...); }, { k: .86, lights: [{ x, y, r, color, glow }] })
+let _chalk = false; const _nightLayers = [];
+function nightShot(c, body, o = {}) { const { k = .86, lights = [], color = PAL.night } = o; body(c); if (k <= 0) return;
+  while (_nightLayers.length < 2) _nightLayers.push(layer()); const [M, L] = _nightLayers, g = M.getContext('2d'), lc = L.getContext('2d');
+  resetT(g); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H); g.globalAlpha = clamp(k, 0, 1); g.fillStyle = color; g.fillRect(0, 0, W, H); g.globalAlpha = 1; g.globalCompositeOperation = 'destination-out'; viewT(g);
+  for (const l of lights) { if (!(l.r > 0)) continue; const gr = g.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r); const lk = l.k ?? 1; gr.addColorStop(0, `rgba(0,0,0,${lk})`); gr.addColorStop(.3, `rgba(0,0,0,${lk * .92})`); gr.addColorStop(.62, `rgba(0,0,0,${lk * .45})`); gr.addColorStop(.85, `rgba(0,0,0,${lk * .1})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(l.x, l.y, l.r, 0, TAU); g.fill(); }
+  c.save(); resetT(c); c.globalCompositeOperation = 'multiply'; c.drawImage(M, 0, 0, W, H); c.restore();
+  const day = PAL; resetT(lc); lc.globalCompositeOperation = 'source-over'; lc.globalAlpha = 1; lc.clearRect(0, 0, W, H); _chalk = true; usePalette(chalkPalette(day)); try { body(lc); } finally { _chalk = false; usePalette(day); }
+  resetT(lc); lc.globalCompositeOperation = 'destination-in'; lc.globalAlpha = 1; lc.drawImage(M, 0, 0, W, H); lc.globalCompositeOperation = 'source-over'; c.save(); resetT(c); c.drawImage(L, 0, 0, W, H); c.restore();
+  viewT(c); for (const l of lights) if (l.glow !== 0 && l.r > 0) { glow(c, l.x, l.y, l.r * .55, l.color || '#ffcf70', (l.glow ?? .16) * k); glow(c, l.x, l.y, Math.min(90, l.r * .22), l.color || '#ffcf70', Math.min(1, (l.glow ?? .16) * 4) * k); } }   // a faint warm air and a tight halo at the source
+// rim: a point on the real silhouette of the cutout, from its alpha. side 'top' | 'bottom' walk across (t = u), 'left' | 'right' walk down (t = v).
+// Characters run along it, water and snow sit on it. For a photo turned by -90 degrees the frame's top is the photo's 'right'.
+function _profile(ph) { if (ph.prof) return ph.prof; const n = 240, cvs = document.createElement('canvas'); cvs.width = cvs.height = n; const g = cvs.getContext('2d', { willReadFrequently: true }); g.drawImage(ph.img, 0, 0, n, n); const d = g.getImageData(0, 0, n, n).data, A = (x, y) => d[(y * n + x) * 4 + 3] > 96;
+  const top = [], bottom = [], left = [], right = []; for (let i = 0; i < n; i++) { let a = null, b = null, l = null, r = null; for (let j = 0; j < n; j++) { if (A(i, j)) { if (a === null) a = j; b = j; } if (A(j, i)) { if (l === null) l = j; r = j; } } top.push(a === null ? null : a / n); bottom.push(b === null ? null : (b + 1) / n); left.push(l === null ? null : l / n); right.push(r === null ? null : (r + 1) / n); }
+  const fillGaps = arr => { let last = arr.find(v => v !== null) ?? .5; return arr.map(v => (v === null ? last : (last = v))); }; return ph.prof = { n, top: fillGaps(top), bottom: fillGaps(bottom), left: fillGaps(left), right: fillGaps(right) }; }
+function rim(pl, side, t) { const p = _profile(pl.ph), f = clamp(t, 0, 1) * (p.n - 1), i = Math.floor(f), j = Math.min(p.n - 1, i + 1), v = lerp(p[side][i], p[side][j], f - i); return side === 'top' || side === 'bottom' ? on(pl, t, v) : on(pl, v, t); }
+// spline: Catmull-Rom through the points, resampled about every `step` units. Doodle lines are given as a few knots.
+function spline(pts, step = 5, close = false) { if (pts.length < 3) { const [a, b] = pts, n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / step)); return Array.from({ length: n + 1 }, (_, k) => [lerp(a[0], b[0], k / n), lerp(a[1], b[1], k / n)]); }
+  const P = i => close ? pts[(i + pts.length) % pts.length] : pts[clamp(i, 0, pts.length - 1)], out = [], segs = close ? pts.length : pts.length - 1;
+  for (let i = 0; i < segs; i++) { const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2), n = Math.max(2, Math.round(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t; out.push([.5 * (2 * p1[0] + (p2[0] - p0[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (3 * p1[0] - p0[0] - 3 * p2[0] + p3[0]) * t3), .5 * (2 * p1[1] + (p2[1] - p0[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (3 * p1[1] - p0[1] - 3 * p2[1] + p3[1]) * t3)]); } }
+  out.push(close ? out[0] : pts[pts.length - 1]); return out; }
+const splinePath = (pts, close = true) => polyPath(spline(pts, 5, close), close);
+// brush: a brush-pen line. Pressure swells and tapers, the hand wanders slowly (not per-point noise), p = 0..1 draws it on.
+function brush(c, pts, o = {}) { const { w = 4, color = PAL.ink, p = 1, seed = 1, amp = 1.6, taper = 1, close = false, smooth = true, al = 1 } = o; if (p <= 0 || pts.length < 2) return;
+  const q = smooth ? spline(pts, 5, close) : pts, r = rng(seed), ph = [r() * TAU, r() * TAU, r() * TAU], f1 = .011 + r() * .008, f2 = .037 + r() * .02; let L = 0; const s = [0]; for (let i = 1; i < q.length; i++) { L += Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]); s.push(L); }
+  const end = L * clamp(p, 0, 1), tl = Math.max(1, Math.min(L * .42, w * 10)) * taper; c.save(); c.strokeStyle = color; c.lineCap = 'round'; c.globalAlpha = al;
+  const pt = i => [q[i][0] + amp * (Math.sin(s[i] * f1 + ph[0]) + .5 * Math.sin(s[i] * f2 + ph[1])), q[i][1] + amp * (Math.cos(s[i] * f1 * 1.3 + ph[1]) + .5 * Math.sin(s[i] * f2 * .8 + ph[2]))];
+  let a = pt(0); for (let i = 1; i < q.length && s[i - 1] < end; i++) { let b = pt(i); if (s[i] > end) { const t = (end - s[i - 1]) / (s[i] - s[i - 1]); b = [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]; }
+    const m = (s[i - 1] + Math.min(s[i], end)) / 2, e = taper ? Math.min(1, m / tl, (L - m) / tl) : 1; c.lineWidth = Math.max(.6, w * (.3 + .7 * Math.sin(e * Math.PI / 2)) * (1 + .2 * Math.sin(m * f2 * 1.7 + ph[2]))); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); a = b; }
+  c.restore(); }
+// wash: watercolour. Off-register from the line, soft at the edge, darker rim, the paper shows through (multiply; chalkPalette switches it to source-over).
+function wash(c, path, color, o = {}) { let { al = .5, off = 5, seed = 1, blend = PAL.washBlend || 'multiply', rim = true } = o; if (_chalk && !o.blend) al *= .6;   // colour is dimmer in the dark, unless the wash is a light itself
+  if (al <= 0) return; const r = rng(seed), dx = (r() - .5) * 2 * off, dy = (r() - .5) * 2 * off; c.save(); c.globalCompositeOperation = blend; c.translate(dx, dy); c.fillStyle = color;
+  c.globalAlpha = al * .55; c.fill(path); c.globalAlpha = al * .17; for (let k = 0; k < 4; k++) { c.save(); c.translate((r() - .5) * 7, (r() - .5) * 7); c.fill(path); c.restore(); }
+  if (rim) { c.globalAlpha = al * .3; c.strokeStyle = color; c.lineWidth = 2.2; c.stroke(path); } c.restore(); }
+// gouache: opaque body colour, so a character reads on top of the photo
+function gouache(c, path, color = PAL.light, al = .97) { c.save(); c.globalAlpha = al; c.fillStyle = color; c.fill(path); c.restore(); }
+// boil: a seed that changes every `every` drawn frames. Add it to brush seeds in a held shot and the line breathes at 3..4 fps. Never on washes or grain.
+const boil = (i, every = 4) => Math.floor(i / every) * 17;
+// doodle: a drawing that draws itself in stroke order. Lines take their time from their length, fills and washes arrive
+// when the pen gets to them and sit under the lines of their layer. Build it once per frame from the pose, then draw(c, tau).
+//   const d = doodle({ start: .3 }); d.fill(bodyPath).line(outlinePts, { close: true }).wash(scarfPath, red).line(...).text('ahh~', x, y); d.draw(c, tau)
+//   d.at(t) jump the pen clock, d.wait(s) pause, d.layer() start a new layer on top, d.mark(fn, dur) custom fn(c, k) with k = 0..1, d.end = when it is finished
+function doodle(o = {}) { const { start = 0, speed = 1000, gap = .03, seed = 1, w = 4, color } = o; const ops = []; let t = start, z = 0, n = 0;
+  const api = { at(time) { t = time; return api; }, wait(d) { t += d; return api; }, layer() { z++; return api; }, get end() { return t; }, get ops() { return ops; },
+    line(pts, q = {}) { const sp = q.smooth === false ? pts : spline(pts, 5, q.close), dur = q.dur ?? Math.max(.07, pathLength(sp) / (q.speed || speed)); ops.push({ kind: 'line', pts: sp, q, t0: t, dur, z, n: n++ }); t += dur + gap; return api; },
+    lines(list, q = {}) { const t0 = t; list.forEach((pts, k) => { if (q.stagger !== undefined) t = t0 + k * q.stagger; api.line(pts, q); }); return api; },   // stagger: start them this far apart instead of one after another
+    fill(path, col, q = {}) { ops.push({ kind: 'fill', path, col, q, t0: q.at ?? t, dur: q.dur ?? .1, z, n: n++ }); return api; },
+    wash(path, col, q = {}) { ops.push({ kind: 'wash', path, col, q, t0: q.at ?? t, dur: q.dur ?? .3, z, n: n++ }); return api; },
+    text(str, x, y, q = {}) { const dur = q.dur ?? str.length * .05; ops.push({ kind: 'text', str, x, y, q, t0: t, dur, z, n: n++ }); t += dur + gap; return api; },
+    mark(fn, dur = .15) { ops.push({ kind: 'mark', fn, t0: t, dur, z, n: n++ }); t += dur + gap; return api; },
+    draw(c, tau, extra = 0) { for (let zz = 0; zz <= z; zz++) for (const pass of [0, 1, 2]) for (const op of ops) { if (op.z !== zz) continue; const k = clamp((tau - op.t0) / op.dur, 0, 1); if (k <= 0) continue;
+        if (pass === 0 && op.kind === 'fill') gouache(c, op.path, op.col ?? PAL.light, (op.q.al ?? .97) * k);
+        else if (pass === 1 && op.kind === 'wash') wash(c, op.path, op.col, { ...op.q, al: (op.q.al ?? .5) * easeOut(k), seed: op.q.seed ?? seed + op.n });
+        else if (pass === 2 && op.kind === 'line') brush(c, op.pts, { w, color: color ?? PAL.ink, ...op.q, smooth: false, p: k, seed: (op.q.seed ?? seed + op.n * 13) + extra });
+        else if (pass === 2 && op.kind === 'text') handText(c, op.str.slice(0, Math.ceil(op.str.length * k)), op.x, op.y, { ink: color ?? PAL.ink, ink2: null, ...op.q });
+        else if (pass === 2 && op.kind === 'mark') op.fn(c, k); } return api; } };
+  return api; }
+// pen: one hand drawing one thing, in one call. Several pens with different start times fill the frame from many sides at once.
+//   pen(c, tau, i, .9, 5, d => hog(d, 90, 640, 54))      o.still: no line boil (scenery that moves by itself), plus any doodle() option
+function pen(c, tau, i, start, seed, build, o = {}) { const d = doodle({ start, seed, speed: 1500, gap: .02, ...o }); build(d); d.draw(c, tau, o.still ? 0 : boil(i)); return d; }
+
 // ===================== STYLE SHEETS =====================
 // styleSheet: every mark in the current palette and finish, labelled. Render it before drawing anything else.
 function styleSheet(c, tau = 0, i = 0) { paper(c); c.font = '16px ui-monospace, Menlo, monospace';
@@ -335,11 +454,12 @@ function defineFilm({ palette, timeline, score, format = {} }) {
   window.__size = { w: OUT_W, h: OUT_H, W, H, S };
   window.__frame = i => { cur = -1; show(i); return cv.toDataURL('image/png'); };            // exact pixels, no screenshot
   window.__grid = (n = 24, cellW = 240) => gridSheet(n, cellW).toDataURL('image/jpeg', .9);  // n evenly spaced frames
+  window.__wav = score ? async () => { const u = new Uint8Array(await renderWav()); let b = ''; for (let k = 0; k < u.length; k += 32768) b += String.fromCharCode.apply(null, u.subarray(k, k + 32768)); return btoa(b); } : null;   // the score as base64 WAV
   if (qs.has('bare')) { document.body.style.cssText = 'margin:0;padding:0;background:#000'; cv.style.cssText = `width:${OUT_W}px;height:${OUT_H}px;display:block`; document.querySelectorAll('.bar').forEach(b => b.hidden = true); }
   else buildPlayer();
-  if (qs.has('grid')) { const img = new Image(); img.src = window.__grid(+qs.get('grid') || 24, 240); img.style.cssText = 'max-width:96vw'; cv.hidden = true; cv.after(img); }
-  else show(qs.has('frame') ? +qs.get('frame') : 0);
-  window.__ready = true;
+  const go = () => { if (qs.has('grid')) { const img = new Image(); img.src = window.__grid(+qs.get('grid') || 24, 240); img.style.cssText = 'max-width:96vw'; cv.hidden = true; cv.after(img); }
+    else show(qs.has('frame') ? +qs.get('frame') : 0); window.__ready = true; };
+  if (_photoLoads.length) Promise.all(_photoLoads).then(go); else go();   // photos decode before the first frame
 }
 // gridSheet: n evenly spaced drawn frames tiled 6 across, labelled with index and time. The first thing to look at.
 function gridSheet(n = 24, cellW = 240) {
@@ -351,7 +471,7 @@ function gridSheet(n = 24, cellW = 240) {
   cur = -1; return sheet;
 }
 function drawFrame(i) { const { timeline } = FILM; const t = i / FPS_DRAW; let acc = 0;
-  for (let k = 0; k < timeline.length; k++) { const s = timeline[k]; if (t < acc + s.dur || k === timeline.length - 1) { resetT(ctx); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; s.fn(ctx, t - acc, i); resetT(ctx); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; return s.name; } acc += s.dur; } }
+  for (let k = 0; k < timeline.length; k++) { const s = timeline[k]; if (t < acc + s.dur || k === timeline.length - 1) { VIEW = null; resetT(ctx); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; s.fn(ctx, t - acc, i); resetT(ctx); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; return s.name; } acc += s.dur; } }
 let cur = -1, playing = false, start = 0, sound = false, ac = null, ui = {};
 function show(i) { if (i === cur) return; cur = i; const name = drawFrame(i); if (ui.scrub) { ui.scrub.value = i; ui.info.textContent = `draw ${String(i).padStart(3, '0')}/${FILM.NDRAW}  t=${(i / FPS_DRAW).toFixed(2)}s  ${name}  ${W}x${H}@${OUT_W}px`; } }
 function loop() { if (!playing) return; const t = ((performance.now() - start) / 1000) % FILM.DUR; show(Math.floor(t * FPS_DRAW)); requestAnimationFrame(loop); }
@@ -364,12 +484,14 @@ function buildPlayer() {
   bar.querySelector('#exp').onclick = async () => { if (!window.showDirectoryPicker) { ui.msg.textContent = 'no File System Access API here: use render.mjs'; return; } const dir = await showDirectoryPicker({ mode: 'readwrite' }); playing = false;
     for (let i = 0; i < FILM.NDRAW; i++) { cur = -1; show(i); const blob = await new Promise(res => cv.toBlob(res, 'image/png')); const fh = await dir.getFileHandle(String(i).padStart(4, '0') + '.png', { create: true }); const w = await fh.createWritable(); await w.write(blob); await w.close(); ui.msg.textContent = `exported ${i + 1}/${FILM.NDRAW}`; }
     ui.msg.textContent = `done. ffmpeg -framerate ${FPS_DRAW} -i %04d.png -r ${FPS_OUT} -pix_fmt yuv420p -crf 18 out.mp4`; };
-  bar.querySelector('#wav').onclick = async () => { if (!FILM.score) { ui.msg.textContent = 'no score defined'; return; } const sr = 48000, oac = new OfflineAudioContext(2, Math.ceil(sr * FILM.DUR), sr); FILM.score(oac, 0, oac.destination); const buf = await oac.startRendering();
-    const n = buf.length, out = new DataView(new ArrayBuffer(44 + n * 4)), ws = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
-    ws(0, 'RIFF'); out.setUint32(4, 36 + n * 4, true); ws(8, 'WAVE'); ws(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true); out.setUint32(24, sr, true); out.setUint32(28, sr * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true); ws(36, 'data'); out.setUint32(40, n * 4, true);
-    const L = buf.getChannelData(0), R = buf.getChannelData(1); let o = 44; for (let i = 0; i < n; i++) { out.setInt16(o, clamp(L[i], -1, 1) * 32767, true); out.setInt16(o + 2, clamp(R[i], -1, 1) * 32767, true); o += 4; }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([out], { type: 'audio/wav' })); a.download = 'score.wav'; a.click(); ui.msg.textContent = 'score.wav: ffmpeg -i out.mp4 -i score.wav -c:v copy -c:a aac -shortest final.mp4'; };
+  bar.querySelector('#wav').onclick = async () => { if (!FILM.score) { ui.msg.textContent = 'no score defined'; return; } const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([await renderWav()], { type: 'audio/wav' })); a.download = 'score.wav'; a.click(); ui.msg.textContent = 'score.wav: ffmpeg -i out.mp4 -i score.wav -c:v copy -c:a aac -shortest final.mp4'; };
 }
+// renderWav: the score through an OfflineAudioContext, as 16-bit stereo WAV bytes. render.mjs calls it through window.__wav, so no click is needed.
+async function renderWav() { const sr = 48000, oac = new OfflineAudioContext(2, Math.ceil(sr * FILM.DUR), sr); FILM.score(oac, 0, oac.destination); const buf = await oac.startRendering();
+  const n = buf.length, out = new DataView(new ArrayBuffer(44 + n * 4)), ws = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, 'RIFF'); out.setUint32(4, 36 + n * 4, true); ws(8, 'WAVE'); ws(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true); out.setUint32(24, sr, true); out.setUint32(28, sr * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true); ws(36, 'data'); out.setUint32(40, n * 4, true);
+  const L = buf.getChannelData(0), R = buf.getChannelData(1); let o = 44; for (let i = 0; i < n; i++) { out.setInt16(o, clamp(L[i], -1, 1) * 32767, true); out.setInt16(o + 2, clamp(R[i], -1, 1) * 32767, true); o += 4; }
+  return out.buffer; }
 // note: one enveloped oscillator, the building block of every score
 function note(ac, master, f, t0, t, d, type = 'triangle', g = .25) { const o = ac.createOscillator(), e = ac.createGain(); o.type = type; o.frequency.value = f; e.gain.setValueAtTime(0, t0 + t); e.gain.linearRampToValueAtTime(g, t0 + t + .02); e.gain.exponentialRampToValueAtTime(.0008, t0 + t + d); o.connect(e); e.connect(master); o.start(t0 + t); o.stop(t0 + t + d + .05); }
 function noiseBurst(ac, master, t0, t, d, g = .3, seed = 1) { const sr = ac.sampleRate, buf = ac.createBuffer(1, Math.ceil(sr * d), sr), ch = buf.getChannelData(0), r = rng(seed); for (let i = 0; i < ch.length; i++) ch[i] = (r() * 2 - 1) * Math.pow(1 - i / ch.length, 2); const s = ac.createBufferSource(); s.buffer = buf; const e = ac.createGain(); e.gain.value = g; s.connect(e); e.connect(master); s.start(t0 + t); }

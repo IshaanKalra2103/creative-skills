@@ -34,7 +34,14 @@ Every palette has the same keys. Scenes rely on all of them existing.
 | `risoPop` | cream stock, fluorescent riso inks, halftone dots | the flipbook | `#f0ece2` / `#2a2050` | `#0078bf #ff48b0 #ffe800 #22366b` | `riso` |
 | `screenSea` | sea blues, cream sky, an orange desk, regular dot screen | the paper boat | `#e8e6db` / `#1a1c2e` | `#0a5083 #051630 #e8c84a` | `screen` |
 | `pencilMinimal` | cream and charcoal, pale pink and sage sections, thin graphite | the personal website | `#f4efe4` / `#27251f` | `#201f1b #8a8a55` | `pencil` |
+| `doodlePastel` | pastel product-shot paper, brush-pen ink, watercolour fills, white gouache | the doodle film | `#efd2d1` / `#2c2f5e` | `#23202b #e8505b` | `flat` |
 | `blueprintNight` | chalk on navy only | blueprint interludes | `#0b0d1f` / `#0b0d1f` | `#e8ecff #7fe7ff` | `ink` |
+
+The doodle look changes paper with every object: `usePalette(pastel('mint'))`
+with `PASTELS` = rose `#efd2d1`, mint `#d3e6d9`, butter `#efe4b3`, sky
+`#d2dee8`, cream `#ebe5d4`, peach `#eeccb4`, lilac `#ded4e9`, sand `#c9b07e`,
+night `#383750`, all measured off the reference. `pastel('#aabbcc')` takes
+any colour. After `nightfall`, switch to `chalkPalette()`.
 
 Measured dominant colours of the references, so you know how far you can
 drift: the flipbook is 45% cream paper, then navy, tan, teal and plum, with a

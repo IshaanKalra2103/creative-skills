@@ -131,6 +131,50 @@ lattice or mark (`hexLattice`, `dotScreen`, `dottedArc`, `squiggleText`,
 **Z. Enso (1.5 s).** `selfDraw` of a thick circle around a thin figure
 outline, then `paper` colour dims to `chalk` over the last 0.5 s.
 
+## Doodle look
+
+Full method in `doodle.md`; these are the shot types. Each is 1.5 to 4 s: the
+object alone for a few frames, drawings arrive from several pens, a gag in the
+last third.
+
+**AA. The object becomes a vehicle.** Photo rotated if needed (`rot`), mast,
+sail and crew placed with `on(pl, u, v)` so they bob with it, water drawn over
+the hull (`fill` then `wash`), foam along the waterline. `shadow: 0`.
+**AB. Someone lives inside.** Characters drawn after the photo, then
+`photoFront` with a lip path lays the front wall back over them. They rise
+into view with `y + (1 - up) * 70`.
+**AC. The object does its job, at last.** It tips over its base (`pivot`,
+`rot`), rings, pours or lights; the drawn world responds: a stream from the
+spout tip, steam that turns into a heart, a character with a cup.
+**AD. Time passes on it.** A drawn hand sweeps a real dial (`brush` from the
+hub, angle from `tau`), a drawn sun crosses the sky with it, the character
+falls asleep at the end.
+**AE. Night falls.** `photo`, `nightfall`, `glow` on the flame,
+`chalkPalette()`, stars, then a second character walks in already drawn
+(`start: -9`, x from `sm`).
+**AG. The light escapes.** `nightShot` with one light on the runaway. It
+hops out of the lamp (`hop(a, b, t, height)`), the pool goes with it and the
+lamp goes dark behind it.
+**AH. Along the edge.** Both runners take `rim(pl, side, v)` with a delay
+between them, a note or a mark pops where each step lands, the camera
+follows the midpoint.
+**AI. Inside the tube.** The runner disappears into the object; only the
+light travels along it (`on(pl, .5, v)`), then it bursts out of the far end
+with a recoil of the photo, rings, a big word and a zoom kick.
+**AJ. The object looks back.** Two small red lights behind the eye and the
+jaw of a helmet, a roar (shake, zigzags, the camera punches in), the
+follower's quills stand up, then the runaway pops out laughing.
+**AK. Getaway.** The photo itself gallops (x from `tau`, bounce from
+`|sin|`), dust puffs and speed lines behind it, the view travels with it and
+drawn milestones pass by.
+**AL. Caught, then let go.** The light dims in the jar (`r` shrinks), one
+held beat with no music, the lid tips (`pivot`, `rot`), it shoots up and `k`
+starts to fall.
+**AM. Sunrise.** A semicircular object rises behind a drawn hill that is
+painted over it, rays draw on, `k` goes to 0.
+**AF. Prints on a line.** The last frame of every scene rendered once into a
+layer, hung as small prints on a drawn string, then `signOff`.
+
 ## Timing and editing
 
 - Write the beat sheet first, as a table in a comment above the timeline:
