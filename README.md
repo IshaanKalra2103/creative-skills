@@ -6,6 +6,7 @@
 |---|---|
 | [riso-rooms](skills/riso-rooms) | Isometric illustrations that look risograph-printed: cutaway rooms with halftone inks, misaligned plates and wobbly lines, drawn in code on a canvas you can pan and zoom. |
 | [logo-intro](skills/logo-intro) | A kinetic name/logo intro in plain JS: atom rings, hyperspace warp, flash, letters popping in with doodles, a boiling highlight box, a wipe to a sparkle. |
+| [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | 10–30 s films where every frame is drawn in Canvas 2D JavaScript: ink on warm paper, riso halftones, screen prints or graphite, rendered to mp4 with a generated Web Audio score. |
 
 ## Install
 
@@ -15,6 +16,7 @@ Clone once, then link the skills you want:
 git clone https://github.com/IshaanKalra2103/riso-rooms ~/src/claude-skills
 ln -s ~/src/claude-skills/skills/riso-rooms ~/.claude/skills/riso-rooms
 ln -s ~/src/claude-skills/skills/logo-intro ~/.claude/skills/logo-intro
+ln -s ~/src/claude-skills/skills/hand-drawn-canvas-animation ~/.claude/skills/hand-drawn-canvas-animation
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -48,6 +50,20 @@ Inspired by Kevin Ngo's ["a small light, room by room"](https://a-small-light-th
 **URL options:** `?name=ada`, `&accent=0` (which letter gets the box), `&yellow=ff5a36&blue=00a37a` (any palette key, hex without `#`), `&speed=0.8`, `?t=9` (freeze time).
 
 Made by rebuilding a reference motion-graphics intro frame by frame in JavaScript.
+
+## hand-drawn-canvas-animation
+
+![One subject through the four looks](skills/hand-drawn-canvas-animation/assets/preview-four-looks.jpg)
+
+- `SKILL.md`: the procedure (brief → beat sheet → palette → puppets → scenes one at a time → full render → score), 12 rules and a review checklist.
+- `assets/core.js` + `assets/film-template.html`: the shared core (palettes, four finishes, marks, lattices, reveals, camera, timeline, player) and the file you copy per film.
+- `examples/`: a 9.5 s fruit-fly ink film and a paper boat through all four looks.
+- `scripts/render.mjs`: a frame grid in seconds, spot frames, full mp4 on twos with a contact sheet. `scripts/wav.mjs`: the score to WAV, headless.
+- `references/`: style rules, palettes, 26 scene recipes, architecture and pitfalls.
+
+Needs Node 18+, Chrome and ffmpeg. `cd` into a film folder with `core.js`, `render.mjs`, `wav.mjs` and `package.json`, `npm i`, then `node render.mjs film.html --grid 24`.
+
+The looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://x.com/kevin_t_ngo/status/2099858454043349342) and others). The core and scenes are original code.
 
 ## License
 

@@ -1,0 +1,101 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>film</title>
+<style>
+  body{margin:0;background:#111;color:#ccc;font:13px/1.4 ui-monospace,Menlo,monospace;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px}
+  canvas#c{width:min(92vw,720px);height:auto;background:#000;box-shadow:0 0 0 1px #333}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+  button{background:#222;color:#ddd;border:1px solid #444;padding:4px 10px;cursor:pointer;font:inherit}
+  input[type=range]{width:320px}
+</style>
+<canvas id="c" width="1080" height="1080"></canvas>
+<script src="core.js"></script>
+<script>
+'use strict';
+// ============================================================
+// FILM TEMPLATE. Copy next to core.js and edit the four sections below.
+// core.js gives you: palettes (PALETTES, usePalette, makePalette, derivePalette, duotone),
+// finishes (surface, dotScreen, plate/printPlate), marks (wob, hatch, grain, scribble,
+// construction, squiggleText, handText, crayon), lattices (hexCells, hexLattice, aster,
+// dotBurst), motifs (seedDot, ripples, dashedRing, dottedArc, plant, section, stickyNote,
+// thread, signOff), composition (layer, cam, blot, iris, mosaic, montage, badges, flash),
+// sheets (styleSheet, paletteSheet), and defineFilm() with the player and render hooks.
+// ============================================================
+
+// ===================== BRIEF & BEAT SHEET =====================
+// Subject: <one sentence>
+// Format: <1:1 | 16:9 | 9:16>, short side 1080 logical units, drawn 12 fps, output 24 fps. Draw relative to CX, CY, W, H so any format works.
+// t     dur   scene        camera     what changes                              kit                          sound
+// 0.0   1.0   stylesheet   -          check palette and finish                  styleSheet                   -
+// 1.0   0.5   palette      -          ramps and harmony                         paletteSheet                 -
+// 1.5   2.0   puppet       push-in    puppet on a textured ground, twitches     paper surface construction   plucks
+// 3.5   2.0   blueprint    static     blot to blueprint, hold, mosaic POV       blot iris mosaic             swell
+
+// ===================== PALETTE =====================
+usePalette('paperInk');
+// Other starts:
+//   usePalette('risoPop');  usePalette('screenSea');  usePalette('pencilMinimal');  usePalette('blueprintNight');
+//   usePalette(makePalette({ fills: ['#3a7ca5', '#d9a441', '#c94c4c'], finish: 'riso' }, 'risoPop'));
+//   usePalette(derivePalette(PALETTES.screenSea, { hue: 40, sat: .8 }));
+//   usePalette(duotone('#ff48b0', '#0078bf'));
+// A scene may switch palettes at its top (usePalette(...)) when the film changes look between shots.
+
+// ===================== PUPPET =====================
+// A character = parts as Path2D in LOCAL coords (origin = body centre, facing up = -y)
+//             + a pose object with a few numbers + one draw function with an ink/blueprint switch.
+// Fill -> surface() -> wobbly outline. surface() follows PAL.finish, so the puppet re-textures with the palette.
+const BUG_ARGS = { body: [0, 10, 42, 64], head: [0, -70, 28, 28] };
+const BUG = { body: ellPath(...BUG_ARGS.body), head: ellPath(...BUG_ARGS.head), eyeL: ellPath(-14, -76, 10, 12, -.3), eyeR: ellPath(14, -76, 10, 12, .3) };
+function drawBug(c, mode, pose, seed) {
+  const ink = mode !== 'blueprint', line = ink ? PAL.ink : PAL.chalk;
+  c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+  for (let i = 0; i < 3; i++) for (const s of [-1, 1]) { const y0 = -20 + i * 24, ph = Math.sin(pose.walk * TAU + i * 2 + s) * 8; c.strokeStyle = line; c.lineWidth = 2; wob(c, [[s * 36, y0], [s * 62, y0 - 14 + ph], [s * 84, y0 + 12 + ph]], 1.5, seed + 10 + i * 3 + s); }
+  c.lineWidth = 1.6; for (const s of [-1, 1]) wob(c, [[s * 10, -94], [s * 22, -118 - pose.twitch * 6], [s * 40, -126]], 1, seed + 20 + s);
+  const parts = [['body', PAL.fills[1], [-44, -56, 88, 132]], ['head', PAL.fills[0], [-30, -100, 60, 60]]];
+  for (const [k, col, box] of parts) { const p = BUG[k]; if (ink) { c.fillStyle = col; c.fill(p); surface(c, p, box, { seed: seed + 30 + k.length }); } c.strokeStyle = line; c.lineWidth = ink ? 2.4 : 2.6; wob(c, ellPts(...BUG_ARGS[k]), 1.8, seed + 50 + k.length, true); }
+  if (ink) { c.save(); c.clip(BUG.body); c.strokeStyle = PAL.shade; c.lineWidth = 7; c.globalAlpha = .9; for (let i = 0; i < 4; i++) { const y = 10 + i * 18; c.beginPath(); c.moveTo(-46, y - 3); c.quadraticCurveTo(0, y + 6, 46, y - 3); c.stroke(); } c.restore(); }
+  for (const [p, s] of [[BUG.eyeL, -1], [BUG.eyeR, 1]]) { c.save(); c.clip(p); if (ink) { c.fillStyle = PAL.blush; c.fill(p); }
+    hexCells([s * 14 - 12, -90, 24, 26], 3.2, (x, y) => { const hp = hexPath(x, y, 3.2); if (ink) { const l = clamp(1 - Math.hypot(x - s * 9, y + 82) / 22, 0, 1); c.fillStyle = mix(shade(PAL.blush, .4), tint(PAL.blush, .5), l); c.fill(hp); c.strokeStyle = alpha(PAL.ink, .5); c.lineWidth = .6; } else { c.strokeStyle = PAL.chalk; c.lineWidth = .7; c.globalAlpha = .75; } c.stroke(hp); });
+    c.globalAlpha = 1; c.fillStyle = '#fff'; c.beginPath(); c.arc(s * 10, -82, 2.4, 0, TAU); c.fill(); c.restore(); c.strokeStyle = line; c.lineWidth = 1.6; wob(c, ellPts(s * 14, -76, 10, 12, s * .3), 1.2, seed + 60 + s, true); }
+  if (ink) scribble(c, BUG.body, 0, 10, { seed: seed + 70, amp: 5, alpha: .5 });
+  c.restore();
+}
+
+// ===================== SCENES =====================
+// Each scene is (c, tau, i): tau = seconds since the scene started, i = global drawn-frame index.
+function scenePuppet(c, tau, i) {
+  paper(c); cam(c, CX, CY + 20, lerp(1.0, 1.15, sm(0, 2, tau)));
+  const ground = circPath(CX, CY + 760, 800), gbox = [CX - 800, CY - 40, 1600, 1600];
+  c.fillStyle = PAL.fills[0]; c.fill(ground);
+  surface(c, ground, gbox, { seed: 21, color: PAL.light, density: .25, gap: 6, len: 16, alpha: .5, width: 1.4, grain: 0 });
+  surface(c, circPath(CX + 260, CY + 860, 600), [CX - 340, CY + 260, 1200, 1200], { seed: 22, color: PAL.blush, density: .45, gap: 5, len: 18, alpha: .35, grain: 6000 });
+  c.strokeStyle = PAL.ink; c.lineWidth = 3; c.globalAlpha = .85; wob(c, ellPts(CX, CY + 760, 800, 800, 0, 120), 2.5, 24, true); c.globalAlpha = 1;
+  c.save(); c.translate(CX, CY + 20); c.rotate(-.12); c.scale(1.6, 1.6); construction(c, 0, 0, 110, 25); drawBug(c, 'ink', { walk: 0, twitch: pulse(i, 8) ? 1 : 0 }, 26); c.restore();
+}
+const L1 = layer(), L2 = layer();
+function sceneBlueprint(c, tau, i) {
+  scenePuppet(L1.getContext('2d'), 2.0, i);
+  const b = L2.getContext('2d'); night(b, PAL.night, 31); cam(b, CX, CY + 20, 1.15);
+  b.strokeStyle = PAL.chalk; b.lineWidth = 1.2; b.globalAlpha = .7; wob(b, ellPts(CX, CY + 760, 800, 800, 0, 120), 1.5, 24, true); b.globalAlpha = 1;
+  b.save(); b.translate(CX, CY + 20); b.rotate(-.12); b.scale(1.6, 1.6); construction(b, 0, 0, 110, 25, alpha(PAL.chalk, .6)); drawBug(b, 'blueprint', { walk: 0, twitch: 0 }, 26); b.restore();
+  blit(c, L1);
+  blot(c, L2, CX + 20, CY, lerp(0, 1000, sm(0, .8, tau, easeOut)), 32);
+  if (tau >= 1.4) { c.fillStyle = PAL.night; c.fillRect(0, 0, W, H); iris(c, CX, CY, 505, cc => mosaic(cc, L1, lerp(40, 13, sm(1.4, 2.0, tau)))); c.strokeStyle = PAL.chalk; c.lineWidth = 3; wob(c, ellPts(CX, CY, 505, 505, 0, 120), 2, 33, true); }
+}
+
+// ===================== SCORE =====================
+// Reads the same timeline as the pictures: a cue on every cut plus a motif per scene.
+function score(ac, t0, dest) {
+  const master = ac.createGain(); master.gain.value = .6; master.connect(dest); const r = rng(7); let acc = 0;
+  for (const s of TIMELINE) { note(ac, master, pentHz(1, 0), t0, acc, .5, 'sine', .25); for (let t = acc; t < acc + s.dur; t += .5) note(ac, master, pentHz(0, r() * 5 | 0), t0, t, .6, 'triangle', .15); acc += s.dur; }
+}
+
+// ===================== FILM =====================
+const TIMELINE = [
+  { name: 'stylesheet', dur: 1.0, fn: styleSheet },
+  { name: 'palette',    dur: 0.5, fn: paletteSheet },
+  { name: 'puppet',     dur: 2.0, fn: scenePuppet },
+  { name: 'blueprint',  dur: 2.0, fn: sceneBlueprint },
+];
+defineFilm({ timeline: TIMELINE, score, format: { ar: '1:1' } });   // render.mjs --ar 9:16 --width 1080 overrides
+</script>
