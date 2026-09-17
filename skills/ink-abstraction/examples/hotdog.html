@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hot Dog Abstraction</title>
+<style>
+  html,body{margin:0;height:100%;background:#e8e6e1;overflow:hidden}
+  canvas{display:block;width:100vw;height:100vh;cursor:pointer}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="engine.js"></script>
+<script>
+// ===================== SUBJECT — edit below =====================
+// A cartoon hot dog walking left: sausage poking out of both ends of the bun, a mustard zigzag,
+// a face on the sausage's left end, stubby legs. Unit box x 0..200, y 8..120.
+const capsule = (x0, x1, y, r, n = 14) => { const p = []; for (let k = 0; k <= n; k++) { const a = Math.PI / 2 + k / n * Math.PI; p.push([x0 + Math.cos(a) * r, y + Math.sin(a) * r]); } for (let k = 0; k <= n; k++) { const a = -Math.PI / 2 + k / n * Math.PI; p.push([x1 + Math.cos(a) * r, y + Math.sin(a) * r]); } return p; };
+const bun = (x0, x1, yTop, yBot, bulge) => { const p = []; for (let k = 0; k <= 24; k++) { const t = k / 24, x = x0 + (x1 - x0) * t; p.push([x, yBot + Math.sin(t * Math.PI) * bulge]); } p.push([x1 + 6, (yTop + yBot) / 2], [x1, yTop]); for (let k = 24; k >= 0; k--) { const t = k / 24; p.push([x0 + (x1 - x0) * t, yTop - Math.sin(t * Math.PI) * 3]); } p.push([x0 - 6, (yTop + yBot) / 2]); return p; };
+defineSheet({
+  title: 'Hot Dog Abstraction',
+  polys: [
+    bun(34, 172, 34, 50, 0).map(([x, y]) => [x, y - (y < 45 ? 8 * Math.sin((x - 34) / 138 * Math.PI) : 0)]),   // top half of the bun, behind
+    capsule(22, 186, 56, 15),                                                                                // the sausage
+    bun(30, 176, 64, 86, 12),                                                                                // bottom half of the bun
+    [[74, 96], [82, 96], [83, 112], [89, 115], [88, 118], [72, 118], [73, 112]],                              // legs
+    [[124, 96], [132, 96], [133, 112], [139, 115], [138, 118], [122, 118], [123, 112]],
+  ],
+  strokes: [
+    { pts: [[40, 52], [52, 44], [62, 54], [74, 44], [86, 54], [98, 44], [110, 54], [122, 44], [134, 54], [146, 44], [158, 54], [170, 46]], w: 2.2, knock: 5 },  // mustard
+    { pts: [[30, 74], [18, 66], [10, 56]], w: 2, knock: 4 },                  // arm waving
+    { pts: [[178, 74], [190, 82], [196, 94]], w: 2, knock: 4 },               // other arm
+    { pts: [[4, 50], [0, 44]], w: 1 }, { pts: [[12, 44], [11, 37]], w: 1 },     // wave ticks
+  ],
+  anchor: [100, 78],                                            // the face survives to the last panel as the knot
+  anchorSwirl: false,
+  dark: .5,
+  shade(x, y) {
+    const sausage = Math.abs(y - 56) < 15 && (x < 36 || x > 170 || y < 62) ? .5 : 0;         // the sausage is the dark ink
+    const underside = Math.max(0, (y - 76) / 16) * .55;                                     // shadow under the bun
+    const bunTop = y < 46 ? .12 : 0;                                                        // pale bread
+    const legs = y > 96 ? .75 : 0;
+    const face = -.3 * Math.exp(-((x - 100) ** 2 + (y - 78) ** 2) / 420);                  // keep the face area light
+    return sausage + underside + bunTop + legs + face + .08 * Math.sin(x * .2) * Math.cos(y * .15) + .12;
+  },
+  details(pen, stage, R) {                                      // a big cartoon face on the bun
+    for (const ex of [84, 116]) {
+      pen.dot(ex, 71, 10, 'paper');
+      pen.stroke(pen.resample([[ex - 9, 71], [ex, 62], [ex + 9, 71], [ex, 80]], 1.5, true), { amp: .4, w: 1.6, close: true });
+      pen.dot(ex + 2, 72.5, 4.2); pen.dot(ex + 3.4, 70.6, 1.3, 'paper');
+    }
+    pen.stroke([[84, 84], [92, 92], [108, 92], [116, 84]], { amp: .3, w: 2.4, knock: 5 });
+    pen.stroke([[94, 91], [100, 96], [106, 91]], { amp: .2, w: 1.4 });                             // tongue
+    for (const [hx, hy] of [[10, 56], [196, 94]]) { pen.dot(hx, hy, 5.5, 'paper'); pen.stroke(pen.resample([[hx - 5.5, hy], [hx, hy - 5.5], [hx + 5.5, hy], [hx, hy + 5.5]], 1, true), { amp: .3, w: 1.4, close: true }); }
+    if (stage < 2) for (const cx of [68, 132]) for (let k = 0; k < 3; k++) pen.stroke([[cx - 4 + k * 4, 88], [cx - 1 + k * 4, 84]], { amp: .15, w: .9 });   // blush
+  },
+});
+</script>
+</body>
+</html>

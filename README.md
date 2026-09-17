@@ -7,6 +7,7 @@
 | [riso-rooms](skills/riso-rooms) | Isometric illustrations that look risograph-printed: cutaway rooms with halftone inks, misaligned plates and wobbly lines, drawn in code on a canvas you can pan and zoom. |
 | [logo-intro](skills/logo-intro) | A kinetic name/logo intro in plain JS: atom rings, hyperspace warp, flash, letters popping in with doodles, a boiling highlight box, a wipe to a sparkle. |
 | [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | 10–30 s films where every frame is drawn in Canvas 2D JavaScript: ink on warm paper, riso halftones, screen prints or graphite, rendered to mp4 with a generated Web Audio score. |
+| [ink-abstraction](skills/ink-abstraction) | A 12-panel pen-and-ink abstraction sheet of any subject in vanilla JS: hatched sketch → black masses → cross-stitch grid → patterned cells → a few lines and one knot. |
 
 ## Install
 
@@ -17,6 +18,7 @@ git clone https://github.com/IshaanKalra2103/riso-rooms ~/src/claude-skills
 ln -s ~/src/claude-skills/skills/riso-rooms ~/.claude/skills/riso-rooms
 ln -s ~/src/claude-skills/skills/logo-intro ~/.claude/skills/logo-intro
 ln -s ~/src/claude-skills/skills/hand-drawn-canvas-animation ~/.claude/skills/hand-drawn-canvas-animation
+ln -s ~/src/claude-skills/skills/ink-abstraction ~/.claude/skills/ink-abstraction
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -64,6 +66,16 @@ Made by rebuilding a reference motion-graphics intro frame by frame in JavaScrip
 Needs Node 18+, Chrome and ffmpeg. `cd` into a film folder with `core.js`, `render.mjs`, `wav.mjs` and `package.json`, `npm i`, then `node render.mjs film.html --grid 24`.
 
 The looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://x.com/kevin_t_ngo/status/2099858454043349342) and others). The core and scenes are original code.
+
+## ink-abstraction
+
+![A cartoon hot dog in twelve stages](skills/ink-abstraction/assets/hotdog.png)
+
+- `SKILL.md`: how to describe a subject (silhouette polygons, a shade field, detail strokes, an anchor), the rules of the look, and how to check it with a headless screenshot.
+- `assets/engine.js`: the twelve stages, paper, boil and controls, no libraries. A subject file calls `defineSheet({...})`.
+- `examples/`: a grazing bull and a cartoon hot dog. `scripts/shot.sh`: screenshot a sheet with headless Chrome.
+
+**Controls:** click for a new variation, `B` toggles the boil. **URL options:** `?still`, `?seed=N`.
 
 ## License
 
