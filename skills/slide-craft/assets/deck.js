@@ -97,5 +97,5 @@
 
   const fromHash = wraps.findIndex(w => '#' + w.id === location.hash);
   mark(fromHash > 0 ? fromHash : 0);
-  if (fromHash > 0) wraps[fromHash].scrollIntoView();
+  if (fromHash > 0) wraps[fromHash].scrollIntoView({ behavior: 'instant', block: 'center' });
 })();
