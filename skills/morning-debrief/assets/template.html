@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F7F7; --card:#fff; --text:#000; --body:rgba(60,60,67,.62); --muted:rgba(0,0,0,.32); --rule:rgba(0,0,0,.08);
+  --yellow:#FFE500; --on-yellow:#000; --ok:#2f7d4a;
+  --display:"Newsreader","Iowan Old Style",Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,"Roboto Mono",monospace;
+  --rail:1160px; --pad:clamp(16px,6vw,90px); --gap:1.5rem;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111; --card:#1a1a1a; --text:#F0F0F0; --body:rgba(235,225,210,.62); --muted:rgba(255,255,255,.32); --rule:rgba(255,255,255,.09); --ok:#7fcf95;}}
+:root[data-theme="dark"]{--bg:#111; --card:#1a1a1a; --text:#F0F0F0; --body:rgba(235,225,210,.62); --muted:rgba(255,255,255,.32); --rule:rgba(255,255,255,.09); --ok:#7fcf95;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.page{padding:28px var(--pad) 80px}
+.rail{width:min(100%,var(--rail));margin:0 auto;container-type:inline-size}
+a{color:inherit}
+.mark{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:22px;font:500 13px/1 var(--display);font-style:italic;color:var(--muted)}
+.mark i{width:18px;height:18px;border-radius:50% 50% 45% 45%;background:var(--text);display:inline-block}
+
+/* hero */
+.hero{position:relative}
+.frame{position:relative;aspect-ratio:1160/600;overflow:hidden;background:#e0ddd8}
+.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.2s ease}
+.frame img.in{opacity:1}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;z-index:1}
+.overlay .the{font:italic 500 clamp(1.65rem,6cqw,4.85rem)/1 var(--display);color:var(--yellow);text-shadow:0 2px 20px rgba(0,0,0,.3),0 0 60px rgba(0,0,0,.15)}
+.overlay h1{margin:0;font:550 clamp(2.1rem,10.5cqw,8.25rem)/.95 var(--display);letter-spacing:-.01em;color:var(--yellow);white-space:nowrap;text-shadow:0 2px 30px rgba(0,0,0,.35),0 0 80px rgba(0,0,0,.2)}
+.edge{position:absolute;top:50%;z-index:3;font:italic 400 clamp(1.1rem,3.6cqw,3rem)/1 var(--display);white-space:nowrap;writing-mode:vertical-lr;transform:translateY(-50%)}
+.edge.date{left:clamp(-3.4rem,-4.2cqw,0px);transform:translateY(-50%) rotate(180deg)}
+.edge.time{right:clamp(-3.4rem,-4.2cqw,0px)}
+.sub{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gap);margin-top:18px}
+.greeting{grid-column:1/8;margin:0;font:italic 400 clamp(1rem,.8rem + .7cqw,1.3rem)/1.5 var(--display);color:var(--body);text-wrap:pretty}
+.caption{grid-column:8/-1;margin:0;text-align:right;font:400 10px/1.5 var(--mono);letter-spacing:.02em;color:var(--muted)}
+
+/* sections: title left (1-4), body right (5-12) */
+main{margin-top:clamp(28px,5vw,56px)}
+section{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gap);padding:clamp(22px,3.4vw,36px) 0;border-top:1px solid var(--rule)}
+h2{grid-column:1/5;margin:0;font:500 clamp(1.4rem,2.6cqw,2.1rem)/1.1 var(--display);letter-spacing:-.005em}
+.sbody{grid-column:5/-1;min-width:0}
+h3{font-family:var(--display)}
+
+/* push forward */
+.push{display:flex;gap:28px;align-items:center}
+.push h3{margin:0 0 6px;font:500 clamp(1.3rem,2.2cqw,1.75rem)/1.2 var(--display)}
+.push p{margin:0;color:var(--body)}
+.star{flex:none;position:relative;width:112px;height:112px;border:0;cursor:pointer;background:var(--yellow);color:var(--on-yellow);
+  font:italic 550 17px/1.05 var(--display);
+  clip-path:polygon(50% 0,59% 10%,71% 4%,76% 16%,89% 16%,88% 29%,99% 36%,92% 47%,100% 58%,89% 64%,91% 77%,78% 79%,74% 91%,61% 87%,50% 97%,39% 87%,26% 91%,22% 79%,9% 77%,11% 64%,0 58%,8% 47%,1% 36%,12% 29%,11% 16%,24% 16%,29% 4%,41% 10%);
+  transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.star:hover{transform:rotate(12deg)}
+.star:active{transform:rotate(12deg) scale(.95)}
+.star .arr{display:inline-block;transition:transform .25s}
+.star:hover .arr{transform:translateX(3px)}
+.star.done{background:var(--ok);color:#fff}
+
+/* todos */
+.todos{display:flex;flex-direction:column}
+.todo{display:grid;grid-template-columns:28px 1fr;gap:14px;padding:14px 0;border-top:1px solid var(--rule);transition:opacity .3s}
+.todo:first-child{border-top:0;padding-top:0}
+.todo.checked{opacity:.45}
+.todo.checked h3{text-decoration:line-through}
+.box{position:relative;width:22px;height:22px;margin-top:3px}
+.box input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.box span{position:absolute;inset:0;border:1.5px solid var(--muted);border-radius:50%;transition:all .2s}
+.box:hover span{border-color:var(--text)}
+.box input:checked+span{background:var(--yellow);border-color:var(--yellow)}
+.box input:checked+span::after{content:"";position:absolute;left:7.5px;top:4px;width:5px;height:10px;border:solid #000;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.box input:focus-visible+span{outline:2px solid var(--text);outline-offset:2px}
+.label{display:block;font:500 11px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.todo h3{margin:0 0 4px;font:500 1.2rem/1.3 var(--display)}
+.todo p{margin:0;color:var(--body);font-size:15px}
+.src{display:inline-flex;gap:5px;margin-top:8px;font:400 11.5px/1.4 var(--mono);color:var(--muted);text-decoration:none}
+.src:hover{color:var(--text)}
+.alldone{display:none;padding:14px 0 0;font:italic 500 1.3rem/1.4 var(--display)}
+.todos.complete .alldone{display:block}
+
+/* waiting */
+.wrow{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:2px 18px;padding:12px 0;border-top:1px solid var(--rule)}
+.wrow:first-child{border-top:0;padding-top:0}
+.who{font:italic 500 1.05rem/1.4 var(--display)}
+.what{font-size:15px}
+.wrow .note{grid-column:2;color:var(--body);font-size:14px}
+
+/* updates */
+.item{display:grid;grid-template-columns:40px 1fr;gap:10px;padding:14px 0;border-top:1px solid var(--rule)}
+.item:first-child{border-top:0;padding-top:0}
+.num{font:italic 400 1.6rem/1 var(--display);color:var(--muted)}
+.item h3{margin:0 0 4px;font:500 1.25rem/1.3 var(--display)}
+.tag{display:inline-block;font:500 10.5px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--rule);border-radius:999px;padding:4px 8px;margin-right:8px;vertical-align:4px;color:var(--body)}
+.item p{margin:0;color:var(--body)}
+.item ul{margin:6px 0 0;padding-left:18px;color:var(--body);font-size:15px}
+
+/* day */
+.slot{display:grid;grid-template-columns:96px 1fr;gap:16px;padding:14px 0;border-top:1px solid var(--rule)}
+.slot:first-child{border-top:0;padding-top:0}
+.slot .t{font:italic 500 1.15rem/1.2 var(--display)}
+.slot .t small{display:block;font:400 12px/1.6 var(--sans);font-style:normal;color:var(--muted)}
+.slot h3{margin:0 0 4px;font:500 1.2rem/1.3 var(--display)}
+.slot p{margin:0;color:var(--body);font-size:15px}
+.chip{margin-top:10px;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--yellow);color:#000;border-radius:999px;padding:7px 14px;font:italic 550 15px/1 var(--display);cursor:pointer;transition:transform .2s}
+.chip:hover{transform:translateY(-1px)}
+.chip.done{background:var(--ok);color:#fff}
+.empty{color:var(--body)}
+
+/* explainer video */
+.explainer video{width:100%;display:block;background:#000;aspect-ratio:16/9}
+.explainer p{margin:8px 0 0;font:400 11px/1.5 var(--mono);color:var(--muted)}
+
+/* ahead + gaps */
+.ahead{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.ahead .card{background:var(--card);padding:16px;border-radius:2px}
+.ahead .when{font:400 11px/1 var(--mono);color:var(--muted)}
+.ahead h3{margin:8px 0 4px;font:500 1.15rem/1.3 var(--display)}
+.ahead p{margin:0;color:var(--body);font-size:14px}
+.gaps{margin:0;padding-left:18px;color:var(--body);font-size:14px}
+
+footer{margin-top:48px;padding-top:28px;border-top:1px solid var(--rule);text-align:center;color:var(--muted);font:italic 400 15px/1.5 var(--display)}
+footer .srcs{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin-top:6px;font:400 11px/1.6 var(--mono);font-style:normal}
+footer a{text-decoration:none}
+footer a:hover{color:var(--text)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;background:var(--text);color:var(--bg);padding:9px 14px;border-radius:999px;font-size:13px;transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-width:760px){
+  section,.sub{display:block}
+  h2{margin-bottom:14px}
+  .caption{text-align:left;margin-top:8px}
+  .edge{display:none}
+  .push{flex-direction:column;align-items:flex-start}
+  .slot{grid-template-columns:1fr;gap:4px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page"><div class="rail">
+  <div class="mark"><i></i><span id="project"></span></div>
+  <header class="hero">
+    <div class="frame" id="frame">
+      <img id="painting" alt="">
+      <div class="overlay"><div class="the">The</div><h1 id="day"></h1></div>
+    </div>
+    <span class="edge date" id="date"></span><span class="edge time" id="time"></span>
+    <div class="sub"><p class="greeting" id="greeting"></p><p class="caption" id="caption"></p></div>
+  </header>
+  <main id="content"></main>
+  <footer id="footer"></footer>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script id="brief-data" type="application/json">__BRIEF_JSON__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('brief-data').textContent);
+  const $ = (t, cls, txt) => { const e = document.createElement(t); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const meta = D.meta || {};
+  const when = meta.generated_at ? new Date(meta.generated_at) : new Date();
+  const dayName = when.toLocaleDateString('en-US', {weekday: 'long'});
+  const dayKey = when.toISOString().slice(0, 10);
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+  };
+
+  document.getElementById('project').textContent = (meta.project || 'Daily') + ' brief';
+  document.getElementById('day').textContent = dayName + ' Brief';
+  document.getElementById('date').textContent = when.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
+  document.getElementById('time').textContent = when.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'});
+  document.getElementById('greeting').textContent = D.greeting || '';
+  const P = D.painting || {};
+  if (P.data_uri) { const img = document.getElementById('painting'); img.onload = () => img.classList.add('in'); img.src = P.data_uri; img.style.objectPosition = P.position || 'center'; }
+  document.getElementById('caption').textContent = P.caption || '';
+
+  const toast = (msg) => { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1800); };
+  const copy = async (text, btn, doneLabel) => {
+    try { await navigator.clipboard.writeText(text); }
+    catch(e){ const ta = $('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch(_){} ta.remove(); }
+    toast('Prompt copied — paste it into Claude');
+    if (btn) { btn.classList.add('done'); if (doneLabel) btn.querySelector('.lbl').textContent = doneLabel; }
+  };
+  const srcLink = (s) => { if (!s || !s.url) return null; const a = $('a', 'src', '↗ ' + (s.name || 'Source')); a.href = s.url; a.target = '_blank'; a.rel = 'noopener'; return a; };
+  const section = (title) => { const sec = $('section'); sec.appendChild($('h2', null, title)); const b = $('div', 'sbody'); sec.appendChild(b); document.getElementById('content').appendChild(sec); return b; };
+
+  if (D.push_forward) {
+    const s = section('Push forward'), c = $('div', 'push'), b = $('div');
+    b.appendChild($('h3', null, D.push_forward.title)); b.appendChild($('p', null, D.push_forward.body));
+    const star = $('button', 'star'); star.type = 'button'; star.innerHTML = '<span class="lbl">Let’s<br>do it <span class="arr">→</span></span>';
+    star.setAttribute('aria-label', 'Copy the prompt for: ' + D.push_forward.title);
+    star.onclick = () => copy(D.push_forward.prompt || D.push_forward.title, star);
+    c.append(b, star); s.appendChild(c);
+  }
+
+  if ((D.top_todos || []).length) {
+    const s = section('Top to-dos'), list = $('div', 'todos');
+    const refresh = () => list.classList.toggle('complete', [...list.querySelectorAll('input')].every(i => i.checked));
+    D.top_todos.forEach((t, i) => {
+      const id = 'md:' + dayKey + ':' + (t.id || i);
+      const row = $('article', 'todo'), box = $('label', 'box'), inp = $('input'), body = $('div');
+      inp.type = 'checkbox'; inp.checked = store.get(id) === '1'; inp.setAttribute('aria-label', t.title);
+      row.classList.toggle('checked', inp.checked);
+      inp.onchange = () => { store.set(id, inp.checked ? '1' : '0'); row.classList.toggle('checked', inp.checked); refresh(); };
+      box.append(inp, $('span'));
+      if (t.label) body.appendChild($('span', 'label', t.label));
+      body.appendChild($('h3', null, t.title));
+      if (t.body) body.appendChild($('p', null, t.body));
+      const l = srcLink(t.source); if (l) body.appendChild(l);
+      row.append(box, body); list.appendChild(row);
+    });
+    list.appendChild($('div', 'alldone', 'All done. The rest of the day is yours.'));
+    refresh(); s.appendChild(list);
+  }
+
+  if ((D.waiting_on || []).length) {
+    const s = section('Waiting on others'), c = $('div', 'wait');
+    D.waiting_on.forEach(w => {
+      const r = $('div', 'wrow'); r.appendChild($('span', 'who', w.who));
+      r.appendChild($('div', 'what', w.what + (w.since ? '  · since ' + w.since : '')));
+      if (w.note) r.appendChild($('div', 'note', w.note));
+      c.appendChild(r);
+    });
+    s.appendChild(c);
+  }
+
+  if ((D.new_updates || []).length) {
+    const s = section('What’s new');
+    if (D.explainer && D.explainer.src) { const box = $('div', 'explainer'); const v = $('video'); v.src = D.explainer.src; v.controls = true; v.playsInline = true; v.muted = false; v.preload = 'metadata'; box.appendChild(v); if (D.explainer.caption) box.appendChild($('p', null, D.explainer.caption)); s.appendChild(box); box.style.marginBottom = '22px'; }
+    D.new_updates.forEach((u, i) => {
+      const it = $('article', 'item'), b = $('div');
+      it.appendChild($('span', 'num', String(i + 1)));
+      const h = $('h3'); if (u.tag) h.appendChild($('span', 'tag', u.tag)); h.appendChild(document.createTextNode(u.title)); b.appendChild(h);
+      if (u.body) b.appendChild($('p', null, u.body));
+      if ((u.bullets || []).length) { const ul = $('ul'); u.bullets.forEach(x => ul.appendChild($('li', null, x))); b.appendChild(ul); }
+      const l = srcLink(u.source); if (l) b.appendChild(l);
+      it.appendChild(b); s.appendChild(it);
+    });
+  }
+
+  if (D.your_day) {
+    const s = section('Your day'), c = $('div', 'day');
+    if (!D.your_day.length) c.appendChild($('div', 'empty', 'Nothing on the calendar — a clear runway.'));
+    D.your_day.forEach(e => {
+      const r = $('div', 'slot'), t = $('div', 't', e.time || ''), b = $('div');
+      if (e.end_time) t.appendChild($('small', null, 'to ' + e.end_time));
+      b.appendChild($('h3', null, e.title)); if (e.note) b.appendChild($('p', null, e.note));
+      if (e.prep_prompt) { const ch = $('button', 'chip'); ch.type = 'button'; ch.innerHTML = '<span class="lbl">Prep me →</span>'; ch.onclick = () => copy(e.prep_prompt, ch, 'Prompt copied'); b.appendChild(ch); }
+      r.append(t, b); c.appendChild(r);
+    });
+    s.appendChild(c);
+  }
+
+  if ((D.looking_ahead || []).length) {
+    const s = section('Looking ahead'), g = $('div', 'ahead');
+    D.looking_ahead.forEach(a => { const c = $('div', 'card'); c.append($('div', 'when', a.when || ''), $('h3', null, a.title)); if (a.body) c.appendChild($('p', null, a.body)); g.appendChild(c); });
+    s.appendChild(g);
+  }
+
+  if ((D.gaps || []).length) {
+    const s = section('What this brief couldn’t see'), ul = $('ul', 'gaps');
+    D.gaps.forEach(x => ul.appendChild($('li', null, x))); s.appendChild(ul);
+  }
+
+  const f = document.getElementById('footer');
+  f.appendChild($('div', null, 'Made for ' + (meta.person || 'you') + ' by Claude, from:'));
+  const srcs = $('div', 'srcs');
+  (D.sources || []).forEach(x => { const a = $('a', null, x.name); if (x.url) { a.href = x.url; a.target = '_blank'; a.rel = 'noopener'; } srcs.appendChild(a); });
+  f.appendChild(srcs);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+[
+  {"file": "Claude_Monet,_Impression,_soleil_levant.jpg", "caption": "Impression, Sunrise — Claude Monet, 1872. Oil on canvas", "position": "center 60%"},
+  {"file": "Claude_Monet_-_Graystaks_I.JPG", "caption": "Grainstacks — Claude Monet, 1890–91. Oil on canvas", "position": "center 55%"},
+  {"file": "Vincent_van_Gogh_-_Wheatfield_with_crows_-_Google_Art_Project.jpg", "caption": "Wheatfield with Crows — Vincent van Gogh, 1890. Oil on canvas", "position": "center 40%"},
+  {"file": "Tsunami_by_hokusai_19th_century.jpg", "caption": "The Great Wave off Kanagawa — Katsushika Hokusai, c. 1831. Woodblock print", "position": "center 45%"},
+  {"file": "Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg", "caption": "Wanderer above the Sea of Fog — Caspar David Friedrich, c. 1818. Oil on canvas", "position": "center 30%"},
+  {"file": "Georges_Seurat_-_A_Sunday_on_La_Grande_Jatte_--_1884_-_Google_Art_Project.jpg", "caption": "A Sunday on La Grande Jatte — Georges Seurat, 1884–86. Oil on canvas", "position": "center 45%"},
+  {"file": "Claude_Monet_-_Water_Lilies_-_1906,_Ryerson.jpg", "caption": "Water Lilies — Claude Monet, 1906. Oil on canvas", "position": "center 50%"},
+  {"file": "John_Constable_The_Hay_Wain.jpg", "caption": "The Hay Wain — John Constable, 1821. Oil on canvas", "position": "center 45%"},
+  {"file": "Winslow_Homer_-_Breezing_Up_(A_Fair_Wind)_-_Google_Art_Project.jpg", "caption": "Breezing Up (A Fair Wind) — Winslow Homer, 1873–76. Oil on canvas", "position": "center 50%"},
+  {"file": "Albert_Bierstadt_-_Among_the_Sierra_Nevada,_California_-_Google_Art_Project.jpg", "caption": "Among the Sierra Nevada, California — Albert Bierstadt, 1868. Oil on canvas", "position": "center 50%"}
+]
