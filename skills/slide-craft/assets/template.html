@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Short label, 4-7 words, no dashes. It shows in the meta row of every slide. -->
+<title>DECK TITLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="deck.css">
+<style>
+  /* Deck-specific classes only. Never restyle .slide, .slide-canvas, .rail or the tokens. */
+</style>
+</head>
+<body data-date="">
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-head" id="deckName"></div>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="rail-foot">
+      <button class="btn" id="present" type="button">Present <span class="k">P</span></button>
+      <div class="nav">
+        <button id="prev" type="button" aria-label="Previous">&larr;</button>
+        <span id="counter">1 / 1</span>
+        <button id="next" type="button" aria-label="Next">&rarr;</button>
+        <button id="gridView" type="button" aria-label="All slides" title="All slides (G)">▦</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+
+    <!-- 1 · title: one claim, one line of context. data-notes becomes the presenter note. -->
+    <div class="slide-wrap" data-title="Title" data-notes="Open with the number, not the method.">
+      <div class="slide"><div class="slide-canvas slide-canvas--title">
+        <h1>The claim, written as <span class="accent">a sentence</span></h1>
+        <p class="subtitle">Who it is for, and the decision it is asking them to make.</p>
+      </div></div>
+    </div>
+
+    <!-- 2 · statement: the spine of the deck, alone on a slide. -->
+    <div class="slide-wrap" data-title="The one thing">
+      <div class="slide"><div class="slide-canvas slide-canvas--center">
+        <p class="statement">The single sentence the room should repeat afterwards.</p>
+      </div></div>
+    </div>
+
+    <!-- 3 · figure: one number, one line of meaning. Never chart a single number. -->
+    <div class="slide-wrap" data-title="Figure">
+      <div class="slide"><div class="slide-canvas slide-canvas--center">
+        <p class="eyebrow">Label for the number</p>
+        <p class="figure">36</p>
+        <p class="figure-context">One sentence that says why this number changes the decision.</p>
+      </div></div>
+    </div>
+
+    <!-- 4 · stats: peers, same size, hairline above each. Three at most. -->
+    <div class="slide-wrap" data-title="Stats">
+      <div class="slide"><div class="slide-canvas slide-canvas--stage">
+        <h2>Heading that states the insight, not the topic</h2>
+        <div class="slide-stage">
+          <div class="stats">
+            <div class="stat"><p class="stat-value">2,334</p><p class="stat-label">What it counts</p></div>
+            <div class="stat"><p class="stat-value">323</p><p class="stat-label">What it counts</p></div>
+            <div class="stat"><p class="stat-value">36</p><p class="stat-label">What it counts</p></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 5 · rows: 3 to 5, each a title and one line. Numbers in mono at the left. -->
+    <div class="slide-wrap" data-title="Rows">
+      <div class="slide"><div class="slide-canvas">
+        <h2>What we found</h2>
+        <ol class="rows">
+          <li><p class="n">01</p><div><p class="t">First finding, said plainly</p><p class="d">The evidence, in one line.</p></div></li>
+          <li><p class="n">02</p><div><p class="t">Second finding</p><p class="d">The evidence, in one line.</p></div></li>
+          <li><p class="n">03</p><div><p class="t">Third finding</p><p class="d">The evidence, in one line.</p></div></li>
+        </ol>
+      </div></div>
+    </div>
+
+    <!-- 6 · compare: two filled panels, one inverted. No coloured left borders anywhere. -->
+    <div class="slide-wrap" data-title="Compare">
+      <div class="slide"><div class="slide-canvas slide-canvas--stage">
+        <h2>The trade the decision turns on</h2>
+        <div class="slide-stage">
+          <div class="cols" style="--n:2">
+            <div class="panel"><p class="tag">Today</p><h3>How it works now</h3><p>One short sentence.</p></div>
+            <div class="panel panel--ink"><p class="tag">Proposed</p><h3>What changes</h3><p>One short sentence.</p></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 7 · quote: someone else's words, attributed. -->
+    <div class="slide-wrap" data-title="Quote">
+      <div class="slide"><div class="slide-canvas slide-canvas--center">
+        <blockquote class="quote">“The sentence someone actually said, kept short.”</blockquote>
+        <p class="quote-by">Name, role · where they said it</p>
+      </div></div>
+    </div>
+
+    <!-- 8 · chart: the heading is the takeaway; Chart.js is optional, SVG is fine. -->
+    <div class="slide-wrap" data-title="Chart">
+      <div class="slide"><div class="slide-canvas slide-canvas--stage">
+        <h2>Heading states what the chart proves</h2>
+        <div class="slide-stage"><div class="chart-box"><canvas id="chart1"></canvas></div></div>
+        <p class="caption">Source, date, n = …</p>
+      </div></div>
+    </div>
+
+    <!-- 9 · the ask: what you want, by when, from whom. Every deck ends on one. -->
+    <div class="slide-wrap" data-title="The ask">
+      <div class="slide"><div class="slide-canvas slide-canvas--title">
+        <h1>The ask, as a verb</h1>
+        <p class="subtitle">Who decides, by when, and what happens next.</p>
+      </div></div>
+    </div>
+
+  </main>
+</div>
+<div class="notes" id="notes"></div>
+<div class="pnav"><button id="pprev" type="button" aria-label="Previous">&larr;</button><button id="pnext" type="button" aria-label="Next">&rarr;</button></div>
+<script src="deck.js"></script>
+</body>
+</html>
