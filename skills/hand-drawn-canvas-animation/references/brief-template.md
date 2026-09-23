@@ -1,35 +1,33 @@
-# Brief template
+# Film brief
 
-Fill this from the user's request before touching code. Keep it at the top of
-the film's HTML as a comment together with the beat sheet.
+Keep the brief and beat sheet in the film source. Infer routine decisions from
+the request; ask only when the missing choice changes the intended film.
 
-```
-BRIEF
-Subject: <one sentence, e.g. "the life of a request inside a 4x RTX 3090 rig">
-Format: <1:1 | 16:9 | 9:16>, output width <1080 | 1920 | 3840>, drawn 12 fps, output 24 fps, <N> seconds
-Look: ink | riso | screen | pencil | doodle (photos of real objects, see doodle.md) | mixed (name the cuts where the look changes)
-Palette: paperInk | risoPop | screenSea | pencilMinimal | blueprintNight
-         | makePalette({...}, base) | derivePalette(base, {hue, sat, light}) | duotone(a, b)
-Finish: follows the palette unless stated
-Anchor: <the element that survives every cut: a dot, a puppet, a thread>
-Puppets: <list, 1..3, each with 3..6 pose params>
-Beats (8..14, each 0.25..3 s):
-  1. <what happens> | look <ink/riso/screen/pencil/doodle> | camera <static/push-in/follow> | recipe <A..Z> | sound <motif>
-  2. ...
-Must include: one establishing shot (A or U), one drawn transition (B, iris or torn section),
-              one of C/D/E/O, one POV or gallery (H or P), sign-off (S)
-Deliver: <name>.html, out/<name>.mp4, out/<name>-contact.jpg
+```text
+Subject and emotional/action beat:
+Duration; primary aspect ratio; delivery resolution:
+Drawing reference; material reference:
+Look: ink | pencil | riso | screen | doodle
+Techniques actually used: whole cels / photo interaction / plates / found motion / sand / paper
+If mixing looks: story reason for each change; pose/object/mark carried across it:
+Palette and material bindings (object / paper / screen):
+Mark language: contour pressure, open strokes, hatch direction, quiet areas:
+Cast: silhouettes, expressions, required views and replacement drawings:
+Drawing method: whole cels / assisted inbetweens / deformation / explicit cutouts:
+Exposure sheet: drawing ids, frame counts, contact and topology changes:
+Hardest action: keys, breakdowns, contacts and release frames:
+Exposure: output 24 fps; ones/twos/holds by action:
+Camera and root motion; screen-space tracking check:
+Environmental force, reaction and recovery; depth layers affected:
+For paper: compact silhouette, attachment, hinge order, expanded silhouette:
+Beat sheet: start, duration, viewer focus, action, camera, sound:
+Closing beat; signature only if wanted:
+External sources/licences:
+Delivery files and known limitations:
 ```
 
-Instruction to prepend when handing the brief to another agent:
-
-```
-You are drawing every frame of a short film in JavaScript on Canvas 2D,
-one HTML file on top of core.js, following the hand-drawn-canvas-animation
-skill. Rules in references/style.md are mandatory. Start from
-assets/film-template.html. Write the beat sheet first, pick the palette and
-render the style sheet and palette sheet, build the puppets, then scenes one
-by one, render the contact sheet after every scene and fix what the review
-checklist in SKILL.md flags. Do not use images, libraries, gradients on the
-final canvas, filters or Math.random.
-```
+Start with the hardest production shot. Follow style.md, motion.md and studio.md
+for the chosen material and action. Review normal-speed playback, a consecutive
+frame strip, a static hold and a full-size still. Expand into the complete film
+only after this shot reads clearly. Blueprint views, montages, guides and drawn
+transitions are optional devices.

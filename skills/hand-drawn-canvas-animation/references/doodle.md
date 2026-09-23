@@ -119,9 +119,11 @@ function sceneTea(c, tau, i) {
   `pen(c, tau, i, start, seed, build)` makes one, fills it and draws it. Run several
   with different `start` times so the frame fills from many sides at once.
   One long queue is the commonest mistake: the last thing never finishes.
-- **Rebuild every frame.** Scenes build their doodles from the current pose
-  each frame. It costs nothing, and it lets a drawn character move after it
-  is drawn. A doodle that is already complete gets `start: -9`.
+- **Drawing exposure.** For a redrawn character use whole poses from
+  [redrawn-animation.md](redrawn-animation.md); hold the same marks throughout
+  each exposure. The older `pen` examples rebuild from a procedural pose every
+  frame. Cache expensive geometry and give it a fixed seed during a hold.
+  A doodle that is already complete gets `start: -9`.
 - **Draw-on budget.** Everything in a shot is on paper by 70% of its length;
   the last 30% is the gag. A character takes 0.6 to 1 s at `speed: 1500`.
 - **The object reacts.** Once per film at least, the photo itself moves: it
@@ -140,11 +142,12 @@ function sceneTea(c, tau, i) {
   characters. Use it for a static night shot with fixed lamps.
 - **Night with moving light.** `nightShot(c, body, { k, lights })`, described
   below. Use it whenever a light travels.
-- **Boil.** `d.draw(c, tau, boil(i))` re-seeds the line every four drawn
-  frames, so held drawings breathe at 3 fps. Lines only. Pass nothing for
-  scenery that moves on its own (waves, a sweeping hand) and for grain.
-- **Ending.** Render each scene's last frame into a layer once and hang the
-  prints on a drawn line, then `signOff`. See `sceneEnd` in the example.
+- **Optional boil.** Legacy `d.draw(c, tau, boil(i))` changes the line seed
+  every four ticks of the 12 Hz compatibility index (3 changes per second).
+  This is an explicit effect, not a default requirement. Prefer a stable hold
+  or a small authored redraw set when the acting calls for one.
+- **Optional ending.** The old example hangs scene stills on a line, then uses
+  `signOff`. Choose an ending for the story; this device is not required.
 
 ## Moving light: `nightShot`
 
@@ -239,16 +242,21 @@ pen(c, tau, i, start, seed, d => { ... }, { still, speed, gap, w, color })   // 
 Inside one doodle layer fills go down first, washes second, lines and text
 last, whatever order you added them in. `.layer()` starts a new stack on top.
 
-## Exceptions to the rules
+## Production notes
 
-- Rule 2 (no gradients): the contact shadow, `backdrop` and `glow` use radial
-  gradients. They belong to the photographed world, never to a drawing.
-- Rule 3: `wash` is the fill and it is off-register by construction.
-- Rule 7: still drawn at 12 fps. The reference draws its lines on at 24.
-- "No text in the frame": short handwritten words are part of this look.
-  Three words a shot at most, lowercase, never a sentence that explains.
-- "No boil": lines may boil through `boil(i)`. Washes, grain and the photo
-  never do.
+The core defaults to 24 fps. Draw-on can run every frame; character poses use
+an exposure track when needed. Material, shadow and light treatments follow
+style.md rather than numbered global prohibitions. Short handwriting is useful
+when it belongs to the drawing; it is not required in every shot.
+
+For body/prop contacts, define support curves and grip points through on(pl,u,v).
+Use the same points for IK and contact drawing, and mask the foreground rim with
+photoFront. Review the real silhouette after every photo transform. A flat photo
+cannot reveal an unseen side during a turn.
+
+studio.js adds pressure ribbons and persistent stroke geometry. materials.js
+adds pigmentWash. These are optional approximations, not a fluid simulation.
+Legacy pen/boil and wash remain available for matching the earlier films.
 
 ## Defects specific to this look
 

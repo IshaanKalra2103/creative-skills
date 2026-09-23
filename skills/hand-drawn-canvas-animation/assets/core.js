@@ -6,10 +6,10 @@
 // lattices, reveals, photos with doodles on them, camera, timeline, score
 // plumbing and the player.
 //
-// A film is an HTML file that loads this script, then defines puppets,
-// scenes and a timeline and calls defineFilm({...}). See film-template.html.
+// A film is an HTML file that loads this script, then defines drawings,
+// scenes and a timeline and calls defineFilm({...}). See examples/sketchbook-bird.html.
 //
-// Sections: CONFIG · COLOUR · PALETTES · RANDOM & EASING · GEOMETRY ·
+// Sections: CONFIG · COLOUR · PALETTES · RANDOM, EASING & MOTION · GEOMETRY ·
 // MARKS · FINISHES · LATTICES & PARTICLES · MOTIFS · REVEALS & COMPOSITION ·
 // PHOTOS & DOODLES · STYLE SHEETS · TIMELINE & RUNTIME
 // ============================================================
@@ -19,17 +19,17 @@
 // Scenes draw in logical units. S scales them to the output width chosen at render time.
 const SHORT = 1080;
 let W = 1080, H = 1080, S = 1, CX = 540, CY = 540, OUT_W = 1080, OUT_H = 1080;
-const _layers = [];   // every layer() canvas, resized when the format changes
+const _layers = [];   // weak registrations: live layers resize; transient print plates can be collected
 function setFormat({ ar = '1:1', width } = {}) {
   const [a, b] = String(ar).split(/[:x\/]/).map(Number); const r = (a > 0 && b > 0) ? a / b : 1;
   if (r >= 1) { H = SHORT; W = Math.round(SHORT * r); } else { W = SHORT; H = Math.round(SHORT / r); }
   S = width ? width / W : 1; OUT_H = 2 * Math.round(H * S / 2); S = OUT_H / H; OUT_W = 2 * Math.round(W * S / 2);
   CX = W / 2; CY = H / 2;
-  for (const L of _layers) { L.o.width = Math.round(L.w * S); L.o.height = Math.round(L.h * S); }   // layers made at file scope follow the format
+  for (let i = _layers.length - 1; i >= 0; i--) { const L = _layers[i], o = L.ref.deref(); if (!o) { _layers.splice(i, 1); continue; } o.width = Math.round((L.w ?? W) * S); o.height = Math.round((L.h ?? H) * S); }   // layers made at file scope follow the format
   return { W, H, S, OUT_W, OUT_H };
 }
 { const q = new URLSearchParams(location.search); if (q.has('ar') || q.has('w')) setFormat({ ar: q.get('ar') || '1:1', width: +q.get('w') || undefined }); }
-const FPS_DRAW = 12, FPS_OUT = 24;          // drawn on twos, packed to 24 fps
+let FPS_DRAW = 24; const FPS_OUT = 24;      // drawn frames per second (12 = everything on twos; defineFilm({ fps: 24 }) puts the camera on ones), packed to 24 fps
 const TAU = Math.PI * 2;
 const HAND_FONT = '"Bradley Hand", "Segoe Script", "Chalkboard", "Comic Sans MS", cursive';
 
@@ -127,29 +127,89 @@ const PASTELS = { rose: '#efd2d1', mint: '#d3e6d9', butter: '#efe4b3', sky: '#d2
 const pastel = name => makePalette({ paper: PASTELS[name] || name }, 'doodlePastel');
 function usePalette(p) { PAL = typeof p === 'string' ? { ...PALETTES[p] } : { ...p }; return PAL; }
 
-// ===================== RANDOM & EASING =====================
+// ===================== RANDOM, EASING & MOTION =====================
 // Everything is seeded. Math.random is banned in films: it makes textures boil.
 function rng(seed) { let a = (seed * 1000003) >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const easeIO = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+// hash: one integer to a 0..1 float, no state. noise1 is built on it.
+function hash(k, seed = 0) { let a = (Math.imul(k | 0, 0x9E3779B1) + Math.imul((seed * 4096) | 0, 0x85EBCA77)) | 0; a ^= a >>> 15; a = Math.imul(a, 0x2C1B3C6D); a ^= a >>> 12; a = Math.imul(a, 0x297A2D39); a ^= a >>> 15; return (a >>> 0) / 4294967296; }
+// noise1: smooth 1D value noise, -1..1, one bump per unit of x. A pure function of (x, seed): the same x always gives the same value.
+function noise1(x, seed = 1) { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(hash(i, seed) * 2 - 1, hash(i + 1, seed) * 2 - 1, u); }
+// drift: organic wander in time, two octaves, about -amp..amp. A handheld camera, an idle sway, a flame, a line that breathes.
+const drift = (t, seed = 1, o = {}) => { const { amp = 1, freq = .5 } = o; return amp * (.7 * noise1(t * freq, seed) + .3 * noise1(t * freq * 2.7 + 11, seed + 3)); };
+// easing. easeIO is cubic in-out: slow out of the pose, slow into the next one. The rest are for specific jobs (motion.md).
+const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const easeIn = t => t * t * t;
+const easeOutQuint = t => 1 - Math.pow(1 - t, 5);                                   // a hard stop that still lands soft
+const easeInOutQuint = t => t < .5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;   // long holds at both ends
+const easeInOutSine = t => -(Math.cos(Math.PI * t) - 1) / 2;                       // the gentlest, for cameras
+const easeOutExpo = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);                    // a snap
+const easeOutBack = (t, s = 1.70158) => 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);   // overshoots and comes back
+const easeInBack = (t, s = 1.70158) => (s + 1) * t * t * t - s * t * t;                                // pulls back before it goes
+const easeOutElastic = t => t <= 0 ? 0 : t >= 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - .75) * (TAU / 3)) + 1;   // wobbles into place
 const sm = (a, b, t, e = easeIO) => e(clamp((t - a) / (b - a), 0, 1));   // 0..1 between times a and b
 const flicker = (i, period = 2) => Math.floor(i / period) % 2 === 0;    // alternate two renders
 const pulse = (i, every, hold = 1) => (i % every) < hold;                 // true for `hold` drawn frames every `every`
+const twos = tau => Math.floor(tau * 12 + 1e-6) / 12;                      // a time snapped to the 12 fps grid: the pose of a character inside a scene that runs on ones
+// ---- motion: the principles as pure functions of time. Nothing here keeps state; the same t gives the same value. ----
+// spring: the step response of a damped spring, 0 -> 1 with an overshoot. t in seconds since the move started; freq in Hz, damp 0..1 (1 = no overshoot).
+function spring(t, o = {}) { const { freq = 2.4, damp = .55 } = o; if (t <= 0) return 0; const w = TAU * freq; if (damp >= 1) return 1 - (1 + w * t) * Math.exp(-w * t); const wd = w * Math.sqrt(1 - damp * damp); return 1 - Math.exp(-damp * w * t) * (Math.cos(wd * t) + damp * w / wd * Math.sin(wd * t)); }
+// settle: a damped wobble after t0, zero before it and soon after. Add it to whatever just stopped (follow-through), or to a scale on a landing.
+// phase 0 starts at rest and swings; phase PI/2 starts at full amplitude (a landing squash) and rings down.
+function settle(t, t0 = 0, o = {}) { const { amp = 1, freq = 3, decay = 4, phase = 0 } = o; const u = t - t0; return u <= 0 ? 0 : amp * Math.exp(-decay * u) * Math.sin(TAU * freq * u + phase); }
+// anticipate: 0..1 between times a and b with a small move the other way first. back = how far (fraction of the move), hold = share of the time spent winding up.
+function anticipate(a, b, t, o = {}) { const { back = .12, hold = .3, e = easeIO } = o; const u = clamp((t - a) / (b - a), 0, 1); return u < hold ? -back * Math.sin(u / hold * Math.PI / 2) : lerp(-back, 1, e((u - hold) / (1 - hold))); }
+// key: keyframes [[t, v, ...], ...]. Each segment eases between its neighbours. One value in -> a number out, several -> an array.
+// A key may carry its own easing as the last element: [1.5, x, y, easeOut] eases the segment that starts at 1.5 s.
+function key(t, K, e = easeIO) { const vals = k => k.filter(v => typeof v === 'number').slice(1), one = vals(K[0]).length === 1, out = v => one ? v[0] : v; if (t <= K[0][0]) return out(vals(K[0]));
+  for (let k = 0; k + 1 < K.length; k++) if (t < K[k + 1][0]) { const a = vals(K[k]), b = vals(K[k + 1]), last = K[k][K[k].length - 1], f = typeof last === 'function' ? last : e, u = f(clamp((t - K[k][0]) / (K[k + 1][0] - K[k][0]), 0, 1)); return out(a.map((x, n) => lerp(x, b[n], u))); }
+  return out(vals(K[K.length - 1])); }
+// keyPath: the same keys, but the values pass through a Catmull-Rom curve, so a camera or a thrown thing does not kink at a key.
+// The easing applies to the whole journey (slow start, slow stop, no pause at the keys in between). Returns an array.
+function keyPath(t, K, o = {}) { const { ease = easeInOutSine } = o; const n = K.length, P = i => K[clamp(i, 0, n - 1)].slice(1); if (n < 3) return [].concat(key(t, K, ease));
+  const t0 = K[0][0], t1 = K[n - 1][0], tm = t0 + ease(clamp((t - t0) / (t1 - t0), 0, 1)) * (t1 - t0); if (tm >= t1) return P(n - 1); let k = 0; while (k + 1 < n - 1 && tm >= K[k + 1][0]) k++;
+  const u = clamp((tm - K[k][0]) / (K[k + 1][0] - K[k][0]), 0, 1), p0 = P(k - 1), p1 = P(k), p2 = P(k + 1), p3 = P(k + 2), u2 = u * u, u3 = u2 * u;
+  return p1.map((_, j) => .5 * (2 * p1[j] + (p2[j] - p0[j]) * u + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * u2 + (3 * p1[j] - p0[j] - 3 * p2[j] + p3[j]) * u3)); }
+// arc: the point between a and b on a parabola that rises by `lift` at the middle (up is negative y). u = 0..1; a jump reads best with u linear in time.
+const arc = (a, b, u, lift = 80) => [lerp(a[0], b[0], u), lerp(a[1], b[1], u) - lift * 4 * u * (1 - u)];
+// squash: [sx, sy] for a stretch k, volume kept: k > 0 stretches along y (in the air), k < 0 squashes (on landing). Scale about the feet.
+const squash = k => [1 / (1 + k), 1 + k];
+// breathe: a slow idle cycle 0..1 with a quick rise and a long fall, the way breath and blinks go. Never quantised: add it to a pose on ones, or through twos().
+const breathe = (t, period = 2.6, phase = 0) => { const u = ((t / period + phase) % 1 + 1) % 1; return u < .4 ? Math.sin(u / .4 * Math.PI / 2) : Math.cos((u - .4) / .6 * Math.PI / 2); };
 
 // ===================== GEOMETRY =====================
-// Fill with a Path2D, outline with a jittered polyline: the two must not coincide.
+// Path geometry for authored fills and strokes. Registration is a material choice.
 function ellPts(cx, cy, rx, ry, rot = 0, n = 44) { const p = []; for (let i = 0; i < n; i++) { const a = i / n * TAU, x = rx * Math.cos(a), y = ry * Math.sin(a); p.push([cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]); } return p; }
 function ellPath(cx, cy, rx, ry, rot = 0) { const p = new Path2D(); p.ellipse(cx, cy, rx, ry, rot, 0, TAU); return p; }
 function circPath(cx, cy, r) { return ellPath(cx, cy, r, r); }
 function rectPath(x, y, w, h) { const p = new Path2D(); p.rect(x, y, w, h); return p; }
 function roundRectPath(x, y, w, h, r) { const p = new Path2D(); p.roundRect(x, y, w, h, r); return p; }
 function polyPath(pts, close = true) { const p = new Path2D(); pts.forEach((q, i) => i ? p.lineTo(q[0], q[1]) : p.moveTo(q[0], q[1])); if (close) p.closePath(); return p; }
+// blob: an ellipse that is not quite one. Low-frequency variation of the radius (amp as a fraction), seeded. Bodies, heads, stones, leaves, clouds.
+function blob(cx, cy, rx, ry, seed = 1, o = {}) { const { amp = .05, rot = 0, n = 48 } = o; const r = rng(seed), k1 = 2 + (r() * 2 | 0), k2 = k1 + 1 + (r() * 2 | 0), p1 = r() * TAU, p2 = r() * TAU, p3 = r() * TAU, p = [];
+  for (let i = 0; i < n; i++) { const a = i / n * TAU, m = 1 + amp * (.6 * Math.sin(k1 * a + p1) + .3 * Math.sin(k2 * a + p2) + .15 * Math.sin((k2 + 2) * a + p3)), x = rx * m * Math.cos(a), y = ry * m * Math.sin(a); p.push([cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]); } return p; }
+// smoothPts: a polyline into a dense curve (Catmull-Rom). Corners sharper than `corner` radians stay corners, so a table keeps its edges and a leg keeps its knee.
+function smoothPts(pts, close = false, step = 4, corner = .8) { const n = pts.length; if (n < 2) return pts.map(p => p.slice()); const P = i => close ? pts[((i % n) + n) % n] : pts[clamp(i, 0, n - 1)];
+  const sharp = []; for (let i = 0; i < n; i++) { if (!close && (i === 0 || i === n - 1)) { sharp.push(true); continue; } const a = P(i - 1), b = P(i), d = P(i + 1); let t = Math.abs(Math.atan2(d[1] - b[1], d[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0])); if (t > Math.PI) t = TAU - t; sharp.push(t > corner); }
+  const out = [], segs = close ? n : n - 1;
+  for (let i = 0; i < segs; i++) { const p1 = P(i), p2 = P(i + 1), c1 = sharp[i % n], c2 = sharp[(i + 1) % n], p0 = c1 ? [2 * p1[0] - p2[0], 2 * p1[1] - p2[1]] : P(i - 1), p3 = c2 ? [2 * p2[0] - p1[0], 2 * p2[1] - p1[1]] : P(i + 2), m = Math.max(1, Math.round(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let k = 0; k < m; k++) { const t = k / m, t2 = t * t, t3 = t2 * t; out.push([.5 * (2 * p1[0] + (p2[0] - p0[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (3 * p1[0] - p0[0] - 3 * p2[0] + p3[0]) * t3), .5 * (2 * p1[1] + (p2[1] - p0[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (3 * p1[1] - p0[1] - 3 * p2[1] + p3[1]) * t3)]); } }
+  if (!close) out.push(pts[n - 1].slice()); return out; }
+// curvePath: a smooth Path2D through points, preserving authored sharp corners.
+const curvePath = (pts, close = true, corner = .8) => polyPath(smoothPts(pts, close, 3, corner), close);
+// warp: bend any outline with slow noise, amp in px. Long edges are subdivided first so the bow shows. A rectangle that is not quite one, a horizon, a shelf.
+function warp(pts, seed = 1, amp = 4, close = true, step = 24) { const n = pts.length, out = [], segs = close ? n : n - 1; for (let i = 0; i < segs; i++) { const a = pts[i], b = pts[(i + 1) % n], m = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / step)); for (let k = 0; k < m; k++) out.push([lerp(a[0], b[0], k / m), lerp(a[1], b[1], k / m)]); } if (!close) out.push(pts[n - 1].slice());
+  let s = 0; return out.map((p, i) => { if (i) s += Math.hypot(p[0] - out[i - 1][0], p[1] - out[i - 1][1]); return [p[0] + amp * noise1(s / 70 + 3, seed), p[1] + amp * noise1(s / 70 + 40, seed + 1)]; }); }
+const rectPts = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
 function pathLength(pts, close) { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (close) L += Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]); return L; }
 function bez(p0, p1, p2, p3, t) { const u = 1 - t; return [u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0], u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]; }
-function layer(w, h) { const full = w === undefined; w = w ?? W; h = h ?? H; const o = document.createElement('canvas'); o.width = Math.round(w * S); o.height = Math.round(h * S); if (full) _layers.push({ o, get w() { return W; }, get h() { return H; } }); else _layers.push({ o, w, h }); return o; }   // output pixels, logical size w x h
+function layer(w, h) { const full = w === undefined; w = w ?? W; h = h ?? H; const o = document.createElement('canvas'); o.width = Math.round(w * S); o.height = Math.round(h * S); _layers.push({ ref: new WeakRef(o), w: full ? null : w, h: full ? null : h }); return o; }   // output pixels, logical size w x h
 function cam(c, x, y, zoom, rot = 0) { c.setTransform(S, 0, 0, S, 0, 0); c.translate(W / 2, H / 2); c.scale(zoom, zoom); c.rotate(rot); c.translate(-x, -y); }
 const resetT = c => c.setTransform(S, 0, 0, S, 0, 0);   // identity in logical units
+// camKeys: a camera through keys [[t, x, y, zoom, rot?], ...] on a smooth curve, eased over the whole move, with an optional handheld drift (hand = px).
+// Call it with the continuous tau: the camera runs on ones even when the characters are on twos. Returns [x, y, zoom, rot].
+function camKeys(c, tau, K, o = {}) { const { ease = easeInOutSine, hand = 0, seed = 9 } = o; const v = keyPath(tau, K, { ease }), z = v[2] ?? 1, rot = v[3] ?? 0;
+  const dx = hand ? drift(tau, seed, { amp: hand, freq: .55 }) : 0, dy = hand ? drift(tau, seed + 5, { amp: hand * .8, freq: .45 }) : 0, dr = hand ? drift(tau, seed + 9, { amp: hand * .0006, freq: .4 }) : 0; cam(c, v[0] + dx / z, v[1] + dy / z, z, rot + dr); return [v[0], v[1], z, rot]; }
 // view: a camera for a whole shot. setView() once at the top of a scene; backdrop() fills the frame and then applies it, so everything after it
 // (photo, doodles, the night mask) is seen through it. It resets to the full frame at the start of every drawn frame.
 let VIEW = null;
@@ -160,18 +220,31 @@ function whip(tau, dur, o = {}) { const { inn = .17, out = .17, dist = 520 } = o
 const blit = (c, src) => { c.save(); resetT(c); c.drawImage(src, 0, 0, W, H); c.restore(); };   // draw a layer full-frame
 
 // ===================== MARKS =====================
-// wob: polyline with seeded jitter (amp 1..3 px). Use for every visible outline.
-function wob(c, pts, amp, seed, close = false) { const r = rng(seed); c.beginPath(); pts.forEach((p, i) => { const x = p[0] + (r() - .5) * amp, y = p[1] + (r() - .5) * amp; i ? c.lineTo(x, y) : c.moveTo(x, y); }); if (close) c.closePath(); c.stroke(); }
-// crayon: a wob stroke with a grainy edge (three passes, the flipbook's ripple line)
-function crayon(c, pts, color, width, seed, close = false) { c.save(); c.strokeStyle = color; c.lineCap = 'round'; c.lineJoin = 'round'; for (let k = 0; k < 3; k++) { c.globalAlpha = k ? .35 : .85; c.lineWidth = width * (k ? .7 : 1); wob(c, pts, 2.5 + k * 1.5, seed + k * 7, close); } c.restore(); }
+// wob: the outline. A hand does not shake per point, it wanders: the stroke gets a slow coherent wobble along its length (seamless on closed
+// shapes), runs through a curve wherever the polyline bends gently and keeps its corners where it bends hard. amp = how far the hand wanders (1..3 px).
+//   o.pressure 0..1   the line swells and tapers like a pen (one stroke per segment: use on outlines, not on 50k-segment layers)
+//   o.smooth false    keep the polyline as given          o.freq   wobbles per ~90 px (1)          o.corner  radians, sharper turns stay corners (.8)
+function wob(c, pts, amp, seed, close = false, o = {}) { const { smooth = true, step = 4, corner = .8, pressure = 0, freq = 1 } = o; if (pts.length < 2) return;
+  const q = smooth ? smoothPts(pts, close, step, corner) : pts, n = q.length, s = [0]; for (let i = 1; i < n; i++) s.push(s[i - 1] + Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]));
+  const L = close ? s[n - 1] + Math.hypot(q[0][0] - q[n - 1][0], q[0][1] - q[n - 1][1]) : s[n - 1], r = rng(seed), ph = [r() * TAU, r() * TAU, r() * TAU, r() * 100];
+  let off; if (close) { const k1 = Math.max(2, Math.round(L / 140 * freq)), k2 = k1 * 2 + 1, k3 = k2 * 2 + 1; off = i => amp * (.42 * Math.sin(k1 * TAU * s[i] / L + ph[0]) + .26 * Math.sin(k2 * TAU * s[i] / L + ph[1]) + .14 * Math.sin(k3 * TAU * s[i] / L + ph[2])); }
+  else { const sc = freq / 90; off = i => amp * (.55 * noise1(s[i] * sc + ph[3], seed) + .28 * noise1(s[i] * sc * 2.6 + ph[3] * 3, seed + 7)); }
+  const out = new Array(n); for (let i = 0; i < n; i++) { const a = q[i > 0 ? i - 1 : (close ? n - 1 : 0)], b = q[i < n - 1 ? i + 1 : (close ? 0 : n - 1)]; let nx = a[1] - b[1], ny = b[0] - a[0]; const l = Math.hypot(nx, ny) || 1, d = off(i); out[i] = [q[i][0] + nx / l * d, q[i][1] + ny / l * d]; }
+  if (!pressure) { c.beginPath(); out.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); if (close) c.closePath(); c.stroke(); return; }
+  const w = c.lineWidth, tl = Math.max(1, Math.min(L * .3, w * 9)), cap = c.lineCap; c.lineCap = 'round';
+  const wid = i => { const e = close ? 1 : Math.min(1, s[i] / tl, (L - s[i]) / tl); return Math.max(.5, w * (1 - pressure * .55 * (1 - Math.sin(e * Math.PI / 2))) * (1 + pressure * .22 * Math.sin(s[i] / 55 + ph[1]) + pressure * .1 * Math.sin(s[i] / 17 + ph[2]))); };
+  for (let i = 1; i < n + (close ? 1 : 0); i++) { const a = out[i - 1], b = out[i % n]; c.lineWidth = (wid(i - 1) + wid(i % n)) / 2; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); } c.lineWidth = w; c.lineCap = cap; }
+// crayon: a wob stroke with a grainy edge (three passes that wander apart, the flipbook's ripple line)
+function crayon(c, pts, color, width, seed, close = false) { c.save(); c.strokeStyle = color; c.lineCap = 'round'; c.lineJoin = 'round'; for (let k = 0; k < 3; k++) { c.globalAlpha = k ? .35 : .85; c.lineWidth = width * (k ? .7 : 1); wob(c, pts, 2.5 + k * 1.5, seed + k * 7, close, { pressure: k ? 0 : .5, freq: 1.4 }); } c.restore(); }
 // hatch: short parallel strokes clipped to `path`. box=[x,y,w,h] bounds the path in the same coords. One stroke() per layer.
 function hatch(c, path, box, o = {}) {
-  const { angle = .9, gap = 7, len = 14, jitter = 6, color = PAL.ink, alpha: al = .35, width = 1.2, seed = 1 } = o; const r = rng(seed);
+  const { angle = .9, gap = 7, len = 14, jitter = 6, color = PAL.ink, alpha: al = .35, width = 1.2, seed = 1, flow = .16, curve = .12 } = o; const r = rng(seed);
   c.save(); c.clip(path); c.strokeStyle = color; c.globalAlpha = al; c.lineWidth = width; c.lineCap = 'round';
   const [bx, by, bw, bh] = box, cx = bx + bw / 2, cy = by + bh / 2, R = Math.hypot(bw, bh) / 2, ca = Math.cos(angle), sa = Math.sin(angle);
-  c.beginPath();
-  for (let v = -R; v <= R; v += gap) for (let u = -R; u <= R; u += len * 1.7) { const uu = u + (r() - .5) * jitter * 2, L = len * (.6 + r() * .8);
-    const x0 = cx + ca * uu - sa * v + (r() - .5) * jitter * .6, y0 = cy + sa * uu + ca * v + (r() - .5) * jitter * .6; c.moveTo(x0, y0); c.lineTo(x0 + ca * L, y0 + sa * L); }
+  c.beginPath();   // one path: every stroke leans with a slow field over the surface (flow, radians) and bends a little (curve, fraction of its length)
+  for (let v = -R; v <= R; v += gap) for (let u = -R; u <= R; u += len * 1.7) { const uu = u + (r() - .5) * jitter * 2, L = len * (.5 + r() * 1.0);
+    const x0 = cx + ca * uu - sa * v + (r() - .5) * jitter * .6, y0 = cy + sa * uu + ca * v + (r() - .5) * jitter * .6, a = angle + (flow ? flow * (noise1(x0 / 240 + 7, seed) + noise1(y0 / 240 + 31, seed + 1)) : 0), cb = Math.cos(a), sb = Math.sin(a), bend = curve * L * (r() - .5) * 2;
+    c.moveTo(x0, y0); if (curve) c.quadraticCurveTo(x0 + cb * L / 2 - sb * bend, y0 + sb * L / 2 + cb * bend, x0 + cb * L, y0 + sb * L); else c.lineTo(x0 + cb * L, y0 + sb * L); }
   c.stroke(); c.restore();
 }
 // grain: n speckles clipped to path
@@ -221,24 +294,24 @@ function dotScreen(c, path, box, o = {}) {
 }
 // plate + printPlate: real colour separations. Draw each ink's coverage in black on a white plate, then print
 // the plates in order with multiply blending. Overlaps mix like ink on paper. This is the flipbook's whole look.
-function plate() { const L = layer(); const g = L.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); return L; }
+function plate() { const L = layer(); const g = L.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, L.width, L.height); resetT(g); return L; }
 const _cov = document.createElement('canvas');
 function printPlate(c, src, o = {}) {
-  const { cell = 7, ink = PAL.inks[0], angle = .26, jitter = .2, seed = 1, gain = 1, maxCov = .78, blend = 'multiply', al = .95 } = o; const r = rng(seed);
+  const { cell = 7, ink = PAL.inks[0], angle = .26, jitter = .2, seed = 1, gain = 1, maxCov = .78, blend = 'multiply', al = .95, offset = [0, 0], rotation = 0, mottling = 0 } = o; const r = rng(seed);
   const sw = Math.ceil(W / cell), sh = Math.ceil(H / cell); _cov.width = sw; _cov.height = sh; const g = _cov.getContext('2d'); g.drawImage(src, 0, 0, sw, sh); const d = g.getImageData(0, 0, sw, sh).data;
-  c.save(); resetT(c); c.globalCompositeOperation = blend; c.globalAlpha = al; c.fillStyle = ink; c.beginPath();
+  c.save(); resetT(c); c.globalCompositeOperation = blend; c.globalAlpha *= al; c.fillStyle = ink; c.translate(W / 2 + offset[0], H / 2 + offset[1]); c.rotate(rotation); c.translate(-W / 2, -H / 2); c.beginPath();
   const R = Math.hypot(W, H) / 2, ca = Math.cos(angle), sa = Math.sin(angle);
   for (let v = -R; v <= R; v += cell) for (let u = -R; u <= R; u += cell) { const x = W / 2 + ca * u - sa * v + (r() - .5) * jitter * cell, y = H / 2 + sa * u + ca * v + (r() - .5) * jitter * cell;
-    if (x < 0 || y < 0 || x >= W || y >= H) continue; const k = ((y / cell | 0) * sw + (x / cell | 0)) * 4; const cov = clamp((1 - (d[k] * .299 + d[k + 1] * .587 + d[k + 2] * .114) / 255) * gain, 0, maxCov);
+    if (x < 0 || y < 0 || x >= W || y >= H) continue; const k = ((y / cell | 0) * sw + (x / cell | 0)) * 4; const cov = clamp((1 - (d[k] * .299 + d[k + 1] * .587 + d[k + 2] * .114) / 255) * (d[k + 3] / 255) * gain * (1 - mottling * (.5 + .5 * noise1(x / 85 + y / 130, seed))), 0, maxCov);
     if (cov < .03) continue; const rad = cell * .62 * Math.sqrt(cov); c.moveTo(x + rad, y); c.arc(x, y, rad, 0, TAU); }
   c.fill(); c.restore();
 }
 // paper: fills the frame with paper colour, optional light bands, and stock grain. Resets the transform.
-function paper(c, base = PAL.paper, band = PAL.paperBand, seed = 5) { resetT(c); c.fillStyle = base; c.fillRect(0, 0, W, H);
+function paper(c, base = PAL.paper, band = PAL.paperBand, seed = 5) { resetT(c); c.fillStyle = base; c.fillRect(0, 0, c.canvas.width / S, c.canvas.height / S);
   if (band) { c.save(); c.translate(W / 2, H / 2); c.rotate(-Math.PI / 4); c.fillStyle = band; for (let i = -6; i <= 6; i++) c.fillRect(-1200, i * 160 - 40, 2400, 80); c.restore(); }
   grain(c, rectPath(0, 0, W, H), [0, 0, W, H], 1400, shade(base, .5), .06, seed, 1.6); }
 // night: dark background with star speckle
-function night(c, base = PAL.night, seed = 5) { resetT(c); c.fillStyle = base; c.fillRect(0, 0, W, H); grain(c, rectPath(0, 0, W, H), [0, 0, W, H], 400, '#ffffff', .5, seed, 1.6); }
+function night(c, base = PAL.night, seed = 5) { resetT(c); c.fillStyle = base; c.fillRect(0, 0, c.canvas.width / S, c.canvas.height / S); grain(c, rectPath(0, 0, W, H), [0, 0, W, H], 400, '#ffffff', .5, seed, 1.6); }
 
 // ===================== LATTICES & PARTICLES =====================
 function hexPath(x, y, s) { const p = new Path2D(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i + Math.PI / 6; i ? p.lineTo(x + s * Math.cos(a), y + s * Math.sin(a)) : p.moveTo(x + s * Math.cos(a), y + s * Math.sin(a)); } p.closePath(); return p; }
@@ -278,13 +351,13 @@ function section(c, y, color, seed = 1) { resetT(c); const p = tornEdge(y, { see
 // stickyNote: a paper square with a drawing callback inside
 function stickyNote(c, x, y, s, seed, draw) { c.save(); c.translate(x, y); c.rotate((rng(seed)() - .5) * .12); c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(4, 5, s, s); c.fillStyle = tint(PAL.paper, .5); c.fillRect(0, 0, s, s); c.strokeStyle = alpha(PAL.ink, .25); c.lineWidth = 1; c.strokeRect(.5, .5, s - 1, s - 1); if (draw) draw(c, s); c.restore(); }
 // thread: a thin line wandering down the frame (the website's spine)
-function thread(c, x, seed, color = PAL.accents[0], width = 1.2) { const r = rng(seed); const pts = []; let px = x; for (let y = -10; y <= H + 10; y += 24) { px += (r() - .5) * 26; pts.push([px, y]); } c.save(); c.strokeStyle = color; c.lineWidth = width; c.globalAlpha = .8; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke(); c.restore(); }
+function thread(c, x, seed, color = PAL.accents[0], width = 1.2) { const r = rng(seed); const pts = []; let px = x; for (let y = -10; y <= H + 10; y += 24) { px += (r() - .5) * 26; pts.push([px, y]); } c.save(); c.strokeStyle = color; c.lineWidth = width; c.globalAlpha = .8; wob(c, pts, .6, seed + 1, false, { corner: 2.5, pressure: .3 }); c.restore(); }
 // signOff: the two-word signature with two ink dots, as in every reference film
 function signOff(c, a, b, o = {}) { const { x = 540, y = 540, size = 60, ink = PAL.ink, ink2 = PAL.accents[0], progressA = 1, progressB = 1 } = o; const ta = a.slice(0, Math.round(a.length * progressA)), tb = b.slice(0, Math.round(b.length * progressB));
   handText(c, ta, x, y - 12, { size, ink, ink2, align: 'center' }); if (tb) handText(c, tb, x, y + size * 1.1, { size: size * .75, ink, ink2, align: 'center' }); seedDot(c, x - 10, y + size * .35, 6, ink, null); seedDot(c, x + 10, y + size * .35, 6, ink2, null); }
 
 // ===================== REVEALS & COMPOSITION =====================
-function selfDraw(c, pts, progress, seed, amp = 1.5, close = false) { const L = pathLength(pts, close); c.save(); c.setLineDash([L * progress, L]); wob(c, pts, amp, seed, close); c.restore(); }
+function selfDraw(c, pts, progress, seed, amp = 1.5, close = false) { if (progress <= 0) return; const L = pathLength(smoothPts(pts, close), close) * 1.03 + amp * 2; c.save(); c.setLineDash([L * clamp(progress, 0, 1), L * 2]); wob(c, pts, amp, seed, close); c.restore(); }
 // blot: reveal `src` inside a growing ink blot (screen coords) with a bristly fringe
 function blot(c, src, cx, cy, R, seed, fringe = PAL.night) { if (R <= 0) return; const r = rng(seed), path = new Path2D(); for (let i = 0; i < 72; i++) { const a = i / 72 * TAU, rr = R * (1 + (r() - .5) * .16), x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; i ? path.lineTo(x, y) : path.moveTo(x, y); } path.closePath();
   c.save(); resetT(c); c.clip(path); c.drawImage(src, 0, 0, W, H); c.restore(); c.save(); resetT(c); c.strokeStyle = fringe; c.lineWidth = 1.6; c.globalAlpha = .9;
@@ -305,6 +378,8 @@ function badges(c, cards, o = {}) { const { cx = 540, cy = 540, r0 = 40, gap = 1
     for (let j = 0; j < n; j++) { const a = j / n * TAU + k * .5, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R, s = size * progress; if (s > 1) { c.save(); c.beginPath(); c.arc(x, y, s, 0, TAU); c.clip(); c.drawImage(_badge.get(cards[placed]), x - s, y - s, s * 2, s * 2); c.restore(); c.strokeStyle = ring; c.lineWidth = 3; c.beginPath(); c.arc(x, y, s, 0, TAU); c.stroke(); } placed++; } k++; }
   c.restore(); }
 // flash: one near-white drawn frame
+// smear: motion blur by hand. draw(dt) is called for dt = -span..0 seconds behind the present, the older copies fainter, then once at 0. For anything fast.
+function smear(c, n, span, draw) { for (let k = n; k >= 1; k--) { c.save(); c.globalAlpha *= .45 * (1 - k / (n + 1)); draw(-span * k / n); c.restore(); } draw(0); }
 function flash(c, color = tint(PAL.paper, .6)) { resetT(c); c.fillStyle = color; c.fillRect(0, 0, W, H); }
 
 // ===================== PHOTOS & DOODLES =====================
@@ -439,42 +514,52 @@ function paletteSheet(c) { paper(c); c.font = '18px ui-monospace, Menlo, monospa
 // ===================== TIMELINE & RUNTIME =====================
 // defineFilm({ palette, timeline, score }) wires the player, the export buttons and the render hooks.
 //   palette   name or object; optional (defaults to the current PAL)
-//   timeline  [{ name, dur, fn(c, tau, i) }]   tau = seconds into the scene, i = global drawn frame
+//   timeline  [{ name, dur, fn(c, tau, i), twos }]   tau = seconds into the scene, i = the global frame on the 12 fps grid (for pulse, boil, flicker)
 //   score     (ac, t0, dest) => schedules notes; optional
-let FILM = null, ctx = null, cv = null;
+//   fps       24 (default), or explicit 12 for an archival film: the camera, particles and light run on ones and tau is continuous; a scene with
+//             twos: true still gets tau snapped to the 12 fps grid, and inside a scene on ones a character's pose comes from twos(tau)
 //   format    { ar: '16:9', width: 1920 }; the query string ?ar=9:16&w=1080 overrides it at render time
-function defineFilm({ palette, timeline, score, format = {} }) {
+let FILM = null, ctx = null, cv = null;
+function defineFilm({ palette, timeline, score, format = {}, fps = 24 }) {
+  if (![12, 24].includes(fps)) throw new Error('Film fps must be 12 or 24');
+  if (!Array.isArray(timeline) || !timeline.length || timeline.some(s => !Number.isFinite(s.dur) || s.dur <= 0 || typeof s.fn !== 'function')) throw new Error('Timeline needs positive durations and scene functions');
+  FPS_DRAW = fps;
   const qs = new URLSearchParams(location.search);
   setFormat({ ar: qs.get('ar') || format.ar || '1:1', width: +qs.get('w') || format.width || undefined });
   if (palette) usePalette(palette);
   cv = document.getElementById('c'); if (!cv) { cv = document.createElement('canvas'); cv.id = 'c'; document.body.prepend(cv); } cv.width = OUT_W; cv.height = OUT_H; ctx = cv.getContext('2d');
-  const DUR = timeline.reduce((a, s) => a + s.dur, 0), NDRAW = Math.round(DUR * FPS_DRAW);
-  FILM = { timeline, score, DUR, NDRAW };
+  const DUR = timeline.reduce((a, s) => a + s.dur, 0), NDRAW = Math.max(1, Math.round(DUR * FPS_DRAW));
+  FILM = { timeline, score, DUR, NDRAW, palette: { ...PAL } };
   window.__drawFrame = i => { cur = -1; show(i); }; window.__NDRAW = NDRAW; window.__FILM = FILM;
-  window.__size = { w: OUT_W, h: OUT_H, W, H, S };
-  window.__frame = i => { cur = -1; show(i); return cv.toDataURL('image/png'); };            // exact pixels, no screenshot
-  window.__grid = (n = 24, cellW = 240) => gridSheet(n, cellW).toDataURL('image/jpeg', .9);  // n evenly spaced frames
+  window.__size = { w: OUT_W, h: OUT_H, W, H, S }; window.__fps = FPS_DRAW;
+  let pk = null, png = null; window.__frame = i => { const k = frameKey(i); if (k === pk) return png; cur = -1; show(i); pk = k; png = cv.toDataURL('image/png'); return png; };   // exact pixels, no screenshot; a frame identical to the last one (a scene on twos) is not redrawn
+  window.__grid = (n = 24, cellW = 240) => gridSheet(n, cellW).toDataURL('image/jpeg', .9);
+  window.__strip = (start, count = 12, cellW = 240) => gridSheet(count, cellW, start).toDataURL('image/jpeg', .94);  // n evenly spaced frames
   window.__wav = score ? async () => { const u = new Uint8Array(await renderWav()); let b = ''; for (let k = 0; k < u.length; k += 32768) b += String.fromCharCode.apply(null, u.subarray(k, k + 32768)); return btoa(b); } : null;   // the score as base64 WAV
   if (qs.has('bare')) { document.body.style.cssText = 'margin:0;padding:0;background:#000'; cv.style.cssText = `width:${OUT_W}px;height:${OUT_H}px;display:block`; document.querySelectorAll('.bar').forEach(b => b.hidden = true); }
   else buildPlayer();
   const go = () => { if (qs.has('grid')) { const img = new Image(); img.src = window.__grid(+qs.get('grid') || 24, 240); img.style.cssText = 'max-width:96vw'; cv.hidden = true; cv.after(img); }
     else show(qs.has('frame') ? +qs.get('frame') : 0); window.__ready = true; };
-  if (_photoLoads.length) Promise.all(_photoLoads).then(go); else go();   // photos decode before the first frame
+  Promise.all([..._photoLoads, document.fonts.ready]).then(go).catch(e => { window.__error = String(e); console.error(e); });   // photos decode before the first frame
 }
 // gridSheet: n evenly spaced drawn frames tiled 6 across, labelled with index and time. The first thing to look at.
-function gridSheet(n = 24, cellW = 240) {
+function gridSheet(n = 24, cellW = 240, startFrame = null) {
+  if (!Number.isInteger(n) || n < 1 || n > 240) throw new Error('Sheet count must be 1..240');
   const cols = 6, rows = Math.ceil(n / cols), cellH = Math.round(cellW * OUT_H / OUT_W), pad = 18, sheet = document.createElement('canvas');
   sheet.width = cols * cellW; sheet.height = rows * (cellH + pad); const g = sheet.getContext('2d'); g.fillStyle = '#141414'; g.fillRect(0, 0, sheet.width, sheet.height);
   g.font = '12px ui-monospace, Menlo, monospace'; g.fillStyle = '#e6e6e6';
-  for (let k = 0; k < n; k++) { const i = Math.round(k * (FILM.NDRAW - 1) / Math.max(1, n - 1)); cur = -1; show(i);
+  for (let k = 0; k < n; k++) { const i = startFrame === null ? Math.round(k * (FILM.NDRAW - 1) / Math.max(1, n - 1)) : clamp(startFrame + k, 0, FILM.NDRAW - 1); cur = -1; show(i);
     const x = (k % cols) * cellW, y = Math.floor(k / cols) * (cellH + pad); g.drawImage(cv, x, y, cellW, cellH); g.fillText(`${String(i).padStart(3, '0')}  ${(i / FPS_DRAW).toFixed(2)}s`, x + 4, y + cellH + 13); }
   cur = -1; return sheet;
 }
-function drawFrame(i) { const { timeline } = FILM; const t = i / FPS_DRAW; let acc = 0;
-  for (let k = 0; k < timeline.length; k++) { const s = timeline[k]; if (t < acc + s.dur || k === timeline.length - 1) { VIEW = null; resetT(ctx); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; s.fn(ctx, t - acc, i); resetT(ctx); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; return s.name; } acc += s.dur; } }
+// locate: which scene frame i falls in, its tau (snapped to the 12 fps grid for a scene on twos) and the 12 fps frame index handed to the scene
+function locate(i) { if (!Number.isInteger(i) || i < 0 || i >= FILM.NDRAW) throw new RangeError('Frame outside film: ' + i); const { timeline } = FILM; const t = i / FPS_DRAW; let acc = 0;
+  for (let k = 0; k < timeline.length; k++) { const s = timeline[k]; if (t < acc + s.dur - 1e-9 || k === timeline.length - 1) { const tau = (FPS_DRAW > 12 && s.twos) ? twos(t - acc) : t - acc; return { s, k, tau, i2: Math.floor((acc + tau) * 12 + 1e-6) }; } acc += s.dur; } }
+const frameKey = i => { const L = locate(i); return `${L.k}|${L.tau.toFixed(5)}|${L.i2}`; };
+function drawFrame(i) { const { s, tau, i2 } = locate(i); VIEW = null; usePalette(FILM.palette); ctx.save(); try { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); resetT(ctx); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setLineDash([]); ctx.filter = 'none'; ctx.shadowBlur = 0; s.fn(ctx, tau, i2); } finally { ctx.restore(); } return s.name; }
 let cur = -1, playing = false, start = 0, sound = false, ac = null, ui = {};
 function show(i) { if (i === cur) return; cur = i; const name = drawFrame(i); if (ui.scrub) { ui.scrub.value = i; ui.info.textContent = `draw ${String(i).padStart(3, '0')}/${FILM.NDRAW}  t=${(i / FPS_DRAW).toFixed(2)}s  ${name}  ${W}x${H}@${OUT_W}px`; } }
-function loop() { if (!playing) return; const t = ((performance.now() - start) / 1000) % FILM.DUR; show(Math.floor(t * FPS_DRAW)); requestAnimationFrame(loop); }
+function loop() { if (!playing) return; const t = ((performance.now() - start) / 1000) % FILM.DUR; show(Math.min(FILM.NDRAW - 1, Math.floor(t * FPS_DRAW))); requestAnimationFrame(loop); }
 function buildPlayer() {
   const bar = document.createElement('div'); bar.className = 'bar'; bar.innerHTML = '<button id="play">play</button><button id="snd">sound: off</button><input id="scrub" type="range" min="0" max="0" value="0"><span id="info"></span><button id="exp">export PNG frames</button><button id="wav">export score.wav</button><span id="msg"></span>';
   cv.after(bar); ui = { scrub: bar.querySelector('#scrub'), info: bar.querySelector('#info'), msg: bar.querySelector('#msg') }; ui.scrub.max = FILM.NDRAW - 1;

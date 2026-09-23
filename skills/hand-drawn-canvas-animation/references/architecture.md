@@ -1,26 +1,29 @@
-# Architecture, API, puppets, rendering, pitfalls
+# Architecture, API, drawings, rendering, pitfalls
 
 ## Files of a film
 
 ```
 my-film/
   core.js            copied from assets/, never edited per film
-  my-film.html       copied from assets/film-template.html, edited
+  studio.js          optional motion/construction helpers
+  cels.js            whole-pose stroke drawings and exposure sheets
+  materials.js       optional material helpers
+  my-film.html       original drawings and scenes; see sketchbook-bird.html
   render.mjs         copied from scripts/
   package.json       copied from scripts/, then npm i
   out/               my-film-frames/, my-film.mp4, my-film-contact.jpg
 ```
 
-`my-film.html` has five sections in this order: brief and beat sheet (a
-comment), palette, puppets, scenes, score, and the `defineFilm` call.
+`my-film.html` contains the brief/beat sheet, palette, drawing data, exposure
+sheets, scenes, optional score and the `defineFilm` call. Keep authoring data
+separate from the brush and runtime so poses can be revised directly.
 
 ## Format and resolution
 
 The frame is logical: the short side is always 1080 units and the long side
 follows the aspect ratio, so a 16:9 film is 1920 x 1080 units and a 9:16 film
 is 1080 x 1920. Scenes draw in these units and place things relative to `CX`,
-`CY`, `W` and `H`, never at literal pixel positions, and the same scene then
-works in any format. Output resolution is a separate choice made at render
+`CY`, `W` and `H`, never at literal pixel positions, and review composition again for each aspect ratio. Output resolution is a separate choice made at render
 time: `--width 1920` scales everything by `S` on the way to the canvas, lines
 and dots included, so a 4K render is as crisp as a 1080 one.
 
@@ -37,8 +40,13 @@ libx264 needs it.
 ## Invariants
 
 - `drawFrame(i)` is a pure function of the drawn-frame index. Scenes keep no
-  state between frames and never read the clock. Same `i`, same pixels, on
-  any machine.
+  state between frames and never read the clock. Same `i`, same pixels in the same pinned browser/font runtime. Cross-machine pixels may differ. Every motion helper (`key`, `spring`, `settle`, `drift`...) is
+  a pure function of time for the same reason.
+- A film draws at 24 fps by default, or explicitly 12 for archival timing. The
+  `i` a scene receives is always the frame index on the 12 fps grid, so
+  `pulse`, `boil` and `flicker` keep their meaning; `tau` is continuous in a
+  24 fps film unless the scene is marked `twos: true`. `twos(tau)` snaps a
+  time to the grid for a character's pose.
 - A scene is `sceneX(c, tau, i)`: `c` a 2D context (main canvas or a layer),
   `tau` seconds since the scene started, `i` the global drawn frame.
 - The timeline is `[{name, dur, fn}]`. Boundaries are the cuts. Duration and
@@ -66,16 +74,21 @@ libx264 needs it.
 | config | `W`, `H`, `CX`, `CY`, `S`, `OUT_W`, `OUT_H`, `SHORT`, `setFormat({ar, width})`, `FPS_DRAW`, `FPS_OUT`, `TAU`, `HAND_FONT` |
 | colour | `lerp`, `clamp`, `parseColor`, `toHex`, `mix`, `tint`, `shade`, `alpha`, `hsl`, `withHsl`, `rotateHue`, `saturate`, `lighten`, `ramp`, `harmony` |
 | palettes | `PALETTES`, `PAL`, `usePalette`, `makePalette`, `derivePalette`, `duotone` |
-| random, easing | `rng(seed)`, `easeIO`, `easeOut`, `easeIn`, `sm(a, b, t, ease)`, `flicker(i, period)`, `pulse(i, every, hold)` |
-| geometry | `ellPts`, `ellPath`, `circPath`, `rectPath`, `roundRectPath`, `polyPath`, `pathLength`, `bez`, `layer(w, h)`, `cam`, `resetT`, `blit(c, layer)` |
-| marks | `wob`, `crayon`, `hatch(c, path, box, opts)`, `grain`, `scribble`, `cross`, `construction`, `squiggleText`, `handText` |
+| random, easing | `rng(seed)`, `hash(k, seed)`, `noise1(x, seed)`, `drift(t, seed, {amp, freq})`, `easeIO` (cubic), `easeOut`, `easeIn`, `easeOutQuint`, `easeInOutQuint`, `easeInOutSine`, `easeOutExpo`, `easeOutBack`, `easeInBack`, `easeOutElastic`, `sm(a, b, t, ease)`, `flicker(i, period)`, `pulse(i, every, hold)`, `twos(tau)` |
+| motion | `key(t, keys, ease)`, `keyPath(t, keys, {ease})`, `spring(t, {freq, damp})`, `settle(t, t0, {amp, freq, decay, phase})`, `anticipate(a, b, t, {back, hold, e})`, `arc(a, b, u, lift)`, `squash(k)`, `breathe(t, period, phase)`, `camKeys(c, tau, keys, {ease, hand, seed})`, `smear(c, n, span, draw)` (see `motion.md`) |
+| geometry | `ellPts`, `ellPath`, `circPath`, `rectPath`, `rectPts`, `roundRectPath`, `polyPath`, `pathLength`, `bez`, `layer(w, h)`, `cam`, `resetT`, `blit(c, layer)` |
+| organic forms | `blob(cx, cy, rx, ry, seed, {amp, rot, n})`, `smoothPts(pts, close, step, corner)`, `curvePath(pts, close, corner)`, `warp(pts, seed, amp, close, step)` |
+| marks | `wob(c, pts, amp, seed, close, {pressure, smooth, corner, freq})`, `crayon`, `hatch(c, path, box, opts)` (`flow`, `curve`), `grain`, `scribble`, `cross`, `construction`, `squiggleText`, `handText` |
 | finishes | `surface(c, path, box, opts)`, `dotScreen`, `plate()`, `printPlate`, `paper`, `night` |
 | lattices, particles | `hexPath`, `hexCells`, `hexLattice`, `aster`, `dotBurst`, `speedLines`, `loops` |
 | motifs | `seedDot`, `ripples`, `dashedRing`, `dottedArc`, `plant`, `tornEdge`, `section`, `stickyNote`, `thread`, `signOff` |
-| reveals, composition | `selfDraw`, `blot`, `iris`, `mosaic`, `montage`, `badges`, `flash` |
+| reveals, composition | `selfDraw`, `blot`, `iris`, `mosaic`, `montage`, `badges`, `flash`, `smear` |
 | photos, doodles | `registerPhoto`, `PHOTOS`, `place`, `on`, `onAll`, `photo`, `photoFront`, `photoSheet`, `backdrop`, `nightfall`, `glow`, `chalkPalette`, `pastel`, `PASTELS`, `spline`, `splinePath`, `brush`, `wash`, `gouache`, `boil`, `doodle`, `pen`, `nightShot`, `rim`, `setView`, `viewT`, `whip` (see `doodle.md`) |
+| found motion (`assets/roto.js`) | `registerClip`, `CLIPS`, `roto`, `rotoPose`, `rotoSprite`, `drawSprite`, `rotoGap`, `rotoAirborne` (see `found-motion.md`) |
+| sand (`assets/sand.js`) | `sandFilm`, `sandFrame`, `sandAdvance`, `sandImage`, `sandRender`, `sandLive`, `sandLook`, `sandTint`, `sandToScreen`, `sandScale`, `G.*`, `scanFill`, `circlePts`, `spiralPts` (see `sand.md`) |
+| paper in space (`assets/paper3d.js`) | `cam3`, `proj3`, `tex3`, `quad3`, `shadeOf`, `shadow3`, `shadowsBegin`, `shadowsEnd`, `book3`, `V3` (see `paper3d.md`) |
 | sheets | `styleSheet`, `paletteSheet` |
-| runtime | `defineFilm({palette, timeline, score, format})`, `gridSheet(n, cellW)`, `note`, `noiseBurst`, `pentHz`; hooks `window.__frame(i)` (PNG data URL), `window.__grid(n)`, `window.__size`, `window.__wav()` (base64 WAV of the score), `window.__ready` (set after every registered photo has decoded) |
+| runtime | `defineFilm({palette, timeline, score, format, fps})`, `gridSheet(n, cellW)`, `note`, `noiseBurst`, `pentHz`; hooks `window.__frame(i)` (PNG data URL, cached when the frame equals the last one), `window.__grid(n)`, `window.__size`, `window.__fps`, `window.__wav()` (base64 WAV of the score), `window.__ready` (set after every registered photo has decoded) |
 
 Signatures worth knowing by heart:
 
@@ -97,34 +110,23 @@ signOff(c, a, b, { x, y, size, ink, ink2, progressA, progressB })
 path. It bounds the hatch or dot grid; a box that is too small leaves bare
 patches, one too large only costs time.
 
-## Building a puppet
+## Building a character
 
-1. **Parts.** 3 to 8 parts as ellipses, circles, rounded rects or polygons in
-   local coordinates, about 200 px tall at scale 1. Keep the arguments in an
-   `ARGS` object and build a `Path2D` per part from them; `ellPts(...ARGS.x)`
-   reuses them for the wobbly outline.
-2. **Pose.** 3 to 6 numbers: `walk`, `twitch`, `wing`, `flap`, `tuck`,
-   `tilt`. Nothing else.
-3. **Order.** Limbs behind, translucent parts, body parts back to front,
-   face, accents on top.
-4. **Per part.** `fill(path)` → `surface(c, path, box, {seed})` → `wob`
-   outline. Markings are thick curved strokes clipped to the part. That is
-   the whole ink pipeline, and it re-textures itself when the palette changes
-   finish.
-5. **Blueprint.** Chalk `wob` outlines only, weight 2.4 to 2.8, lattices in
-   chalk at alpha 0.75.
-6. **Details.** Hex-lattice eyes shaded toward a highlight (`mix(shade(blush), tint(blush), l)`),
-   one `scribble` on the largest part, `construction` around the puppet in
-   establishing shots.
-7. **Motion.** Limbs from `sin(phase)`; blur by drawing a part three times
-   at ±angle with alpha; never tween the texture.
-8. **Test.** Put the puppet on the style sheet at scales 0.6, 1 and 1.8.
-   Render frame 0. It must read at 240 px.
+For the default hand-drawn character, read [redrawn-animation.md](redrawn-animation.md)
+and `examples/sketchbook-bird.html`. Author complete keys and breakdowns with
+semantic stroke ids and an exposure sheet. Keep gesture, contour, overlaps and
+local hatching together in each drawing. `cels.js` compiles graphite/ink marks;
+assisted inbetweens require matching landmarks and topology.
 
-Non-creature subjects use the same recipe: parts are `roundRectPath`s and
-circles, eyes become LEDs (small hex discs), hatch runs along panel
-directions, markings become vents or traces, and `construction` lines make
-the object read as a technical drawing.
+A rig can support construction, repeated travel and contact solving. Redraw the
+visible outline around bent limbs and changing views; rotating oval pieces with
+grain over them does not satisfy the default sketch direction. The bug template
+and weight study remain useful rig/API examples. Use them as the visual model
+only for an explicitly chosen cutout or procedural-puppet treatment.
+
+Keep each exposed drawing and its material pattern stable for the hold. Camera
+movement is separate; inspect their combined screen motion. Blueprint and
+construction-line modes are optional story devices.
 
 ## Riso plates
 
@@ -181,8 +183,8 @@ function sceneRoom(c, tau, i) {
 - Spot check: `node render.mjs <film>.html --only 0,37,74` writes
   `out/<film>-frames/NNNN.png` and stops.
 - Full render: `node render.mjs <film>.html`. One headless Chrome through
-  `puppeteer-core`, every drawn frame screenshotted, then ffmpeg packs the
-  mp4 on twos and builds `out/<film>-contact.jpg` with two tiles per second.
+  `puppeteer-core`, every frame exported from the canvas, then ffmpeg packs a 24 fps
+  mp4 (duplicating only an explicitly 12 fps film) and builds `out/<film>-contact.jpg` with two tiles per second.
   A frame that throws is reported with its number and time, and no mp4 is
   built. If the film defines a score, the page renders it through an
   `OfflineAudioContext` and the script writes `out/<film>-score.wav` and
@@ -195,7 +197,8 @@ function sceneRoom(c, tau, i) {
   `ffmpeg -framerate 12 -i %04d.png -r 24 -pix_fmt yuv420p -crf 18 out.mp4`.
 - Remotion, if the project already uses it: call `drawFrame` from a component
   on a canvas ref with `useCurrentFrame()`; `fps: 24` and
-  `drawFrame(Math.floor(frame / 2))`.
+  `drawFrame(Math.min(__NDRAW - 1, Math.floor(frame * __fps / compositionFps)))`.
+  At 24 fps in both places, pass `frame` directly.
 
 ## Pitfalls
 
@@ -206,8 +209,7 @@ function sceneRoom(c, tau, i) {
 - `clip` without `save`/`restore` → every later draw is clipped.
 - `selfDraw` needs the real perimeter for the dash pattern; `pathLength`
   computes it.
-- `getImageData` fails on a canvas that ever drew a cross-origin image. This
-  style uses no images.
+- `getImageData` fails on a canvas that ever drew a cross-origin image. Use embedded or same-origin assets and await image decoding.
 - Ghost copies at alpha 0.34 each stack to near-opaque; divide by the count.
 - The in-page PNG export needs a click (File System Access API); automated
   renders go through `render.mjs`.
@@ -227,4 +229,31 @@ function sceneRoom(c, tau, i) {
 - `drawImage(layer, 0, 0)` draws the layer at output-pixel size; under a
   scaled format it lands wrong. Use `blit(c, layer)` or pass `W, H`.
 - Loading `core.js` twice, or redefining `W`, `H`, `PAL` in the film, throws
-  at load: top-level `const`s are shared across classic scripts.
+  at load: top-level `const`s are shared across classic scripts. The same for
+  a film's own `key`, `arc`, `drift`, `spring`, `hash` or any other core name:
+  the page never sets `__ready` and `render.mjs` waits until it times out.
+- `wob` on a rectangle keeps the corners; `wob` on a dense polyline curves
+  it. A polyline that must stay angular (a lightning bolt, a saw) passes
+  `{ smooth: false }`.
+- `pressure` strokes one segment at a time. Fine for outlines, wrong for a
+  hatch or a lattice: those stay single-path.
+- `drift` and `breathe` through `twos()` step visibly. Choose exposure deliberately; do not quantize twice.
+
+## Optional production modules and verification
+
+Copy assets/studio.js and assets/cels.js beside core.js for whole drawings.
+Add assets/materials.js when using the optional material helpers. Their signatures and constraints are in studio.md. The
+frame callback's `i` remains a 12 Hz compatibility index; use tau or an exposure
+track for new actions. Existing no-fps films now sample at 24 fps; set fps:12
+explicitly to preserve their previous cadence. Runtime resets the base palette
+on every frame, so a palette switch must be explicit in each scene.
+
+The renderer supports --strip START,COUNT for consecutive-frame QA. Full renders
+stage new frames, limit encoded duration and replace only the named film's
+outputs after success. Failed staging directories are retained for diagnosis.
+The -render.json sidecar records dimensions, frame counts, cadence and duration.
+--ar is an override, not a default that replaces defineFilm.format.
+
+Run node scripts/verify.mjs for regression checks. Preserve a pinned Chrome and
+font environment when comparing exact pixels. Numerical checks do not certify
+acting or drawing quality.

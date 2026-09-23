@@ -1,10 +1,10 @@
 # Palettes, tints and finishes
 
-The colour system lives in `assets/core.js`. A film never writes a hex value
-into a scene; it picks a palette, derives from it, and reads `PAL.*`. That is
-what makes a scene portable between looks: the same puppet renders as ink on
-warm paper, as riso dots, as a flat screen print or as graphite, by changing
-one line.
+The colour system lives in `assets/core.js`. Use `PAL.*` for colours shared
+across scenes or material variants; local authored marks may carry their own
+colours. A palette change can reuse geometry across finishes, but adapting a
+look also requires appropriate stroke language, separations and drawing design.
+A new palette alone does not turn a rig into redrawn pencil animation.
 
 ## The palette schema
 

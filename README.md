@@ -6,7 +6,7 @@
 |---|---|
 | [riso-rooms](skills/riso-rooms) | Isometric illustrations that look risograph-printed: cutaway rooms with halftone inks, misaligned plates and wobbly lines, drawn in code on a canvas you can pan and zoom. |
 | [logo-intro](skills/logo-intro) | A kinetic name/logo intro in plain JS: atom rings, hyperspace warp, flash, letters popping in with doodles, a boiling highlight box, a wipe to a sparkle. |
-| [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | 10–30 s films where every frame is drawn in Canvas 2D JavaScript: ink on warm paper, riso halftones, screen prints, graphite, or brush-pen doodles on cut-out photos, rendered to mp4 with a generated Web Audio score. |
+| [hand-drawn-canvas-animation](skills/hand-drawn-canvas-animation) | Hand-drawn short films drawn in Canvas 2D JavaScript: whole-pose character drawings, ink, pencil, riso, screen print or brush-pen doodles on photos, plus rotoscoped real motion, sand animation and a pop-up paper book, rendered to mp4 with a generated Web Audio score. |
 | [ink-abstraction](skills/ink-abstraction) | A 12-panel pen-and-ink abstraction sheet of any subject in vanilla JS: hatched sketch → black masses → cross-stitch grid → patterned cells → a few lines and one knot. |
 | [morph-tile-loop](skills/morph-tile-loop) | Seamless geometric loops in vanilla JS: a dot opens into layered rings, morphs into a gradient star, zooms out over an endless lattice into halftone, and dives back in. |
 | [iso-sim-town](skills/iso-sim-town) | A playable late-90s isometric sim town in vanilla JS: pre-rendered-looking buildings, baked shadows, dithered 256-colour pixels, traffic, day/night, a Props window and a Windows 98 UI. |
@@ -63,19 +63,21 @@ Made by rebuilding a reference motion-graphics intro frame by frame in JavaScrip
 
 ## hand-drawn-canvas-animation
 
-![One subject through the four looks](skills/hand-drawn-canvas-animation/assets/preview-four-looks.jpg)
+![Becoming: a chick grows through different materials](skills/hand-drawn-canvas-animation/assets/preview-becoming-phoenix.jpg)
 
-![Doodles on museum photos](skills/hand-drawn-canvas-animation/assets/preview-held-once.jpg)
+![A small decision: whole-pose pencil drawings](skills/hand-drawn-canvas-animation/assets/preview-sketchbook-bird.png)
 
-- `SKILL.md`: the procedure (brief → beat sheet → palette → puppets → scenes one at a time → full render → score), the rules and a review checklist.
-- `assets/core.js` + `assets/film-template.html`: the shared core (palettes, finishes, marks, lattices, reveals, photos and doodles, camera, timeline, player) and the file you copy per film.
-- `examples/`: a 9.5 s fruit-fly ink film, a paper boat through four looks, a 22 s doodle film on museum photos and a 31 s night chase.
-- `scripts/render.mjs`: a frame grid in seconds, spot frames, full mp4 on twos with the score muxed in and a contact sheet. `scripts/photo.mjs`: cuts a found photo out of its background and writes a check sheet with a coordinate grid.
-- `references/`: style rules, palettes, 39 scene recipes, the doodle look, architecture and pitfalls.
+![Found motion, sand and paper in space](skills/hand-drawn-canvas-animation/assets/preview-methods.jpg)
+
+- `SKILL.md`: the procedure (brief → beat sheet → palette → key poses → scenes one at a time → full render → score), the rules and a review checklist.
+- `assets/core.js` + `assets/film-template.html`: the shared core (palettes, finishes, marks, reveals, photos and doodles, camera, timeline, player) and the file you copy per film. Engines that load beside it: `roto.js` (found motion traced from video), `sand.js` (a sand bed on backlit glass), `paper3d.js` (pop-up pages in a 3D room), plus `cels.js`, `materials.js` and `studio.js`.
+- `examples/`: `becoming-phoenix/`, a 60 s film that moves through five drawing styles, sand and a pop-up book; `sketchbook-bird.html`, a whole-pose pencil study; the fruit fly, four looks, museum-photo doodles and night chase; gallop, paper horse, moon book, one seed, one year, weight and material studies; and `workshop.html`, a point-and-click screen that drives the film engine.
+- `scripts/`: `render.mjs` (frame grid, spot frames, mp4 on twos with the score, contact sheet), `verify.mjs`, `photo.mjs` (cut a photo out of its background) and `roto.py` (trace motion from a video).
+- `references/`: style rules, palettes, redrawn animation, motion, mixed media, found motion, sand, paper3d, studio, the doodle look, architecture and pitfalls.
 
 Needs Node 18+, Chrome and ffmpeg; the doodle look cuts photos best with `rembg` on PATH. `cd` into a film folder with `core.js`, `render.mjs` and `package.json`, `npm i`, then `node render.mjs film.html --grid 24`.
 
-The looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://x.com/kevin_t_ngo/status/2099858454043349342), [doodles on photos](https://x.com/kevin_t_ngo/status/2100601972902842517) and others). The core and scenes are original code.
+Synced from [alesha-pro/tools](https://github.com/alesha-pro/tools/tree/main/skills/hand-drawn-canvas-animation) (MIT, see the skill's `LICENSE`). The first looks are rebuilt from Kevin Ngo's films ([the life of a fruit fly](https://x.com/kevin_t_ngo/status/2099858454043349342), [doodles on photos](https://x.com/kevin_t_ngo/status/2100601972902842517) and others).
 
 ## ink-abstraction
 

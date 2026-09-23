@@ -1,110 +1,106 @@
-# Style: the looks, the rules, the vocabulary
+# Art direction by medium
 
-One core, four drawn looks and a fifth that draws on photos (`doodle.md`).
-All come from films by the same author and share
-the bones: paper stock, seeded textures, hard cuts, a drawn cadence, a signed
-ending. They differ in palette, finish and the devices they lean on.
+Choose a material and a drawing language separately. The default character
+language is visible strokes and whole redrawn poses; see
+[redrawn-animation.md](redrawn-animation.md). Keep the palette deliberate;
+clean shapes, aligned fills, pure light accents and several materials in one shot
+are allowed when the chosen reference calls for them. Procedural roughness is
+optional. The original Kevin Ngo films remain references for particular graphic
+looks; their montage structures and signatures are not rules for every film.
 
-## The looks
+## Ink
 
-| look | palette | finish | backgrounds | line | texture | signature devices | reference |
-|---|---|---|---|---|---|---|---|
-| **ink** | `paperInk` | `ink` | warm paper with light bands; navy for blueprint interludes | dark wobbly outline 2 to 3 px | hatching along the form, grain, cross-hatch shadows | construction lines, riso scribble on one part, hex lattices, blot wipe, mosaic POV, camera follow | the fruit fly |
-| **riso** | `risoPop` | `riso` | cream stock; purple-navy starfield | crayon strokes with grainy edges | halftone dot screens per ink, overprinted | seed dot in every frame, crayon ripples, iris, 4-cards-per-second montage, badge gallery, duotone beat, hand sign-off | the flipbook |
-| **screen** | `screenSea` | `screen` | cream sky, blue water, one orange desk; starfield at night | thin dark outline only where a shape needs it | a regular dot grid on every flat shape | one constant protagonist through 30 cuts, day and night pairs, origami setup and payoff, squiggle letters | the paper boat |
-| **doodle** | `doodlePastel` through `pastel(name)` | `flat` | one pastel sheet per object with a vignette; navy after `nightfall` | brush pen 3 to 5 px, swelling and tapering, drawing itself on | watercolour washes off the line, white gouache bodies | a cut-out photo as the subject, the object misread as something else, drawings behind, on and inside it, the object reacts, handwritten words, prints on a line at the end | the doodle film, see `doodle.md` |
-| **pencil** | `pencilMinimal` | `pencil` | cream; pale pink and sage sections; warm black section | thin graphite, 0.8 to 1.2 px | almost none: sparse lines, tiny dots | torn-edge sections, walls of squiggle text, pressed plants, sticky notes, a thread down the page, dotted arcs and dot fireworks on black, an enso | the personal website |
+Prioritize construction and silhouette, then line hierarchy and form shading.
+Use pressure-shaped contour gestures and lighter internal detail. Let stroke
+endings and selected overlaps remain visible. Redraw the contour for each pose;
+keep long edges confident rather than roughening every millimetre. Break a line only where
+light, overlap or gesture motivates it. `drawCel(...,{material:'ink'})` draws authored cels;
+`makeStroke`/`drawStroke` preserve an
+authored pressure profile. `formHatch` takes tone and direction fields; run it in
+fixed local bounds and turn/deform the result with the object. Add cross-hatching
+in the shadow instead of darkening every surface equally. Clean ink need not boil.
 
-A film can live in one look or cut between them. Cutting looks is itself a
-device (`examples/four-looks.html` does it seven times) and must land on a
-hard cut, never inside a shot.
+Reject: uniformly hairy outlines, the same hatch angle on every body part,
+search lines everywhere, flickering hatch identities. Test: a head turn and an
+arm lifting weight, viewed both as silhouette and as finished ink.
 
-## Rules
+## Pencil
 
-These are not suggestions. If a frame breaks one, fix the frame.
+Start with `cels.js` and `drawCel(...,{material:'pencil'})`: narrow interrupted
+passes with pressure, authored as whole drawings. Use `graphite` for additional
+tonal strokes when needed. The older `drawStroke` pencil option adds deposits
+to a filled ribbon; that alone is insufficient for an open pencil sketch. Separate outline, broad side-of-pencil shading and sparse
+construction lines. Vary pressure along a deliberate drawing gesture; do not
+map the character's travelling speed to pencil pressure. Several quieter passes
+usually read better than a thick noisy contour. Held redraw variants should
+preserve landmarks, proportions and endpoints.
 
-1. **Paper, not screen.** Every frame starts with `paper(c)` or `night(c)`:
-   stock colour plus stock grain. Never pure black, never pure white.
-2. **Texture is a finish, not a gradient.** Shading comes from `surface()`:
-   hatching, dot screen or graphite. No `createLinearGradient` on the final
-   canvas, no `filter`, no `shadowBlur`. The one exception is inside a riso
-   plate, where a gradient becomes dot size (`printPlate`) or a density
-   function (`dotScreen`).
-3. **Nothing lines up perfectly.** Fill a shape with a `Path2D`, outline it
-   with a separately jittered polyline (`wob`, `crayon`). Fill and outline
-   must not coincide. Outline 2 to 3 px in ink and screen, crayon 3 to 5 px in
-   riso, 0.8 to 1.2 px in pencil.
-4. **Misregistration is an accent.** `scribble` on one or two parts per
-   frame in the ink look; two-ink offsets in `seedDot`, `handText` and
-   `signOff` everywhere. Never on backgrounds.
-5. **Two renderers, one geometry.** Every drawable takes `mode`: the normal
-   mode for its look, or `blueprint` (chalk strokes on night, no fills,
-   lattices as outlines). Blueprint interludes mean "look inside".
-6. **Guides show.** Construction lines with ticks and crosses in about half
-   the ink shots; dashed rings and dotted arcs in riso and pencil. They say
-   "this is a drawing being made".
-7. **Lattices for many-of-the-same.** Hex lattices for eyes, cells, POV
-   mosaics; dot grids for cities, fields, crowds.
-8. **Seeded everything.** `rng(seed)`. `Math.random` is banned. Textures do
-   not change between drawn frames of a static shot. Deliberate boil, if any,
-   re-seeds outlines only, every 3 drawn frames, never the finish.
-9. **Drawn on twos.** Draw at 12 fps, output 24 fps. Idle motion is quantised
-   with `pulse(i, every)`. Camera and paths ease smoothly but are sampled on
-   the grid. In the riso montage, one card per 3 drawn frames.
-10. **Cut hard, transition rarely.** Shots 0.8 to 2.5 s, or 0.25 s in a
-    montage. Devices, in order of preference: ink blot, iris, self-drawing
-    line, flicker between two renders, one-frame flash, torn section rising.
-    Never two devices back to back.
-11. **Palette discipline.** Every colour comes from `PAL`. A film may switch
-    palettes on a cut and derive variants, but never invents a hex inside a
-    scene.
-12. **One thing per shot.** The silhouette reads at 240 px, contact-sheet
-    size. A montage card reads at 120 px, badge size. If a scene does not read
-    on the grid sheet in a second and a half, redo it, do not decorate it; one
-    large object beats twenty small ones.
-13. **An anchor survives the cuts.** The seed dot, the boat, the thread, the
-    fly: one element stays in place or in role while everything around it
-    changes. Decide what it is before writing scenes.
-14. **Sign it.** The last shot is `signOff`: two words in hand lettering, two
-    ink dots. It is the only text a film needs.
+These helpers approximate graphite with layered marks; they do not simulate
+paper fibres or graphite deposition physically. Add a custom rest-space paper
+mask when a close-up needs visible tooth. Test: gaze, blink, small head turn and
+breathing, with no music. A scrolling pencil webpage is a layout reference,
+not an acting reference.
 
-## Vocabulary: say this, get that
+## Riso
 
-| term in the brief or beat sheet | what it looks like | kit call |
-|---|---|---|
-| wobbly outline | shaky ink contour | `wob(c, pts, amp, seed, close)` |
-| crayon line | thick stroke with a grainy edge | `crayon(c, pts, color, width, seed, close)` |
-| hatching that follows the form | short parallel strokes along a part's long axis | `surface(..., {finish:'ink'})`, `hatch(c, path, box, {angle})` |
-| cross-hatch shadow | two hatch layers at ±45°, darker | two `hatch` calls |
-| grain, stock | speckles that give tone and paper feel | `grain`, `paper`, `night` |
-| dot screen, halftone | dots whose size carries the tone | `surface(..., {finish:'riso'|'screen'})`, `dotScreen` |
-| plates, separations, overprint | one plate per ink, multiplied on paper | `plate()`, `printPlate` |
-| knockout | white shape on a plate that keeps the ink off | draw `#fff` on the plate |
-| duotone beat | one shot in two inks | `usePalette(duotone(a, b))` |
-| riso outline, misregistered accents | same contour in accent colours, offset | `scribble` |
-| construction lines, guides | thin lines with ticks, a circle, crosses | `construction`, `cross` |
-| dashed ring, dotted arc | rings drawn as dashes or dots | `dashedRing`, `dottedArc` |
-| blueprint mode | chalk-on-night version of the same geometry | `drawX(c, 'blueprint', ...)` on `night(c)` |
-| hex lattice, compound eye, cells | pointy-top hexagon grid | `hexCells`, `hexLattice`, `hexPath` |
-| POV mosaic | scene as flat hex tiles | `mosaic(c, layer, cellSize)` |
-| spark, nucleus, aster | dot with rays | `aster` |
-| dot fireworks | bursts made of dots on rays | `dotBurst` |
-| seed dot, anchor dot | the dot that never leaves the frame | `seedDot` |
-| ripples | concentric crayon rings born every few frames | `ripples`, or `crayon` per ring |
-| iris | a circle opening on another render | `iris(c, cx, cy, r, fn)` |
-| ink blot wipe | bristly blob reveals another render | `blot(c, layer, cx, cy, R, seed)` |
-| montage, cards | full-bleed shots at 4 per second | `montage(c, cards, tau, .25, i)` |
-| gallery, badges | every card as a round stamp on rings | `badges(c, cards, {progress, scale})` |
-| self-drawing line | contour appears as if being drawn | `selfDraw` |
-| speed lines, wake loops | strokes and coloured sine ribbons behind a mover | `speedLines`, `loops` |
-| ghost limbs | a part drawn 3 times at ±angle with alpha | loop in the puppet |
-| torn section | new paper colour from a torn edge downward | `section(c, y, color, seed)` |
-| wall of text, letter, notes | rows of illegible handwriting | `squiggleText` |
-| sticky note | paper square with a small drawing | `stickyNote(c, x, y, s, seed, draw)` |
-| pressed plant | branching stem with leaf clusters | `plant` |
-| thread, spine | thin line wandering down the frame | `thread` |
-| hand lettering, sign-off | real letters in a handwriting face, two inks | `handText`, `signOff` |
-| flash frame | one near-white drawn frame | `flash(c)` |
-| flicker | alternate two renders every 2 drawn frames | `flicker(i)` |
-| twitch, pulse | one drawn frame of change every N | `pulse(i, every)` |
-| push-in, follow, lead | camera moves | `cam(c, x, y, zoom, rot)` |
+Design two to four ink separations from deliberately drawn shapes. Preserve
+selected brush or pencil marks in the plate artwork; avoid turning the whole
+character into clean geometric masses by default. Redraw changing silhouettes
+and internal overlaps before separating the inks. `plate()` supplies an opaque white coverage
+canvas at the correct scale; draw coverage in grey/black, knockouts in white.
+`printPlate` supports a whole-plate `offset`, `rotation` and low-frequency
+`mottling`. Keep these stable through a held print. The raster belongs to the
+sheet unless the art direction explicitly says otherwise. Avoid independent
+per-dot shaking. Preserve negative space and inspect overlap colours.
+
+Multiply is a useful approximation, not a calibrated physical ink model. Full
+solids are valid. Select regular or custom stochastic screens to match the
+reference; do not force a coarse dot pattern onto every element. Test: overlapping
+inks during motion and a camera push, including the encoded delivery size.
+
+## Screen print
+
+Draw the key silhouettes and preserve deliberate brush edges, uneven terminals
+and occasional open marks. Redraw those shapes through the action rather than
+rotating a stack of unchanged parts. Use strong, carefully balanced flat masses,
+opaque ink and occasional small
+coverage imperfections (`screenFill`). Halftone is optional. Keep the shape's
+edge and the grain quiet enough that facial features survive reduction. Separate
+this look from riso with density, edge treatment and colour interaction, not
+merely a different dot angle. Use depth planes only where they help staging.
+
+Test: a boat on a cresting wave, with a stable hull silhouette and controlled
+phase differences between wave, boat and background. Reject: texture obscuring
+the drawing, arbitrary noisy edges and every layer set to multiply.
+
+## Doodle on photos
+
+Read `doodle.md` for source preparation and anchor coordinates. Give each image
+an actual role in the action. A grip, foot plant, shadow and correct occlusion
+make a drawn actor share the photographed space. Store attachment points in
+object coordinates and rebuild them through `on(pl,u,v)` after every transform.
+Use whole drawn gesture poses, expressive brush strokes and restrained washes (`pigmentWash`); draw-on
+should leave enough time for the action and reaction. A draw-on reveal is a
+separate device from character animation: after the reveal, poses still need
+redrawing, substitutions and deliberate exposure.
+
+A rotating flat photo does not reveal a new side. Choose another view or stage
+around that limitation. Test: a character catches a handle, climbs over a rim
+and disappears behind its front edge. Reject: sliding hands, halos, floating
+feet, and drawn decoration that never interacts with the object.
+
+## Rhythm, light and texture
+
+Use exposure by action rather than a style-wide frame-rate restriction. Twos
+are often useful; fast turns and fine gestures may need ones. Light and camera
+usually sample every output frame. Check the combination rather than assuming
+that independent smooth tracks produce smooth screen motion.
+
+Paper may be a world surface, a cel or a fixed graphic background. Decide where
+its texture lives. Add intentional boil only to designated strokes. Grain is
+not a universal overlay. Controlled gradients, masks and soft shadows are valid
+when they describe the medium or lighting; avoid indiscriminate blur as a finish.
+
+Blueprint, construction guides, badges, seed dots, whip cuts and sign-offs are
+available in `core.js` and `scenes.md`. Select them for the story rather than
+using them as evidence that the film is hand-drawn.
