@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iron Filings</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  .ui { position: fixed; pointer-events: none; user-select: none; color: #16171a;
+        font: 11px/1.6 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; }
+  .tl { top: 20px; left: 24px; }
+  .bl { bottom: 20px; left: 24px; }
+  .br { bottom: 20px; right: 24px; text-align: right; opacity: .45; }
+  .dim { opacity: .5; }
+</style>
+</head>
+<body>
+<canvas data-dither></canvas>
+<div class="ui tl"><b>Iron filings</b><br><span class="dim">over Morpho rhetenor</span></div>
+<div class="ui bl"><span id="stats"></span><br><span class="dim">move to gather &middot; click to flip polarity</span></div>
+<div class="ui br">Photo: Didier Descouens / MHNT<br>CC BY-SA 4.0</div>
+
+<script src="image.js"></script>
+<script>
+window.DITHER = {
+  image: window.DITHER_IMAGE,
+  mode: 'filings',
+  cells: 300,
+  fit: 0.8,
+  maxH: 0.72,
+  contrast: 1.35,
+  brightness: 0.2,
+  sheen: 1,                // morpho blue is structural colour: let it swing with the magnet
+  ink: '#16171a',
+  paper: '#f2f1ec',
+  filings: { reach: 0.1, maxHeld: 3200, hold: [2.2, 4.5], spikes: 9 },
+  onStats: s => {
+    document.getElementById('stats').textContent = `${s.filings.toLocaleString()} filings · ${s.held.toLocaleString()} on the magnet`;
+  },
+};
+</script>
+<script src="engine.js"></script>
+</body>
+</html>

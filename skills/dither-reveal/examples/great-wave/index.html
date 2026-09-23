@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Great Wave, dithered</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  .ui { position: fixed; pointer-events: none; user-select: none; color: #1a1d2b;
+        font: 11px/1.6 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; }
+  .tl { top: 20px; left: 24px; }
+  .bl { bottom: 20px; left: 24px; }
+  .br { bottom: 20px; right: 24px; text-align: right; opacity: .45; }
+  .dim { opacity: .5; }
+</style>
+</head>
+<body>
+<canvas data-dither></canvas>
+<div class="ui tl"><b>Under the Wave off Kanagawa</b><br><span class="dim">Katsushika Hokusai, ca. 1830&ndash;32</span></div>
+<div class="ui bl">1-bit veil<br><span class="dim">hover to reveal &middot; click to burst</span></div>
+<div class="ui br">The Metropolitan Museum of Art<br>Open Access, public domain</div>
+
+<script src="image.js"></script>
+<script>
+window.DITHER = {
+  image: window.DITHER_IMAGE,
+  mode: 'veil',
+  cells: 260,
+  fit: 0.78,
+  maxH: 0.74,
+  contrast: 1.5,
+  brightness: -0.04,
+  ink: '#1a1d2b',          // Prussian-ish ink, not black
+  paper: '#f3efe4',
+  veil: { radius: 0.24, linger: 1.2, colorDots: true, burst: true, burstScale: 3.4, burstDur: 0.6 },
+};
+</script>
+<script src="engine.js"></script>
+</body>
+</html>

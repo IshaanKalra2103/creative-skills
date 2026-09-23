@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geode, with Tenant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+  :root { --paper: #f3efe5; --ink: #1c1a17; }
+  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); overflow: hidden; }
+  canvas { position: fixed; left: 0; top: 0; display: block; touch-action: none; cursor: crosshair; }
+  .plate { position: fixed; pointer-events: none; font-family: 'IM Fell English', Georgia, serif; user-select: none; }
+  .tl { top: 22px; left: 28px; font-family: 'IM Fell English SC', Georgia, serif; font-size: 16px; letter-spacing: .08em; }
+  .tr { top: 22px; right: 28px; font-size: 16px; font-style: italic; }
+  .cap { left: 0; right: 0; bottom: 26px; text-align: center; }
+  .cap .t { font-size: 24px; }
+  .cap .h { margin-top: 6px; font-size: 14px; font-style: italic; opacity: .6; }
+  .z { right: 28px; bottom: 28px; font: 12px/1 ui-monospace, Menlo, monospace; opacity: .5; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="plate tl">Pl. VII.</div>
+<div class="plate tr">Fig. 1.</div>
+<div class="plate cap">
+  <div class="t">Geode, <i>with tenant.</i></div>
+  <div class="h">hover to take a section &middot; scroll to move the cut &middot; click to split</div>
+</div>
+<div class="plate z" id="z">cut z +0.00</div>
+<script>
+// A stippled specimen plate. The veil is a blue-noise ink dither of the rock's outside;
+// the cursor is a lens that shows the rock sectioned at a plane (scroll moves the plane).
+// Click splits it open. Something lives in the cavity.
+const CFG = {
+  cellsAcross: 260,   // dither cells across the shorter side of the viewport
+  radius: 0.22,       // lens radius, fraction of the shorter side
+  linger: 1.2,        // seconds for a sectioned spot to heal back to ink
+  sceneScale: 0.5,    // rays per device px (one per CSS px on retina)
+  ink: [0.11, 0.10, 0.09],
+  paper: [0.953, 0.937, 0.898],
+};
+const BAND_COLORS = [[0.16, 0.5, 0.86], [0.62, 0.9, 0.93], [0.92, 0.42, 0.58], [0.35, 0.22, 0.62], [0.96, 0.94, 0.88]];
+
+const canvas = document.getElementById('c');
+const zLabel = document.getElementById('z');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
+if (!gl) {
+  document.querySelector('.cap .h').textContent = 'this plate needs WebGL2';
+  throw new Error('WebGL2 unavailable');
+}
+
+const FULL_VS = `#version 300 es
+in vec2 aPos;
+void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+// Lens trail: previous mask minus decay, max'd with the pointer's swept capsule.
+const MASK_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uPrev;
+uniform vec2 uMaskRes, uA, uB;
+uniform float uR, uOn, uDecay;
+out vec4 o;
+void main() {
+  vec2 p = gl_FragCoord.xy;
+  float m = texture(uPrev, p / uMaskRes).r - uDecay;
+  vec2 ab = uB - uA;
+  float h = clamp(dot(p - uA, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+  float d = length(p - uA - ab * h);
+  m = max(m, uOn * (1.0 - smoothstep(uR * 0.15, uR, d)));
+  o = vec4(vec3(clamp(m, 0.0, 1.0)), 1.0);
+}`;
+
+// Raymarched specimen. Two rays per pixel: A sees the whole rock (the veil),
+// B sees it sectioned at the cut plane (only where the lens mask is non-zero).
+const SCENE_FS = `#version 300 es
+precision highp float;
+precision highp sampler3D;
+uniform sampler3D uNoise;
+uniform sampler2D uMask;
+uniform mat3 uObj;
+uniform float uSplit, uOpen, uTime, uClip, uPupil, uTanHalf;
+uniform vec3 uCamPos, uCamF, uCamR, uCamU, uLook;
+uniform vec2 uRes;
+layout(location = 0) out vec4 outA;
+layout(location = 1) out vec4 outB;
+
+const vec3 LIGHT = vec3(-0.532, 0.726, 0.436);
+const float EYE_R = 0.18;
+const float BOUND = 2.2;
+
+float nz(vec3 p) { return texture(uNoise, p * 0.125).r; }
+float hash1(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+vec3 hash3(vec3 p) {
+  return fract(sin(vec3(dot(p, vec3(127.1, 311.7, 74.7)), dot(p, vec3(269.5, 183.3, 246.1)),
+                        dot(p, vec3(113.5, 271.9, 124.6)))) * 43758.5453);
+}
+
+// Druzy lining: Manhattan-distance Voronoi makes pyramidal, faceted crystal points.
+vec2 druzy(vec3 x) {
+  vec3 i = floor(x), f = fract(x), s = step(0.5, f) - 1.0;
+  float best = 9.0, id = 0.0;
+  for (int k = 0; k < 2; k++) for (int j = 0; j < 2; j++) for (int h = 0; h < 2; h++) {
+    vec3 g = s + vec3(h, j, k);
+    vec3 r = g + 0.25 + 0.5 * hash3(i + g) - f;
+    float d = abs(r.x) + abs(r.y) + abs(r.z);
+    if (d < best) { best = d; id = hash1(i + g); }
+  }
+  return vec2(best, id);
+}
+
+float outerD(vec3 q) {
+  float d = length(q * vec3(0.98, 1.1, 0.95)) - 1.0;
+  d += (0.5 * nz(q * 1.1) + 0.25 * nz(q * 2.3 + 4.1) + 0.125 * nz(q * 4.7 + 8.3) - 0.44) * 0.5;
+  return d + (nz(q * 7.0 + 2.0) - 0.5) * 0.035;
+}
+float cavityD(vec3 q, out vec2 cr) {
+  float l = length(q);
+  cr = druzy(q / max(l, 1e-3) * 5.0 + 13.0);
+  float spike = 0.17 * max(0.0, 1.0 - cr.x * 1.6);
+  float r = 0.52 + (nz(q * 1.4 + 6.0) - 0.5) * 0.22;
+  return l - (r - spike);
+}
+float shellD(vec3 q) {
+  float o = outerD(q);
+  if (dot(q, q) > 0.81) return o;
+  vec2 cr;
+  return max(o, -cavityD(q, cr));
+}
+
+// The halves hinge open toward the camera like a book.
+vec3 hingeL(vec3 p) { p.x += uSplit; float c = cos(uOpen), s = sin(uOpen); return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z); }
+vec3 hingeR(vec3 p) { p.x -= uSplit; float c = cos(uOpen), s = -sin(uOpen); return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z); }
+
+float geodeD(vec3 p) {
+  if (uSplit < 0.0005) return shellD(uObj * p);
+  vec3 pl = hingeL(p), pr = hingeR(p);
+  return min(max(shellD(uObj * pl), pl.x), max(shellD(uObj * pr), -pr.x));
+}
+// The cut removes rock nearer the camera than the plane. The tenant is exempt.
+float sceneD(vec3 p, float clip) {
+  return min(max(geodeD(p), dot(p, -uCamF) - clip), length(p) - EYE_R);
+}
+
+bool march(vec3 ro, vec3 rd, float clip, out vec3 hit) {
+  hit = ro;
+  float b = dot(ro, rd), c = dot(ro, ro) - BOUND * BOUND, h = b * b - c;
+  if (h < 0.0) return false;
+  h = sqrt(h);
+  float t = max(-b - h, 0.0), t1 = -b + h;
+  for (int i = 0; i < 120; i++) {
+    hit = ro + rd * t;
+    float d = sceneD(hit, clip);
+    if (d < 0.0006 * t) return true;
+    t += d * 0.72;
+    if (t > t1) return false;
+  }
+  return sceneD(hit, clip) < 0.02;
+}
+
+vec3 normalAt(vec3 p, float clip) {
+  const vec2 k = vec2(1.0, -1.0);
+  const float e = 0.002;
+  return normalize(k.xyy * sceneD(p + k.xyy * e, clip) + k.yyx * sceneD(p + k.yyx * e, clip) +
+                   k.yxy * sceneD(p + k.yxy * e, clip) + k.xxx * sceneD(p + k.xxx * e, clip));
+}
+float aoAt(vec3 p, vec3 n, float clip) {
+  float occ = 0.0, w = 1.0;
+  for (int i = 1; i <= 4; i++) {
+    float h = 0.025 * float(i * i);
+    occ += (h - sceneD(p + n * h, clip)) * w;
+    w *= 0.62;
+  }
+  return clamp(1.0 - 1.8 * occ, 0.0, 1.0);
+}
+
+// 0 rind, 1 section face, 2 crystal, 3 the tenant.
+int classify(vec3 p, float clip, out vec3 q, out vec2 cr, out float o, out float cav) {
+  vec3 pf = p;
+  float side = -1e3;
+  if (uSplit >= 0.0005) {
+    vec3 pl = hingeL(p), pr = hingeR(p);
+    float dl = max(shellD(uObj * pl), pl.x), dr = max(shellD(uObj * pr), -pr.x);
+    if (dl < dr) { pf = pl; side = pl.x; } else { pf = pr; side = -pr.x; }
+  }
+  q = uObj * pf;
+  o = outerD(q);
+  cav = cavityD(q, cr);
+  float cut = max(side, dot(p, -uCamF) - clip);
+  float solid = max(o, -cav);
+  if (length(p) - EYE_R < max(solid, cut)) return 3;
+  if (cut > solid) return 1;
+  return -cav > o ? 2 : 0;
+}
+
+float rockLum(vec3 p, vec3 n, vec3 v, vec3 q, float clip) {
+  float dif = max(dot(n, LIGHT), 0.0);
+  float ao = aoAt(p, n, clip);
+  float pits = smoothstep(0.35, 0.65, nz(q * 11.0 + 3.0));
+  float fres = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+  float l = (0.08 + 0.95 * dif) * mix(0.55, 1.0, ao) * mix(0.7, 1.0, pits) + 0.12 * max(n.y, 0.0);
+  return clamp(l * (1.0 - 0.75 * fres), 0.0, 1.0);
+}
+vec3 rockColor(float lum, vec3 q) {
+  return mix(vec3(0.30, 0.24, 0.20), vec3(0.86, 0.80, 0.70), lum) * mix(0.85, 1.08, nz(q * 5.0 + 1.0));
+}
+
+vec3 bandCol(float i) {
+  i = mod(i, 6.0);
+  if (i < 1.0) return vec3(0.11, 0.16, 0.42);
+  if (i < 2.0) return vec3(0.16, 0.50, 0.86);
+  if (i < 3.0) return vec3(0.62, 0.90, 0.93);
+  if (i < 4.0) return vec3(0.96, 0.94, 0.88);
+  if (i < 5.0) return vec3(0.92, 0.42, 0.58);
+  return vec3(0.35, 0.22, 0.62);
+}
+// Bands follow depth between the rind and the cavity wall, so they hug both shapes like real agate.
+vec3 agate(vec3 q, float o, float cav) {
+  float t = clamp(-o / max(-o + cav, 1e-3), 0.0, 1.0);
+  if (t < 0.06) return mix(vec3(0.42, 0.31, 0.23), vec3(0.64, 0.52, 0.40), nz(q * 9.0));
+  if (t < 0.11) return vec3(0.93, 0.92, 0.88) * (0.95 + 0.05 * nz(q * 20.0));
+  if (t > 0.84) {
+    float fib = nz(normalize(q) * 30.0);
+    return mix(vec3(0.96, 0.95, 0.97), vec3(0.58, 0.36, 0.82), smoothstep(0.84, 1.0, t)) * (0.85 + 0.2 * fib);
+  }
+  float x = (t - 0.11) / 0.73 * 8.0 + (nz(q * 2.2 + 5.0) - 0.5) * 2.2;
+  float f = fract(x);
+  vec3 c = mix(bandCol(floor(x)), bandCol(floor(x) + 1.0), smoothstep(0.78, 1.0, f));
+  c *= 0.9 + 0.1 * sin(x * 60.0);
+  return mix(c, vec3(1.0), 0.6 * (1.0 - smoothstep(0.0, 0.05, f)));
+}
+
+vec3 crystal(vec3 p, vec3 n, vec3 v, vec2 cr) {
+  float ndv = max(dot(n, v), 0.0);
+  vec3 base = mix(vec3(0.30, 0.10, 0.48), vec3(0.78, 0.62, 0.96), smoothstep(0.1, 0.8, cr.x)) * (0.85 + 0.3 * cr.y);
+  vec3 iri = 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + ndv * 1.3 + cr.y));
+  float dif = 0.45 + 0.55 * max(dot(n, LIGHT), 0.0);
+  float spec = pow(max(dot(reflect(-LIGHT, n), v), 0.0), 40.0);
+  float glint = step(0.82, cr.y) * (0.5 + 0.5 * sin(uTime * 2.5 + cr.y * 90.0));
+  vec3 c = base * dif + iri * 0.12 + spec * mix(vec3(1.0), iri, 0.5) * (0.7 + 1.5 * glint);
+  return c + vec3(0.55, 0.9, 0.8) * 0.3 * exp(-4.0 * max(length(p) - EYE_R, 0.0));
+}
+
+vec3 eyeShade(vec3 p, vec3 n, vec3 v) {
+  vec3 f = uLook;
+  vec3 up = abs(f.y) > 0.95 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+  vec3 bx = normalize(cross(up, f)), by = cross(f, bx);
+  float a = acos(clamp(dot(n, f), -1.0, 1.0));
+  vec2 dc = normalize(vec2(dot(n, bx), dot(n, by)) + 1e-5);
+  const float IRIS = 0.62;
+  vec3 sclera = vec3(0.95, 0.93, 0.89) * (0.9 + 0.1 * nz(p * 20.0));
+  sclera = mix(sclera, vec3(0.85, 0.45, 0.45), smoothstep(1.4, 2.6, a) * 0.5);
+  float streak = nz(vec3(dc * 6.0, a * 8.0));
+  vec3 iri = 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + a * 1.8 + streak * 0.6 + uTime * 0.05));
+  vec3 iris = mix(vec3(0.85, 0.55, 0.18), iri, 0.4 * smoothstep(0.35, 0.8, streak)) * (0.5 + 0.7 * streak);
+  float edge = smoothstep(IRIS - 0.03, IRIS, a);
+  vec3 c = mix(iris, sclera, edge);
+  c *= 1.0 - 0.55 * smoothstep(IRIS - 0.12, IRIS, a) * (1.0 - edge);
+  c = mix(vec3(0.02), c, smoothstep(uPupil - 0.02, uPupil + 0.01, a));
+  float dif = 0.5 + 0.5 * max(dot(n, LIGHT), 0.0);
+  float spec = pow(max(dot(reflect(-LIGHT, n), v), 0.0), 90.0);
+  return c * dif + spec * 0.9 + iris * 0.25 * (1.0 - edge);
+}
+
+vec3 colorFor(int k, vec3 p, vec3 n, vec3 v, vec3 q, vec2 cr, float o, float cav, float clip) {
+  if (k == 3) return eyeShade(p, n, v);
+  if (k == 2) return crystal(p, n, v, cr) * mix(0.35, 1.0, aoAt(p, n, clip));
+  if (k == 1) {
+    float spec = pow(max(dot(reflect(-LIGHT, n), v), 0.0), 24.0);
+    return agate(q, o, cav) * (0.82 + 0.25 * max(dot(n, LIGHT), 0.0)) + spec * 0.25;
+  }
+  return rockColor(rockLum(p, n, v, q, clip), q);
+}
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / (0.5 * min(uRes.x, uRes.y));
+  vec3 rd = normalize(uCamF + (uv.x * uCamR + uv.y * uCamU) * uTanHalf);
+  vec3 ro = uCamPos, v = -rd, p, q, n;
+  vec2 cr;
+  float o, cav;
+
+  // A: rind goes out as luminance (alpha .5) for the ink dither; anything else as color (alpha 1).
+  if (march(ro, rd, 1e3, p)) {
+    int k = classify(p, 1e3, q, cr, o, cav);
+    n = normalAt(p, 1e3);
+    outA = k == 0 ? vec4(vec3(rockLum(p, n, v, q, 1e3)), 0.5) : vec4(colorFor(k, p, n, v, q, cr, o, cav, 1e3), 1.0);
+  } else {
+    float lum = 1.0;
+    if (rd.y < 0.0) {  // a stippled cast shadow on the plate
+      vec3 g = ro + rd * ((-1.28 - ro.y) / rd.y);
+      vec2 d = (g.xz - vec2(0.45, -0.35)) / vec2(1.05 + uSplit * 1.3, 0.75);
+      lum = 1.0 - 0.62 * exp(-2.0 * dot(d, d));
+    }
+    outA = vec4(vec3(lum), lum < 0.99 ? 0.5 : 0.0);
+  }
+
+  outB = vec4(0.0);
+  if (texture(uMask, gl_FragCoord.xy / uRes).r > 0.004 && march(ro, rd, uClip, p)) {
+    int k = classify(p, uClip, q, cr, o, cav);
+    n = normalAt(p, uClip);
+    outB = vec4(colorFor(k, p, n, v, q, cr, o, cav, uClip), 1.0);
+  }
+}`;
+
+// Composite: blue-noise ink veil -> dots tinted by the section -> ordered handoff to the section.
+const VIEW_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uA, uB, uMask, uBlue;
+uniform vec2 uRes;
+uniform float uCell;
+uniform vec3 uInk, uPaper;
+out vec4 outColor;
+float bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
+float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
+float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
+float h21(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void main() {
+  vec2 frag = gl_FragCoord.xy;
+  vec2 cell = floor(frag / uCell);
+  vec2 cuv = (cell + 0.5) * uCell / uRes, uv = frag / uRes;
+  float bn = texelFetch(uBlue, ivec2(mod(cell, 64.0)), 0).r * (255.0 / 256.0) + 0.5 / 256.0;  // never 0 or 1
+  vec3 paper = uPaper * (0.985 + 0.03 * h21(cell));
+  vec3 ink = uInk * (0.85 + 0.3 * h21(cell + 17.0));
+
+  vec4 a = texture(uA, cuv), af = texture(uA, uv);
+  float lum = a.a > 0.25 ? clamp((a.r - 0.5) * 1.15 + 0.5, 0.0, 1.0) : 1.0;
+  float inked = step(lum, bn) * step(a.a, 0.75);
+
+  float m = texture(uMask, cuv).r;
+  vec4 bc = texture(uB, cuv), bf = texture(uB, uv);
+  vec3 speck = mix(ink, bc.a > 0.5 ? bc.rgb : ink, smoothstep(0.02, 0.3, m));
+  vec3 veil = mix(paper, speck, inked);
+  if (af.a > 0.75) veil = af.rgb;  // split open: the faces are simply there, in color
+  vec3 section = mix(paper, bf.rgb, clamp(bf.a, 0.0, 1.0));
+  outColor = vec4(bayer8(cell) < smoothstep(0.3, 0.85, m) ? section : veil, 1.0);
+}`;
+
+// Rock dust thrown off when the geode cracks: square dots snapped to the dither grid.
+const DUST_VS = `#version 300 es
+in vec2 aPos;
+in vec4 aCol;
+uniform vec2 uCss;
+uniform float uPx, uDpr;
+out vec4 vCol;
+void main() {
+  vec2 s = (floor(aPos / uPx) + 0.5) * uPx;
+  gl_Position = vec4(s.x / uCss.x * 2.0 - 1.0, 1.0 - s.y / uCss.y * 2.0, 0.0, 1.0);
+  gl_PointSize = uPx * uDpr;
+  vCol = aCol;
+}`;
+const DUST_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uBlue;
+uniform float uCell;
+in vec4 vCol;
+out vec4 o;
+void main() {
+  if (texelFetch(uBlue, ivec2(mod(floor(gl_FragCoord.xy / uCell), 64.0)), 0).r > vCol.a) discard;
+  o = vec4(vCol.rgb, 1.0);
+}`;
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function program(vs, fs, attribs = ['aPos']) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+  attribs.forEach((a, i) => gl.bindAttribLocation(p, i, a));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {};
+  for (let i = 0, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i < n; i++) {
+    const name = gl.getActiveUniform(p, i).name;
+    u[name] = gl.getUniformLocation(p, name);
+  }
+  return { p, u };
+}
+function texture2D(filter, wrap = gl.CLAMP_TO_EDGE) {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+  return t;
+}
+
+function lcg(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+
+// Tileable value noise, one lattice cell per 1/L of the texture, quintic-smoothed.
+function makeNoise3D(S = 64, L = 8) {
+  const rnd = lcg(11), lat = new Float32Array(L * L * L).map(rnd);
+  const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+  const at = (x, y, z) => lat[((z % L) * L + (y % L)) * L + (x % L)];
+  const out = new Uint8Array(S * S * S);
+  for (let z = 0; z < S; z++) {
+    const gz = z / S * L, iz = Math.floor(gz), fz = fade(gz - iz);
+    for (let y = 0; y < S; y++) {
+      const gy = y / S * L, iy = Math.floor(gy), fy = fade(gy - iy);
+      for (let x = 0; x < S; x++) {
+        const gx = x / S * L, ix = Math.floor(gx), fx = fade(gx - ix);
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const v = lerp(
+          lerp(lerp(at(ix, iy, iz), at(ix + 1, iy, iz), fx), lerp(at(ix, iy + 1, iz), at(ix + 1, iy + 1, iz), fx), fy),
+          lerp(lerp(at(ix, iy, iz + 1), at(ix + 1, iy, iz + 1), fx), lerp(at(ix, iy + 1, iz + 1), at(ix + 1, iy + 1, iz + 1), fx), fy),
+          fz);
+        out[(z * S + y) * S + x] = v * 255;
+      }
+    }
+  }
+  return out;
+}
+
+// Void-and-cluster blue noise: the threshold map that makes the stipple look hand-placed
+// but stay put while the rock turns (error diffusion would crawl every frame).
+function makeBlueNoise(N = 64) {
+  const n = N * N, sigma = 1.9, K = new Float32Array(n);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const dx = Math.min(x, N - x), dy = Math.min(y, N - y);
+    K[y * N + x] = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+  }
+  const E = new Float32Array(n), on = new Uint8Array(n), rank = new Uint16Array(n);
+  const splat = (i, s) => {
+    const ix = i % N, iy = (i / N) | 0;
+    for (let y = 0; y < N; y++) {
+      const ky = ((y - iy + N) % N) * N, row = y * N;
+      for (let x = 0; x < N; x++) E[row + x] += s * K[ky + ((x - ix + N) % N)];
+    }
+  };
+  const tightest = () => { let b = 0, bv = -Infinity; for (let i = 0; i < n; i++) if (on[i] && E[i] > bv) { bv = E[i]; b = i; } return b; };
+  const loosest = () => { let b = 0, bv = Infinity; for (let i = 0; i < n; i++) if (!on[i] && E[i] < bv) { bv = E[i]; b = i; } return b; };
+  const rnd = lcg(7), ones = Math.floor(n * 0.1);
+  for (let placed = 0; placed < ones;) {
+    const i = Math.floor(rnd() * n);
+    if (!on[i]) { on[i] = 1; splat(i, 1); placed++; }
+  }
+  for (let it = 0; it < n; it++) {
+    const c = tightest(); on[c] = 0; splat(c, -1);
+    const v = loosest();
+    on[v] = 1; splat(v, 1);
+    if (v === c) break;
+  }
+  const protoOn = on.slice(), protoE = E.slice();
+  for (let r = ones - 1; r >= 0; r--) { const c = tightest(); on[c] = 0; splat(c, -1); rank[c] = r; }
+  on.set(protoOn); E.set(protoE);
+  for (let r = ones; r < n; r++) { const v = loosest(); on[v] = 1; splat(v, 1); rank[v] = r; }
+  const out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) out[i] = Math.floor((rank[i] + 0.5) / n * 256);
+  return out;
+}
+
+const maskProg = program(FULL_VS, MASK_FS);
+const sceneProg = program(FULL_VS, SCENE_FS);
+const viewProg = program(FULL_VS, VIEW_FS);
+const dustProg = program(DUST_VS, DUST_FS, ['aPos', 'aCol']);
+
+const fullVao = gl.createVertexArray();
+gl.bindVertexArray(fullVao);
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+const MAX_DUST = 600;
+const dustData = new Float32Array(MAX_DUST * 6);
+const dustVao = gl.createVertexArray();
+gl.bindVertexArray(dustVao);
+const dustBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, dustBuf);
+gl.bufferData(gl.ARRAY_BUFFER, dustData.byteLength, gl.DYNAMIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 24, 0);
+gl.enableVertexAttribArray(1);
+gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 24, 8);
+gl.bindVertexArray(null);
+
+gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+const noiseTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_3D, noiseTex);
+gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, 64, 64, 64, 0, gl.RED, gl.UNSIGNED_BYTE, makeNoise3D());
+for (const w of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T, gl.TEXTURE_WRAP_R]) gl.texParameteri(gl.TEXTURE_3D, w, gl.REPEAT);
+gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+const blueTex = texture2D(gl.NEAREST, gl.REPEAT);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 64, 64, 0, gl.RED, gl.UNSIGNED_BYTE, makeBlueNoise());
+
+const masks = [0, 1].map(() => ({ tex: texture2D(gl.LINEAR), fb: gl.createFramebuffer() }));
+const sceneA = texture2D(gl.LINEAR), sceneB = texture2D(gl.LINEAR);
+const sceneFb = gl.createFramebuffer();
+
+let dpr = 1, px = 3, cssW = 0, cssH = 0, W = 0, H = 0, cell = 3, SW = 0, SH = 0, MW = 0, MH = 0;
+const MASK_DIV = 4;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  px = Math.max(2, Math.round(Math.min(innerWidth, innerHeight) / CFG.cellsAcross));
+  cssW = Math.ceil(innerWidth / px) * px;
+  cssH = Math.ceil(innerHeight / px) * px;
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  cell = px * dpr;
+  W = canvas.width = Math.round(cssW * dpr);
+  H = canvas.height = Math.round(cssH * dpr);
+  SW = Math.max(1, Math.round(W * CFG.sceneScale));
+  SH = Math.max(1, Math.round(H * CFG.sceneScale));
+  MW = Math.ceil(cssW / MASK_DIV);
+  MH = Math.ceil(cssH / MASK_DIV);
+  for (const m of masks) {
+    gl.bindTexture(gl.TEXTURE_2D, m.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, MW, MH, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, m.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, m.tex, 0);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+  for (const t of [sceneA, sceneB]) {
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, SW, SH, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sceneA, 0);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, sceneB, 0);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+// ---- state ----
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ptr = { on: false, x: 0, y: 0, px: 0, py: 0, cx: 0, cy: 0, fresh: true, downAt: 0, downX: 0, downY: 0 };
+const crack = { target: 0, s: 0, v: 0 };
+let yaw = 0.6, tiltX = 0, tiltY = 0, clip = 0, clipTarget = 0, shake = 0, time = 0;
+let look = [0, 0, 1], pupil = 0.32;
+const dust = [];
+const TAN_HALF = 0.42, ELEV = 0.2;
+
+function objMatrix(yw, pitch) {
+  // world->object = (Ry(yaw) Rx(pitch))^T, column-major.
+  const cy = Math.cos(yw), sy = Math.sin(yw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  return new Float32Array([cy, sy * sp, sy * cp, 0, cp, -sp, -sy, cy * sp, cy * cp]);
+}
+const norm = v => { const l = Math.hypot(...v) || 1; return v.map(c => c / l); };
+
+function camera(dist) {
+  const pos = [0, dist * Math.sin(ELEV), dist * Math.cos(ELEV)];
+  const f = norm(pos.map(c => -c)), r = [1, 0, 0];
+  const u = [0, -f[2], f[1]];  // cross(r, f)
+  const k = shake * 0.08;
+  pos[0] += (Math.random() - 0.5) * k;
+  pos[1] += (Math.random() - 0.5) * k;
+  return { pos, f, r, u };
+}
+function screenRay(cam, cx, cy) {
+  const s = 0.5 * Math.min(cssW, cssH);
+  const ux = (cx - cssW / 2) / s, uy = -(cy - cssH / 2) / s;
+  return norm([0, 1, 2].map(i => cam.f[i] + (ux * cam.r[i] + uy * cam.u[i]) * TAN_HALF));
+}
+
+function spawnDust(n, colored, speed) {
+  const R = objectRadiusPx();
+  for (let i = 0; i < n && dust.length < MAX_DUST; i++) {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const c = colored && Math.random() < 0.35 ? BAND_COLORS[(Math.random() * BAND_COLORS.length) | 0] : CFG.ink;
+    dust.push({
+      x: cssW / 2 + side * Math.random() * 8, y: cssH / 2 + (Math.random() * 2 - 1) * R * 0.85,
+      vx: side * (40 + Math.random() * speed), vy: -(30 + Math.random() * speed * 0.8),
+      life: 0, max: 0.6 + Math.random() * 1.0, c,
+    });
+  }
+}
+function objectRadiusPx() {
+  const dist = 4.3 + 1.5 * Math.min(Math.max(crack.s, 0), 1.2);
+  return (1.05 / dist) / TAN_HALF * 0.5 * Math.min(cssW, cssH);
+}
+
+function setCrack(open) {
+  crack.target = open ? 1 : 0;
+  if (open) { shake = 1; spawnDust(180, true, 420); }
+}
+
+window.addEventListener('pointermove', e => {
+  ptr.cx = e.clientX; ptr.cy = e.clientY;
+  ptr.x = e.clientX / MASK_DIV; ptr.y = MH - e.clientY / MASK_DIV;
+  if (!ptr.on || ptr.fresh) { ptr.px = ptr.x; ptr.py = ptr.y; ptr.fresh = false; }
+  ptr.on = e.pointerType === 'mouse' || e.buttons > 0;
+});
+window.addEventListener('pointerdown', e => {
+  ptr.cx = e.clientX; ptr.cy = e.clientY;
+  ptr.x = ptr.px = e.clientX / MASK_DIV; ptr.y = ptr.py = MH - e.clientY / MASK_DIV;
+  ptr.on = true;
+  ptr.downAt = performance.now(); ptr.downX = e.clientX; ptr.downY = e.clientY;
+});
+window.addEventListener('pointerup', e => {
+  const tap = performance.now() - ptr.downAt < 350 && Math.hypot(e.clientX - ptr.downX, e.clientY - ptr.downY) < 8;
+  if (tap) setCrack(crack.target === 0);
+  if (e.pointerType !== 'mouse') ptr.on = false;
+});
+document.documentElement.addEventListener('pointerleave', () => { ptr.on = false; ptr.fresh = true; });
+window.addEventListener('blur', () => { ptr.on = false; ptr.fresh = true; });
+window.addEventListener('wheel', e => {
+  e.preventDefault();
+  clipTarget = Math.min(0.95, Math.max(-0.95, clipTarget - e.deltaY * 0.0012));
+}, { passive: false });
+
+function update(dt) {
+  time += dt;
+  // Spring toward open/closed; slamming shut throws a little dust.
+  crack.v += (70 * (crack.target - crack.s) - 9 * crack.v) * dt;
+  crack.s += crack.v * dt;
+  if (crack.s < 0) {
+    if (crack.v < -0.8) { shake = 0.6; spawnDust(50, false, 220); }
+    crack.s = 0; crack.v = 0;
+  }
+  shake *= Math.exp(-dt * 10);
+  const open01 = Math.min(Math.max(crack.s, 0), 1);
+
+  yaw += dt * (reduced ? 0 : 0.22 * (1 - open01) * (ptr.on ? 0.35 : 1));
+  const nx = ptr.on ? ptr.cx / cssW - 0.5 : 0, ny = ptr.on ? ptr.cy / cssH - 0.5 : 0;
+  const ease = 1 - Math.exp(-dt * 3);
+  tiltX += (ny * 0.35 - tiltX) * ease;
+  tiltY += (nx * 0.5 - tiltY) * ease;
+  clip += (clipTarget - clip) * (1 - Math.exp(-dt * 10));
+
+  for (let i = dust.length - 1; i >= 0; i--) {
+    const d = dust[i];
+    d.vy += 900 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.life += dt;
+    if (d.life > d.max) dust.splice(i, 1);
+  }
+}
+
+let cur = 0, last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));  // first rAF stamp can predate `last`
+  last = now;
+  update(dt);
+
+  const s = Math.max(crack.s, 0);
+  const cam = camera(4.3 + 1.5 * Math.min(s, 1.2));
+  const V = cam.f.map(c => -c);
+
+  // The tenant watches the cursor when it can see it, and wanders when it can't.
+  let target;
+  if (ptr.on) {
+    const rd = screenRay(cam, ptr.cx, ptr.cy);
+    const t = (1.3 - (cam.pos[0] * V[0] + cam.pos[1] * V[1] + cam.pos[2] * V[2])) / (rd[0] * V[0] + rd[1] * V[1] + rd[2] * V[2]);
+    target = norm(cam.pos.map((c, i) => c + rd[i] * t));
+  } else {
+    target = norm([V[0] + 0.3 * Math.sin(time * 0.7), V[1] + 0.2 * Math.sin(time * 0.53 + 1), V[2]]);
+  }
+  const k = 1 - Math.exp(-dt * 9);
+  look = norm(look.map((c, i) => c + (target[i] - c) * k));
+  const lensR = CFG.radius * Math.min(cssW, cssH);
+  const seen = (ptr.on && Math.hypot(ptr.cx - cssW / 2, ptr.cy - cssH / 2) < lensR * 1.1) || s > 0.4;
+  pupil += ((seen ? 0.17 : 0.33) - pupil) * (1 - Math.exp(-dt * 5));
+  zLabel.textContent = `cut z ${clip >= 0 ? '+' : '−'}${Math.abs(clip).toFixed(2)}`;
+
+  // 1. lens mask
+  const src = masks[cur], dst = masks[1 - cur];
+  gl.bindVertexArray(fullVao);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fb);
+  gl.viewport(0, 0, MW, MH);
+  gl.useProgram(maskProg.p);
+  let u = maskProg.u;
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, src.tex);
+  gl.uniform1i(u.uPrev, 0);
+  gl.uniform2f(u.uMaskRes, MW, MH);
+  gl.uniform2f(u.uA, ptr.px, ptr.py);
+  gl.uniform2f(u.uB, ptr.x, ptr.y);
+  gl.uniform1f(u.uR, lensR / MASK_DIV);
+  gl.uniform1f(u.uOn, ptr.on ? 1 : 0);
+  gl.uniform1f(u.uDecay, dt / CFG.linger);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  cur = 1 - cur;
+  ptr.px = ptr.x; ptr.py = ptr.y;
+
+  // 2. specimen, both rays
+  gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFb);
+  gl.viewport(0, 0, SW, SH);
+  gl.useProgram(sceneProg.p);
+  u = sceneProg.u;
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_3D, noiseTex);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, dst.tex);
+  gl.uniform1i(u.uNoise, 0);
+  gl.uniform1i(u.uMask, 1);
+  gl.uniformMatrix3fv(u.uObj, false, objMatrix(yaw + tiltY, tiltX));
+  gl.uniform1f(u.uSplit, 0.68 * s);
+  gl.uniform1f(u.uOpen, 0.6 * s);
+  gl.uniform1f(u.uTime, time);
+  gl.uniform1f(u.uClip, clip);
+  gl.uniform1f(u.uPupil, pupil);
+  gl.uniform1f(u.uTanHalf, TAN_HALF);
+  gl.uniform3fv(u.uCamPos, cam.pos);
+  gl.uniform3fv(u.uCamF, cam.f);
+  gl.uniform3fv(u.uCamR, cam.r);
+  gl.uniform3fv(u.uCamU, cam.u);
+  gl.uniform3fv(u.uLook, look);
+  gl.uniform2f(u.uRes, SW, SH);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  // 3. plate
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, W, H);
+  gl.useProgram(viewProg.p);
+  u = viewProg.u;
+  const texes = [sceneA, sceneB, dst.tex, blueTex];
+  ['uA', 'uB', 'uMask', 'uBlue'].forEach((name, i) => {
+    gl.activeTexture(gl.TEXTURE0 + i);
+    gl.bindTexture(gl.TEXTURE_2D, texes[i]);
+    gl.uniform1i(u[name], i);
+  });
+  gl.uniform2f(u.uRes, W, H);
+  gl.uniform1f(u.uCell, cell);
+  gl.uniform3fv(u.uInk, CFG.ink);
+  gl.uniform3fv(u.uPaper, CFG.paper);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  // 4. dust
+  if (dust.length) {
+    dust.forEach((d, i) => dustData.set([d.x, d.y, d.c[0], d.c[1], d.c[2], 1 - d.life / d.max], i * 6));
+    gl.useProgram(dustProg.p);
+    u = dustProg.u;
+    gl.bindVertexArray(dustVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, dustBuf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, dustData, 0, dust.length * 6);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, blueTex);
+    gl.uniform1i(u.uBlue, 0);
+    gl.uniform2f(u.uCss, cssW, cssH);
+    gl.uniform1f(u.uPx, px);
+    gl.uniform1f(u.uDpr, dpr);
+    gl.uniform1f(u.uCell, cell);
+    gl.drawArrays(gl.POINTS, 0, dust.length);
+  }
+  window.__ready = true;
+  requestAnimationFrame(frame);
+}
+
+resize();
+let rt;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 120); });
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

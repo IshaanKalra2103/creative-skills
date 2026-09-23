@@ -16,6 +16,7 @@
 | [sketchbook-portfolio](skills/sketchbook-portfolio) | An illustrated personal portfolio in plain HTML/CSS/JS: a red sketchbook hero with boiling hand-drawn SVG, stamp borders and chalk doodles, Lenis smooth scroll, a 3D-hinged page, notes that pin mid-screen while polaroids parallax past, project cards that land on a tilting grid board, nav hover doodles and click ink bursts. |
 | [xray-scroll](skills/xray-scroll) | A scroll-driven x-ray film from any 3D model: three.js renders it see-through with dark rims and a floor reflection, it assembles part by part as GSAP ScrollTrigger scrubs one timeline over Lenis smooth scroll, and it cuts through pixel-mosaic, green dot-grid, red scanline, NO SIGNAL and datamosh glitches, with green tracking boxes, decoding captions and a timecode HUD. Single merged meshes (AI sculpts, scans) are split into parts automatically. |
 | [scientific-figure-making](skills/scientific-figure-making) | Publication-ready matplotlib figures for papers, slides and reports: grouped bars, trends, heatmaps and multi-panel layouts in one house style (palette, fonts, spines, legend panels, print-safe hatching, vector export). By Chen Liu, from [figures4papers](https://github.com/ChenLiu-1996/figures4papers). |
+| [dither-reveal](skills/dither-reveal) | Any image as a 1-bit Floyd–Steinberg dither that the cursor peels back to colour, in one WebGL2 page. Veil mode burns a lingering hole with colour leaking into the dots at its edge; filings mode turns every dot into an iron filing that the cursor lifts like a magnet into a spiky ferrofluid blob, then lets slide home. Comes with a script that cuts any photo off its background and embeds it, and a raymarched geode whose hover lens shows its cross-section. |
 
 ## Install
 
@@ -32,6 +33,7 @@ ln -s ~/src/claude-skills/skills/iso-sim-town ~/.claude/skills/iso-sim-town
 ln -s ~/src/claude-skills/skills/pixel-showcase ~/.claude/skills/pixel-showcase
 ln -s ~/src/claude-skills/skills/sketchbook-portfolio ~/.claude/skills/sketchbook-portfolio
 ln -s ~/src/claude-skills/skills/scientific-figure-making ~/.claude/skills/scientific-figure-making
+ln -s ~/src/claude-skills/skills/dither-reveal ~/.claude/skills/dither-reveal
 ln -s ~/src/claude-skills/skills/xray-scroll ~/.claude/skills/xray-scroll
 ```
 
@@ -126,7 +128,7 @@ Made by rebuilding a reference video of an isometric town builder in JavaScript.
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev) and scientific-figure-making (CC BY-NC 4.0, Chen Liu).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev) and scientific-figure-making (CC BY-NC 4.0, Chen Liu). The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
 
 ## pixel-showcase
 
@@ -189,3 +191,20 @@ Inspired by a reference clip of an x-ray car ("SHIPMENT PROJECT // TRACE LOG"); 
 - `references/demos.md`: links to the upstream `figure_*` folders, the canonical scripts behind the style.
 
 Copied unchanged from [ChenLiu-1996/figures4papers](https://github.com/ChenLiu-1996/figures4papers/tree/main/scientific-figure-making) (`3c181f8`) by [Chen Liu](https://chenliu-1996.github.io/). Licensed CC BY-NC 4.0, not MIT: see the skill's `LICENSE`. The preview images are upstream's `figure_ImmunoStruct` and `figure_ophthal_review` outputs.
+
+## dither-reveal
+
+![Veil mode on Hokusai's Great Wave](skills/dither-reveal/assets/great-wave.jpg)
+
+![Filings mode: a magnet lifting iron filings off a morpho](skills/dither-reveal/assets/morpho.jpg)
+
+*Each sheet: idle, sweeping, parked, click, click + 0.5 s, healed, captured by `scripts/shot.mjs`.*
+
+- `SKILL.md`: how both modes work, the workflow (image → scaffold → tune → contact sheet), rules and limits.
+- `template/`: the engine (`engine.js`, both modes, no dependencies) and a page shell configured through `window.DITHER`.
+- `scripts/new.sh <dest> <image> [veil|filings]`: scaffold a page from any image. `prep-image.py` cuts the subject off a plain background and embeds it, so the page runs from `file://`.
+- `examples/`: `great-wave` (veil), `morpho` (filings), `geode` (a standalone raymarched specimen plate with a cross-section lens, a scroll-controlled cut and click-to-split).
+
+**Controls:** move to reveal or gather filings, click to burst or flip polarity. On the geode, scroll moves the cut.
+
+Inspired by a screen recording of a "Dither Veil" hover demo; the code is original. The Great Wave is from [The Met's Open Access collection](https://www.metmuseum.org/art/collection/search/45434) (public domain). The morpho photo is by [Didier Descouens / MHNT](https://commons.wikimedia.org/wiki/File:Morpho_rhetenor_rhetenor_MHNT_dos.jpg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).

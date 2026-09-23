@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dither reveal</title><!-- EDIT -->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  .ui { position: fixed; pointer-events: none; user-select: none; color: #161719;
+        font: 11px/1.6 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; }
+  .tl { top: 20px; left: 24px; }
+  .bl { bottom: 20px; left: 24px; }
+  .br { bottom: 20px; right: 24px; text-align: right; opacity: .45; }
+  .dim { opacity: .5; }
+</style>
+</head>
+<body>
+<canvas data-dither></canvas>
+<!-- EDIT: captions. Keep a credit line for any image whose licence asks for one. -->
+<div class="ui tl"><b>Title</b><br><span class="dim">subtitle</span></div>
+<div class="ui bl"><span id="stats"></span><br><span class="dim" id="hint"></span></div>
+<div class="ui br">Image: credit / licence</div>
+
+<script src="image.js"></script><!-- window.DITHER_IMAGE, written by scripts/prep-image.py -->
+<script>
+// Every field: references/config.md. Anything left out takes the engine default.
+window.DITHER = {
+  image: window.DITHER_IMAGE,
+  mode: 'veil',            // EDIT: 'veil' (hover burns a hole) | 'filings' (every dot is an iron filing, cursor is a magnet)
+  cells: 260,              // dots across the shorter side of the viewport
+  contrast: 1.2,
+  brightness: 0,           // + for fewer dots
+  invert: false,           // true: ink on highlights (chrome, neon, night shots). Needs a cut-out image.
+  sheen: 0,                // 0..1 hue swing near the cursor, for iridescent subjects
+  ink: '#161719',
+  paper: '#f2f1ec',
+  onStats: s => {
+    document.getElementById('stats').textContent = s.filings != null
+      ? `${s.filings.toLocaleString()} filings · ${s.held.toLocaleString()} on the magnet`
+      : `${s.cells.toLocaleString()} cells`;
+  },
+};
+document.getElementById('hint').textContent = window.DITHER.mode === 'filings'
+  ? 'move to gather · click to flip polarity' : 'hover to reveal · click to burst';
+</script>
+<script src="engine.js"></script>
+</body>
+</html>
