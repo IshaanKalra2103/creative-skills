@@ -14,6 +14,7 @@
 | [slide-craft](skills/slide-craft) | Presentations as one self-contained HTML deck: fixed 1280×720 slides, thumbnail rail, presenter mode with notes, print to PDF — plus the thinking first (audience, the one sentence, the ask) and a list of the things that make slides look generated. |
 | [pixel-showcase](skills/pixel-showcase) | A gacha-style "who's that?" reveal for pixel sprites: hold to charge a silhouette through rarity colours, then it bursts into its own pixels and reassembles in colour, with a stat card, NEW/SHINY stamps, a dex and chip-tune sound. Templates for animated Gen 1 Pokémon (live from PokeAPI) and procedurally generated creatures. |
 | [sketchbook-portfolio](skills/sketchbook-portfolio) | An illustrated personal portfolio in plain HTML/CSS/JS: a red sketchbook hero with boiling hand-drawn SVG, stamp borders and chalk doodles, Lenis smooth scroll, a 3D-hinged page, notes that pin mid-screen while polaroids parallax past, project cards that land on a tilting grid board, nav hover doodles and click ink bursts. |
+| [scientific-figure-making](skills/scientific-figure-making) | Publication-ready matplotlib figures for papers, slides and reports: grouped bars, trends, heatmaps and multi-panel layouts in one house style (palette, fonts, spines, legend panels, print-safe hatching, vector export). By Chen Liu, from [figures4papers](https://github.com/ChenLiu-1996/figures4papers). |
 
 ## Install
 
@@ -29,6 +30,7 @@ ln -s ~/src/claude-skills/skills/morph-tile-loop ~/.claude/skills/morph-tile-loo
 ln -s ~/src/claude-skills/skills/iso-sim-town ~/.claude/skills/iso-sim-town
 ln -s ~/src/claude-skills/skills/pixel-showcase ~/.claude/skills/pixel-showcase
 ln -s ~/src/claude-skills/skills/sketchbook-portfolio ~/.claude/skills/sketchbook-portfolio
+ln -s ~/src/claude-skills/skills/scientific-figure-making ~/.claude/skills/scientific-figure-making
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -122,7 +124,7 @@ Made by rebuilding a reference video of an isometric town builder in JavaScript.
 
 ## License
 
-MIT
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev) and scientific-figure-making (CC BY-NC 4.0, Chen Liu).
 
 ## pixel-showcase
 
@@ -153,3 +155,18 @@ Inspired by my own pixel loot-card opener. Pokémon © Nintendo / Game Freak / T
 **URL options:** `?y=1800` opens a static frame at that scroll position (no smooth scroll), for screenshots.
 
 Inspired by [Jackie Zhang's portfolio](https://jackiezhang.co.za/). The code and illustrations are original.
+
+## scientific-figure-making
+
+![Grouped bars in the house style](skills/scientific-figure-making/assets/bars.png)
+
+![Trend plot in the house style](skills/scientific-figure-making/assets/trend.png)
+
+- `SKILL.md`: when to load it (matplotlib figures with a publication target) and when not to (Plotly/Altair/Bokeh, EDA-only plots, 3D/GIS, Figma-first infographics).
+- `references/design-theory.md`: the house style measured from the real scripts: fonts and sizes, spines, the blue/green/red/neutral palette and what each colour means, export DPI, layout rules.
+- `references/api.md`: `PALETTE`, `FigureStyle` and the helper signatures (`apply_publication_style`, `make_grouped_bar`, `make_trend`, `make_heatmap`, `finalize_figure`…) to implement per project.
+- `references/common-patterns.md`: ultra-wide panels, a legend-only axis, hidden category ticks, tight y-limits, black edges and hatching so bars survive grayscale print.
+- `references/tutorials.md`: grouped bars, multi-panel trends with a legend column, a labelled heatmap.
+- `references/demos.md`: links to the upstream `figure_*` folders, the canonical scripts behind the style.
+
+Copied unchanged from [ChenLiu-1996/figures4papers](https://github.com/ChenLiu-1996/figures4papers/tree/main/scientific-figure-making) (`3c181f8`) by [Chen Liu](https://chenliu-1996.github.io/). Licensed CC BY-NC 4.0, not MIT: see the skill's `LICENSE`. The preview images are upstream's `figure_ImmunoStruct` and `figure_ophthal_review` outputs.
