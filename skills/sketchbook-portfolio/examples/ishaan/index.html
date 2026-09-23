@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ishaan Kalra</title>
+<meta name="description" content="Ishaan Kalra, software engineer (ML / AI) in College Park, MD. I build software that does my chores.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e35342'/%3E%3Cpath d='M22 16v32M16 16h12M16 48h12M36 16v32M50 16L37 33l14 15' stroke='%23212121' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Averia+Serif+Libre&family=Geist+Mono:wght@400;500&family=Gochi+Hand&family=Inter:wght@400;500&family=Instrument+Serif:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ shared SVG: filters + doodle library ============ -->
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- wobbly ink line; seeds get swapped by main.js for a hand-drawn "boil" -->
+    <filter id="rough" x="-8%" y="-8%" width="116%" height="116%" data-boil>
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="2"/>
+      <feDisplacementMap in="SourceGraphic" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough-lite" x="-4%" y="-4%" width="108%" height="108%" data-boil>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="1" seed="4"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- chalky white line: wobble + grain dropouts -->
+    <filter id="chalk" x="-12%" y="-12%" width="124%" height="124%" data-boil>
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="5" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wob"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="1" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3.2 2.55" result="mask"/>
+      <feComposite in="wob" in2="mask" operator="in"/>
+    </filter>
+
+    <!-- soccer ball -->
+    <symbol id="d-ball" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="40" style="fill:var(--fill,none)"/>
+      <path d="M50 37 L62.4 46 L57.6 60.5 L42.4 60.5 L37.6 46 Z" style="fill:currentColor"/>
+      <path d="M50 37V24M62.4 46L74.7 42M57.6 60.5L65.3 71M42.4 60.5L34.7 71M37.6 46L25.3 42"/>
+      <path d="M50 24L30 15.4M50 24L70 15.4M74.7 42L76.8 20.3M74.7 42L89.1 58.3M65.3 71L86.5 66.3M65.3 71L54.2 89.8M34.7 71L45.8 89.8M34.7 71L13.5 66.3M25.3 42L10.9 58.3M25.3 42L23.2 20.3"/>
+    </symbol>
+
+    <!-- Testudo, the UMD terrapin -->
+    <symbol id="d-turtle" viewBox="0 0 140 100">
+      <path d="M108 58C116 44 134 44 134 56C134 66 122 68 112 64" style="fill:var(--fill,none)"/>
+      <circle cx="124" cy="53" r="2.4" style="fill:currentColor"/>
+      <path d="M122 60q4 3 8 0"/>
+      <path d="M90 68C90 80 100 82 102 70M34 68C32 80 44 82 46 70" style="fill:var(--fill,none)"/>
+      <path d="M22 62L10 66L22 67"/>
+      <path d="M22 64C26 22 94 20 108 64Z" style="fill:var(--fill,none)"/>
+      <path d="M16 64Q64 76 114 64"/>
+      <path d="M52 42L64 36L76 42L76 54L64 60L52 54Z"/>
+      <path d="M52 42L38 36M76 42L90 36M52 54L34 62M76 54L96 62M64 36V32M64 60V64"/>
+    </symbol>
+
+    <!-- Maryland blue crab -->
+    <symbol id="d-crab" viewBox="0 0 140 100">
+      <g id="crab-half">
+        <path d="M42 56C30 52 26 44 28 34"/>
+        <path d="M28 34C14 34 10 18 20 10C22 18 26 22 32 22C30 16 32 10 38 12C42 22 38 32 28 34Z" style="fill:var(--fill,none)"/>
+        <path d="M44 66L30 70L22 80M46 70L34 78L28 90M52 74L44 84L40 94"/>
+        <path d="M62 47L58 32"/>
+        <circle cx="57" cy="29" r="4" style="fill:var(--fill,none)"/>
+      </g>
+      <use href="#crab-half" transform="matrix(-1 0 0 1 140 0)"/>
+      <path d="M40 62C40 44 100 44 100 62C100 76 40 76 40 62Z" style="fill:var(--fill,none)"/>
+      <path d="M64 62Q70 67 76 62"/>
+      <circle cx="52" cy="58" r="1.6" style="fill:currentColor"/>
+      <circle cx="88" cy="58" r="1.6" style="fill:currentColor"/>
+    </symbol>
+
+    <!-- headphones -->
+    <symbol id="d-headphones" viewBox="0 0 100 100">
+      <path d="M20 60C16 20 84 20 80 60M27 56C26 30 74 30 73 56"/>
+      <path d="M14 54h14a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V58a4 4 0 0 1 4-4z" style="fill:var(--fill,none)"/>
+      <path d="M72 54h14a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H72a4 4 0 0 1-4-4V58a4 4 0 0 1 4-4z" style="fill:var(--fill,none)"/>
+      <path d="M17 60v16M83 60v16"/>
+      <path d="M92 22V9l-9 2.5v13"/>
+      <circle cx="89.5" cy="22.5" r="2.6" style="fill:currentColor"/>
+      <circle cx="80.5" cy="25" r="2.6" style="fill:currentColor"/>
+    </symbol>
+
+    <!-- game controller -->
+    <symbol id="d-controller" viewBox="0 0 120 80">
+      <path d="M30 18H90C108 18 116 40 114 60C112 74 98 76 90 64L82 54H38L30 64C22 76 8 74 6 60C4 40 12 18 30 18Z" style="fill:var(--fill,none)"/>
+      <path d="M28 34h6v-6h6v6h6v6h-6v6h-6v-6h-6Z"/>
+      <circle cx="84" cy="30" r="3.5"/><circle cx="92" cy="38" r="3.5"/>
+      <circle cx="84" cy="46" r="3.5"/><circle cx="76" cy="38" r="3.5"/>
+      <path d="M53 38h5M62 38h5"/>
+    </symbol>
+
+    <!-- rubber duck -->
+    <symbol id="d-duck" viewBox="0 0 110 100">
+      <path d="M14 60C14 46 30 44 44 50C40 30 52 14 70 16C86 18 92 34 86 46C100 44 104 58 96 72C88 88 30 90 14 60Z" style="fill:var(--fill,none)"/>
+      <path d="M86 30C96 26 104 32 100 36C96 40 88 38 86 36"/>
+      <circle cx="74" cy="28" r="2.6" style="fill:currentColor"/>
+      <path d="M40 64C50 56 66 60 64 70C56 74 46 72 40 64Z"/>
+      <path d="M4 94q8-6 16 0t16 0t16 0t16 0t16 0t16 0" />
+    </symbol>
+
+    <!-- paper plane -->
+    <symbol id="d-plane" viewBox="0 0 140 80">
+      <path d="M58 40L130 8L98 68L84 50Z" style="fill:var(--fill,none)"/>
+      <path d="M84 50L130 8M84 50L82 64L92 58"/>
+      <path d="M54 44C36 50 30 30 16 40C6 48 12 60 4 66" stroke-dasharray="4 7"/>
+    </symbol>
+
+    <!-- flower -->
+    <symbol id="d-flower" viewBox="0 0 100 130">
+      <path d="M50 55C47 80 54 100 50 126"/>
+      <path d="M50 92C34 80 20 88 18 98C30 104 44 100 50 92ZM50 92C40 92 30 95 22 98" style="fill:var(--fill,none)"/>
+      <path d="M51 106C66 94 80 100 84 108C72 116 58 114 51 106ZM51 106C62 106 72 107 80 108" style="fill:var(--fill,none)"/>
+      <g style="fill:var(--fill,none)">
+        <ellipse cx="50" cy="23" rx="11" ry="15"/>
+        <ellipse cx="50" cy="23" rx="11" ry="15" transform="rotate(72 50 40)"/>
+        <ellipse cx="50" cy="23" rx="11" ry="15" transform="rotate(144 50 40)"/>
+        <ellipse cx="50" cy="23" rx="11" ry="15" transform="rotate(216 50 40)"/>
+        <ellipse cx="50" cy="23" rx="11" ry="15" transform="rotate(288 50 40)"/>
+        <circle cx="50" cy="40" r="7"/>
+      </g>
+      <circle cx="50" cy="40" r="2" style="fill:currentColor"/>
+    </symbol>
+
+    <!-- crown -->
+    <symbol id="d-crown" viewBox="0 0 120 90">
+      <path d="M14 70L8 24L36 46L60 14L84 46L112 24L106 70Z" style="fill:var(--fill,none)"/>
+      <path d="M14 70H106V82H14Z" style="fill:var(--fill,none)"/>
+      <circle cx="8" cy="20" r="4"/><circle cx="60" cy="10" r="4"/><circle cx="112" cy="20" r="4"/>
+      <path d="M36 76l4-3 4 3-4 3ZM56 76l4-3 4 3-4 3ZM76 76l4-3 4 3-4 3Z" style="fill:currentColor"/>
+    </symbol>
+
+    <!-- little agent robot -->
+    <symbol id="d-robot" viewBox="0 0 100 120">
+      <path d="M50 26V14"/><circle cx="50" cy="10" r="4"/>
+      <rect x="15" y="38" width="7" height="14" rx="2"/><rect x="78" y="38" width="7" height="14" rx="2"/>
+      <rect x="22" y="26" width="56" height="40" rx="10" style="fill:var(--fill,none)"/>
+      <circle cx="39" cy="44" r="4" style="fill:currentColor"/><circle cx="61" cy="44" r="4" style="fill:currentColor"/>
+      <path d="M41 54Q50 61 59 54"/>
+      <path d="M45 66V71M55 66V71"/>
+      <path d="M30 78C20 82 16 92 18 100"/><circle cx="18" cy="103" r="3.5"/>
+      <path d="M70 78C82 74 88 64 86 53"/><circle cx="86" cy="48" r="4"/>
+      <path d="M93 38q4-4 2-9M97 47q5-2 6-8"/>
+      <rect x="30" y="71" width="40" height="33" rx="8" style="fill:var(--fill,none)"/>
+      <circle cx="50" cy="84" r="5"/><path d="M40 96h6M54 96h6"/>
+      <path d="M42 104V114M58 104V114M36 115H46M54 115H64"/>
+    </symbol>
+
+    <!-- retro terminal computer -->
+    <symbol id="d-computer" viewBox="0 0 140 120">
+      <path d="M24 14H112C118 14 122 18 122 24V78C122 84 118 88 112 88H24C18 88 14 84 14 78V24C14 18 18 14 24 14Z" style="fill:var(--fill,none)"/>
+      <rect x="28" y="24" width="80" height="52" rx="8"/>
+      <path d="M46 38l9 6-9 6"/>
+      <path d="M62 58h16" class="blink"/>
+      <path d="M34 88L28 102H108L102 88"/>
+      <rect x="20" y="102" width="96" height="11" rx="3" style="fill:var(--fill,none)"/>
+      <path d="M30 107.5h6M42 107.5h6M54 107.5h28M88 107.5h6M100 107.5h6"/>
+      <path d="M100 82h12"/>
+    </symbol>
+
+    <!-- monogram: the person's initials -->
+    <symbol id="d-monogram" viewBox="0 0 100 100">
+      <path d="M30 26V74M22 26H38M22 74H38M54 26V74M80 26L56 52L82 74"/>
+    </symbol>
+
+    <!-- window + cursor -->
+    <symbol id="d-cursor" viewBox="0 0 100 100">
+      <rect x="14" y="20" width="72" height="60" rx="8" style="fill:var(--fill,none)"/>
+      <path d="M14 34H86"/>
+      <circle cx="23" cy="27" r="2.4"/><circle cx="31" cy="27" r="2.4"/><circle cx="39" cy="27" r="2.4"/>
+      <path d="M46 44L46 70L53 63L58 74L63 72L58 61L67 61Z" style="fill:currentColor"/>
+    </symbol>
+
+    <!-- paper clip -->
+    <symbol id="d-clip" viewBox="0 0 30 70">
+      <path d="M21 14V52a8 8 0 0 1-16 0V12a6 6 0 0 1 12 0V50a2.5 2.5 0 0 1-5 0V20"/>
+    </symbol>
+
+    <!-- hand-drawn arrow -->
+    <symbol id="d-arrow" viewBox="0 0 120 60">
+      <path d="M6 44C30 12 70 8 104 30M90 17L106 31L87 37"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ stamp borders (filled by main.js) ============ -->
+<div class="stamps stamps--left" aria-hidden="true"><div class="stamps__track"></div></div>
+<div class="stamps stamps--right" aria-hidden="true"><div class="stamps__track"></div></div>
+<div class="stamp-tip" aria-hidden="true"></div>
+
+<header class="nav">
+  <a href="#top" class="nav__link nav__link--smile" aria-label="Back to top">
+    <svg class="nav__smile" viewBox="0 0 24 24"><g filter="url(#rough-lite)"><circle cx="12" cy="12" r="10"/><circle cx="8.5" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M7.5 14.5c2.5 3 6.5 3 9 0"/></g></svg>
+  </a>
+  <a href="#about" class="nav__link">
+    <span class="nav__label">about</span>
+    <svg class="nav__loop" viewBox="0 0 120 50" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M86 8C66 1 28 3 13 15C0 26 12 41 42 45C74 49 110 41 113 27C115 16 102 9 80 7C70 6 62 8 55 11"/></svg>
+    <span class="nav__pop" aria-hidden="true">
+      <svg class="pop" style="--d:0ms;--x:-4px;--y:-78px;--r:-6deg;width:52px;stroke-width:5" viewBox="0 0 100 120"><g filter="url(#rough-lite)"><use href="#d-robot"/></g></svg>
+      <svg class="pop" style="--d:60ms;--x:-54px;--y:-58px;--r:-14deg;width:24px" viewBox="0 0 24 24"><g filter="url(#rough-lite)"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></g></svg>
+      <svg class="pop" style="--d:110ms;--x:44px;--y:-50px;--r:10deg;width:20px" viewBox="0 0 20 30"><g filter="url(#rough-lite)"><path d="M4 28C6 18 14 18 14 10C14 4 8 3 7 8C6 13 14 14 18 6"/></g></svg>
+      <svg class="pop" style="--d:90ms;--x:-44px;--y:8px;--r:0deg;width:22px" viewBox="0 0 22 22"><g filter="url(#rough-lite)"><path d="M2 12h7M6 18l4-4M12 21v-6"/></g></svg>
+      <span class="pop pop--tag" style="--d:140ms;--x:0px;--y:34px;--r:-3deg">still compiling</span>
+    </span>
+  </a>
+  <a href="#work" class="nav__link">
+    <span class="nav__label">work</span>
+    <svg class="nav__loop" viewBox="0 0 120 50" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M86 8C66 1 28 3 13 15C0 26 12 41 42 45C74 49 110 41 113 27C115 16 102 9 80 7C70 6 62 8 55 11"/></svg>
+    <span class="nav__pop" aria-hidden="true">
+      <svg class="pop" style="--d:0ms;--x:-6px;--y:-92px;--r:-8deg;width:70px;stroke-width:5" viewBox="0 0 100 100"><g filter="url(#rough-lite)"><use href="#d-cursor" style="--fill:var(--bg)"/></g></svg>
+      <svg class="pop" style="--d:70ms;--x:30px;--y:-54px;--r:8deg;width:40px;stroke-width:5" viewBox="0 0 100 120"><g filter="url(#rough-lite)"><use href="#d-robot" style="--fill:var(--bg)"/></g></svg>
+      <svg class="pop" style="--d:120ms;--x:-58px;--y:-40px;--r:-10deg;width:22px" viewBox="0 0 24 24"><g filter="url(#rough-lite)"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></g></svg>
+      <svg class="pop" style="--d:150ms;--x:58px;--y:-86px;--r:14deg;width:22px" viewBox="0 0 24 24"><g filter="url(#rough-lite)"><path d="M4 3l14 7-6 2 4 8-3 1-4-8-5 4z"/></g></svg>
+    </span>
+  </a>
+  <a href="#connect" class="nav__link">
+    <span class="nav__label">connect</span>
+    <svg class="nav__loop" viewBox="0 0 120 50" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M86 8C66 1 28 3 13 15C0 26 12 41 42 45C74 49 110 41 113 27C115 16 102 9 80 7C70 6 62 8 55 11"/></svg>
+    <span class="nav__pop" aria-hidden="true">
+      <svg class="pop" style="--d:0ms;--x:-10px;--y:-70px;--r:-4deg;width:46px;stroke-width:5" viewBox="0 0 100 120"><g filter="url(#rough-lite)"><use href="#d-robot" style="--fill:var(--bg)"/></g></svg>
+      <svg class="pop" style="--d:80ms;--x:44px;--y:-92px;--r:12deg;width:44px;stroke-width:5" viewBox="0 0 140 80"><g filter="url(#rough-lite)"><use href="#d-plane" style="--fill:var(--bg)"/></g></svg>
+      <svg class="pop" style="--d:130ms;--x:52px;--y:-40px;--r:-8deg;width:30px" viewBox="0 0 30 22"><g filter="url(#rough-lite)"><rect x="2" y="2" width="26" height="18" rx="3"/><path d="M3 4l12 9 12-9"/></g></svg>
+      <svg class="pop" style="--d:170ms;--x:-58px;--y:-36px;--r:-12deg;width:24px" viewBox="0 0 24 24"><g filter="url(#rough-lite)"><circle cx="12" cy="12" r="4"/><path d="M16 8v5.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-3.5 7.1"/></g></svg>
+    </span>
+  </a>
+</header>
+
+<main>
+
+<!-- ============ the sketchbook ============ -->
+<section class="book" id="top">
+  <svg class="doodle" data-speed="0.8" style="left:-172px;top:330px;width:116px;--rot:-8deg" viewBox="0 0 110 100"><g filter="url(#chalk)"><use href="#d-duck"/></g></svg>
+  <svg class="doodle" data-speed="1.15" style="right:-180px;top:150px;width:126px;--rot:10deg" viewBox="0 0 120 90"><g filter="url(#chalk)"><use href="#d-crown"/></g></svg>
+  <svg class="doodle" data-speed="0.9" style="right:-168px;top:520px;width:108px;--rot:-6deg" viewBox="0 0 120 80"><g filter="url(#chalk)"><use href="#d-controller"/></g></svg>
+
+  <!-- top half: grid page. tilts back a little as you scroll -->
+  <div class="book__top">
+    <div class="page page--grid">
+      <div class="hero">
+        <div class="hero__text">
+          <svg class="signature" viewBox="0 0 230 80" role="img" aria-label="Ishaan">
+            <g filter="url(#rough-lite)">
+              <text x="4" y="58">Ishaan</text>
+              <path d="M8 68C60 60 120 74 176 62" fill="none"/>
+              <circle cx="196" cy="30" r="2.2" fill="currentColor" stroke="none"/>
+              <circle cx="206" cy="30" r="2.2" fill="currentColor" stroke="none"/>
+              <path d="M192 38c4 6 14 6 18 0" fill="none"/>
+            </g>
+          </svg>
+          <p class="hero__role">Software Engineer · ML / AI</p>
+          <h1 class="hero__title">Software should<br>do the <span class="hand">chores<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><g filter="url(#rough-lite)"><path d="M4 12C40 4 90 16 130 8S180 10 196 6"/></g></svg></span></h1>
+          <p class="hero__loc">College Park, MD <span aria-hidden="true">•</span> <span id="clock" data-tz="America/New_York">GMT −4:00</span></p>
+        </div>
+
+        <!-- hero illustration -->
+        <svg class="hero__art" viewBox="62 0 492 426" role="img" aria-label="A hand-drawn terminal window checking off chores, with a turtle on top, a small robot waving, a soccer ball and plants">
+          <g class="ink" filter="url(#rough)">
+            <!-- window -->
+            <rect x="150" y="64" width="250" height="296" rx="10" class="paper"/>
+            <path d="M150 92H400"/>
+            <circle cx="167" cy="78" r="5"/><circle cx="183" cy="78" r="5"/><circle cx="199" cy="78" r="5"/>
+            <path d="M226 75H262M226 81H262M338 75H364" />
+            <rect x="372" y="72" width="10" height="10" rx="1.5"/><rect x="386" y="72" width="10" height="10" rx="1.5"/>
+            <path d="M388 110V330"/><rect x="384" y="118" width="8" height="34" rx="3" class="solid"/>
+            <path d="M172 150l5 6 10-12M172 182l5 6 10-12M172 214l5 6 10-12M172 246l5 6 10-12" stroke-width="3"/>
+
+            <!-- plants behind bushes -->
+            <path d="M140 392C134 340 146 300 136 252"/>
+            <path d="M139 364c-16-2-26-12-28-24c14 0 26 10 28 24z M140 342c16-2 26-12 28-24c-14 0-26 10-28 24z M141 320c-14-2-22-10-24-20c12 0 22 8 24 20z M140 300c14-2 22-10 24-20c-12 0-22 8-24 20z M138 280c-11-2-17-8-18-16c9 0 16 6 18 16z M137 262c10-2 15-8 16-15c-8 0-14 6-16 15z" class="paper"/>
+            <path d="M404 382C410 330 400 290 414 240"/>
+            <path d="M404 372C380 342 384 302 392 282C400 312 404 342 404 372Z M406 352C430 322 436 292 430 264C420 292 410 322 406 352Z" class="paper"/>
+            <path d="M270 404C268 390 272 380 268 368"/>
+            <path d="M268 382c-10-2-16-8-16-16c8 0 14 6 16 16z M270 376c10-2 16-8 16-16c-8 0-14 6-16 16z" class="paper"/>
+
+            <!-- bushes -->
+            <path d="M112 402C100 384 112 364 130 370C132 350 158 344 170 358C180 340 208 342 212 362C230 356 250 372 240 390C252 394 250 404 242 404Z" class="paper"/>
+            <path d="M140 388q4-6 8 0q4-6 8 0M190 378q4-6 8 0q4-6 8 0M222 392q3-5 6 0"/>
+            <path d="M318 402C306 388 318 370 334 376C338 356 364 352 372 368C384 358 404 364 402 382C414 386 414 402 404 404Z" class="paper"/>
+            <path d="M344 390q4-6 8 0q4-6 8 0M378 380q3-5 6 0"/>
+            <path d="M500 404C494 392 504 382 514 388C520 378 536 380 536 392C546 394 546 404 540 404Z" class="paper"/>
+
+            <!-- ground -->
+            <path d="M70 404C180 398 330 408 548 402"/>
+            <path d="M86 404l3-9l2 7l3-11l2 13M300 404l3-8l2 6l3-10l2 12M462 404l3-8l2 6l3-10l2 12"/>
+            <ellipse cx="288" cy="414" rx="6" ry="3"/><ellipse cx="452" cy="414" rx="4" ry="2"/>
+
+            <!-- sparkles -->
+            <path d="M470 118l3-11l3 11l11 3l-11 3l-3 11l-3-11l-11-3z M102 150l2-7l2 7l7 2l-7 2l-2 7l-2-7l-7-2z M512 236l2-6l2 6l6 2l-6 2l-2 6l-2-6l-6-2z"/>
+
+            <!-- characters -->
+            <use href="#d-ball" x="92" y="344" width="58" height="58" style="--fill:var(--cream)"/>
+            <use href="#d-robot" x="396" y="258" width="120" height="144" style="--fill:var(--cream)"/>
+            <use href="#d-turtle" x="176" y="7" width="98" height="70" style="--fill:var(--cream)"/>
+            <use href="#d-headphones" x="352" y="22" width="66" height="66" transform="rotate(14 385 55)" style="--fill:var(--cream)"/>
+            <use href="#d-flower" x="398" y="206" width="34" height="44" style="--fill:var(--cream)"/>
+          </g>
+          <!-- terminal text kept crisp so it stays readable -->
+          <g class="term">
+            <text x="300" y="83" class="t-mono t-center">~/chores</text>
+            <text x="170" y="126" class="t-mono">$ ishaan --automate</text>
+            <text x="194" y="160" class="t-hand">slack triaged</text>
+            <text x="194" y="192" class="t-hand">meetings summarized</text>
+            <text x="194" y="224" class="t-hand">resume tailored</text>
+            <text x="194" y="256" class="t-hand">forms autofilled</text>
+            <text x="170" y="296" class="t-mono">$</text>
+            <rect x="186" y="284" width="9" height="15" class="cursor"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="ribbon ribbon--left" aria-hidden="true"></div>
+    <div class="ribbon ribbon--right" aria-hidden="true"></div>
+  </div>
+
+  <!-- bottom half: hinged at the fold, opens flat as it scrolls in -->
+  <div class="book__bottom">
+    <div class="book__sheet">
+      <div class="page page--plain">
+        <p class="beliefs__title">3 things I strongly believe in</p>
+        <svg class="page-doodle page-doodle--bl" viewBox="0 0 100 130" aria-hidden="true"><g class="ink" filter="url(#rough)"><use href="#d-flower" style="--fill:var(--cream)"/></g></svg>
+        <svg class="page-doodle page-doodle--br" viewBox="0 0 140 100" aria-hidden="true"><g class="ink" filter="url(#rough)"><use href="#d-turtle" style="--fill:var(--cream)"/></g></svg>
+      </div>
+    </div>
+
+    <!-- each note rides a tall track; it sticks mid-screen until its track runs out -->
+    <div class="notes">
+      <div class="note-track" style="--x:8%;--y:118px;--pin:760px;z-index:3">
+        <div class="note-pin">
+          <div class="note note--lined"><span class="tape tape--tl"></span><p>ship it rough, then iterate.</p></div>
+        </div>
+      </div>
+      <div class="note-track" style="--x:50%;--y:84px;--pin:1260px;z-index:2">
+        <div class="note-pin">
+          <div class="note note--grid"><span class="tape tape--tr"></span><p>Automate the boring parts.</p></div>
+        </div>
+      </div>
+      <div class="note-track" style="--x:37%;--y:300px;--pin:1720px;z-index:1">
+        <div class="note-pin">
+          <div class="note note--kraft"><svg class="clip" viewBox="0 0 30 70" aria-hidden="true"><use href="#d-clip"/></svg><p>Measure,<br>don't guess.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ gallery: parallax polaroids around the pinned notes ============ -->
+<section class="gallery" aria-hidden="true">
+  <div class="gallery__inner">
+    <svg class="doodle" data-speed="1.3" style="left:27%;top:380px;width:120px;--rot:6deg" viewBox="0 0 140 100"><g filter="url(#chalk)"><use href="#d-crab"/></g></svg>
+    <svg class="doodle" data-speed="0.75" style="right:26%;top:860px;width:92px;--rot:-4deg" viewBox="0 0 100 130"><g filter="url(#chalk)"><use href="#d-flower"/></g></svg>
+    <svg class="doodle" data-speed="1.2" style="left:26%;top:1320px;width:96px;--rot:-10deg" viewBox="0 0 100 100"><g filter="url(#chalk)"><use href="#d-headphones"/></g></svg>
+    <svg class="doodle" data-speed="0.85" style="right:25%;top:1700px;width:120px;--rot:8deg" viewBox="0 0 140 80"><g filter="url(#chalk)"><use href="#d-plane"/></g></svg>
+  </div>
+</section>
+
+<!-- ============ work ============ -->
+<section class="work" id="work">
+  <div class="work__head">
+    <h2>Things I've built</h2>
+    <p class="work__hint">drag them around
+      <svg viewBox="0 0 120 60" aria-hidden="true"><g filter="url(#rough-lite)"><use href="#d-arrow"/></g></svg>
+    </p>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board">
+      <ol class="board__rows" aria-hidden="true"></ol>
+      <div class="board__inner" aria-hidden="true"></div>
+      <span class="cross" style="left:34%;top:30%"></span>
+      <span class="cross" style="left:66%;top:63%"></span>
+      <span class="cross" style="left:92%;top:90%"></span>
+      <span class="cross" style="left:20%;top:95%"></span>
+
+      <!-- larp -->
+      <article class="card" style="--r:-2.5deg;left:4%;top:56px">
+        <div class="scr scr--dark">
+          <div class="scr__bar"><i></i><i></i><i></i><span>larp</span></div>
+          <div class="panes">
+            <div class="panes__pane"><b>chatgpt</b><i style="--w:88%"></i><i style="--w:70%"></i><i style="--w:40%" class="stream"></i></div>
+            <div class="panes__pane"><b>claude</b><i style="--w:92%"></i><i style="--w:64%"></i><i style="--w:52%" class="stream"></i></div>
+            <div class="panes__pane"><b>ai mode</b><i style="--w:80%"></i><i style="--w:30%" class="stream"></i></div>
+            <div class="panes__pane"><b>ollama</b><i style="--w:74%"></i><i style="--w:58%"></i><i style="--w:66%" class="stream"></i></div>
+          </div>
+          <div class="panes__prompt">› one prompt, four answers<span class="caret"></span></div>
+        </div>
+        <h3>larp</h3>
+        <p>ChatGPT, Claude, Google AI Mode and a local Ollama model side by side in one terminal. One prompt goes to all of them and each answer streams into its own pane.</p>
+        <p class="tags">python · textual · chrome extension · websockets</p>
+      </article>
+
+      <!-- chalk -->
+      <article class="card" style="--r:1.8deg;left:36%;top:34px">
+        <div class="scr scr--light">
+          <div class="scr__bar"><i></i><i></i><i></i><span>chalk</span></div>
+          <svg class="sketch" viewBox="0 0 300 130" aria-hidden="true">
+            <g filter="url(#rough-lite)" fill="none" stroke="#2a2622" stroke-width="1.8" stroke-linecap="round">
+              <rect x="14" y="24" width="70" height="34" rx="6"/>
+              <rect x="116" y="24" width="70" height="34" rx="6"/>
+              <rect x="218" y="24" width="70" height="34" rx="6"/>
+              <path d="M84 41H112M106 36l6 5-6 5M186 41H214M208 36l6 5-6 5" stroke="#e35342"/>
+              <path d="M40 72C80 100 200 100 250 70" stroke-dasharray="3 5"/>
+            </g>
+            <g font-family="Geist Mono, monospace" font-size="11" fill="#2a2622" text-anchor="middle">
+              <text x="49" y="45">SYN</text><text x="151" y="45">SYN-ACK</text><text x="253" y="45">ACK</text>
+            </g>
+            <text x="12" y="120" font-family="Geist Mono, monospace" font-size="10.5" fill="#8a8178">you: how does the TCP handshake work?</text>
+          </svg>
+        </div>
+        <h3>chalk</h3>
+        <p>A whiteboard in the terminal. You draw with the mouse, an AI draws with tools, on the same canvas. Ask it to explain something and it teaches by sketching and animating.</p>
+        <p class="tags">python · tool use · braille plots · graphviz</p>
+      </article>
+
+      <!-- hud -->
+      <article class="card" style="--r:-1.2deg;left:68.5%;top:70px">
+        <div class="scr scr--dark">
+          <div class="scr__bar"><i></i><i></i><i></i><span>hud</span></div>
+          <div class="dash">
+            <div class="dash__p"><b>today</b><span class="bar" style="--w:74%"></span><span class="bar" style="--w:48%"></span><span class="bar" style="--w:62%"></span></div>
+            <div class="dash__p"><b>real madrid</b><em>next fixture ▸</em><em class="dim">college park · 64°</em></div>
+            <div class="dash__p"><b>spotify</b><div class="viz" data-viz></div></div>
+            <div class="dash__p"><b>shipping streak</b><div class="heat" data-heat></div></div>
+          </div>
+        </div>
+        <h3>hud</h3>
+        <p>My terminal dashboard: calendar, job applications, git shipping streak, weather, Real Madrid fixtures, and Spotify with a visualizer. Meeting notes get summarized into follow-ups overnight.</p>
+        <p class="tags">textual · eventkit · spotify api · sqlite</p>
+      </article>
+
+      <!-- slackhub -->
+      <article class="card" style="--r:2.2deg;left:6%;top:474px">
+        <div class="scr scr--dark">
+          <div class="scr__bar"><i></i><i></i><i></i><span>slackhub · unread</span></div>
+          <ul class="rows">
+            <li><b class="p4">P4</b><span>can you take a look before 5?</span></li>
+            <li><b class="p3">P3</b><span>free for a quick sync tmrw?</span></li>
+            <li><b class="p2">P2</b><span>which branch has the fix?</span></li>
+            <li class="dim"><b>P0</b><span>welcome to #random 🎉</span></li>
+          </ul>
+        </div>
+        <h3>slackhub</h3>
+        <p>Every Slack workspace in one TUI. Unreads are ranked by a small intent and priority classifier, so the things that need a reply float to the top.</p>
+        <p class="tags">mcp · launchd sync · sqlite · classifier</p>
+      </article>
+
+      <!-- refill -->
+      <article class="card" style="--r:-1.6deg;left:37.5%;top:452px">
+        <div class="scr scr--light">
+          <div class="scr__bar"><i></i><i></i><i></i><span>apply · ml engineer</span></div>
+          <ul class="form">
+            <li><span>Full name</span><em>Ishaan Kalra</em><b>✓</b></li>
+            <li><span>School</span><em>University of Maryland - College Park</em><b>✓</b></li>
+            <li><span>If yes above, explain</span><em>reads the answer it depends on</em><b>✓</b></li>
+            <li><span>Why this role?</span><em>reasoned from resume + JD</em><b>✓</b></li>
+          </ul>
+        </div>
+        <h3>refill</h3>
+        <p>A job-application autofill extension built around four failures I measured in existing tools. It sends the whole form graph plus resume and JD in one call, so conditional questions can be answered.</p>
+        <p class="tags">mv3 extension · fastapi · llm</p>
+      </article>
+
+      <!-- har-recon -->
+      <article class="card" style="--r:1.4deg;left:67%;top:490px">
+        <div class="scr scr--dark">
+          <div class="scr__bar"><i></i><i></i><i></i><span>har-recon</span></div>
+          <ul class="rows rows--mono">
+            <li><b class="t-gql">GQL</b><span>query getPlaylist</span><em>212ms</em></li>
+            <li><b class="t-rest">GET</b><span>/v1/me</span><em>48ms</em></li>
+            <li><b class="t-sse">SSE</b><span>/events</span><em>live</em></li>
+            <li><b class="t-ws">WS</b><span>frames</span><em>1,204</em></li>
+          </ul>
+        </div>
+        <h3>har-recon</h3>
+        <p>Capture a HAR from your own browser session over CDP and get a protocol-aware map of any web API: REST, GraphQL, gRPC-web, SSE, WebSockets, raw protobuf.</p>
+        <p class="tags">cdp · protocol analysis · json-schema</p>
+      </article>
+
+      <!-- har-keeper -->
+      <article class="card" style="--r:-2deg;left:10%;top:884px">
+        <div class="scr scr--dark">
+          <div class="scr__bar"><i></i><i></i><i></i><span>har-keeper · observe</span></div>
+          <ul class="log">
+            <li><b class="warn">●</b> auth: bearer expired</li>
+            <li class="ok">↻ reload real site → fresh token ✓</li>
+            <li><b class="warn">●</b> spec drift: query hash rotated</li>
+            <li class="ok">↻ re-captured → healed ✓</li>
+          </ul>
+        </div>
+        <h3>har-keeper</h3>
+        <p>Keeps har-recon-generated MCP servers working while you only stay signed in. It lets the real site mint fresh auth and heals request specs when a deploy drifts them.</p>
+        <p class="tags">mcp · self-healing · any site</p>
+      </article>
+
+      <!-- shortcat -->
+      <article class="card" style="--r:2.4deg;left:40%;top:866px">
+        <div class="scr scr--dark">
+          <div class="scr__bar"><i></i><i></i><i></i><span>zsh</span></div>
+          <ul class="log">
+            <li>$ shortcat build "morning brief"</li>
+            <li class="ok">✓ grounded in 402 real action ids</li>
+            <li class="ok">✓ assembled + signed</li>
+            <li class="dim">→ morning-brief.shortcut</li>
+          </ul>
+        </div>
+        <h3>shortcat</h3>
+        <p>A CLI that writes Apple Shortcuts. I pulled every valid action identifier out of the macOS dyld shared cache so generated shortcuts actually open instead of showing "Unknown Action".</p>
+        <p class="tags">reverse engineering · workflowkit · llm</p>
+      </article>
+
+      <p class="board__caption">Everything here started as a chore.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ about ============ -->
+<section class="about reveal" id="about">
+  <p class="eyebrow">What's his deal?</p>
+  <div class="about__grid">
+    <article class="about__note">
+      <span class="tape tape--tl"></span>
+      <h2>About me</h2>
+      <p>Hi, I'm Ishaan. I'm doing my MS in Computer Science at the University of Maryland, and I build software that does my chores: agents that triage my Slack, a terminal dashboard for my whole day, a whiteboard where an AI teaches by drawing.</p>
+      <p>I care most about shipping things people actually use, and about the model work underneath them: training, evals, methods. Off the keyboard it's Real Madrid, a lot of other sport, and whatever's on repeat.</p>
+    </article>
+    <ul class="stickers" aria-label="A few things about me"></ul>
+  </div>
+</section>
+
+<!-- ============ connect ============ -->
+<section class="connect-wrap reveal" id="connect">
+
+  <div class="connect">
+    <svg class="doodle" style="left:-172px;top:-10px;width:116px;--rot:-5deg" viewBox="0 0 140 80"><g filter="url(#chalk)"><use href="#d-plane"/></g></svg>
+    <svg class="doodle" style="right:-178px;top:200px;width:124px;--rot:4deg" viewBox="0 0 140 100"><g filter="url(#chalk)"><use href="#d-turtle"/></g></svg>
+    <div class="connect__list">
+      <h2>What I look for</h2>
+      <ul class="checklist">
+        <li><label><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24"><path d="M4 13l5 5L20 5"/></svg></span>Shipping things people use</label></li>
+        <li><label><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24"><path d="M4 13l5 5L20 5"/></svg></span>Real model work: training, evals</label></li>
+        <li><label><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24"><path d="M4 13l5 5L20 5"/></svg></span>Tools that give people time back</label></li>
+      </ul>
+      <!-- TODO: swap in the email you want public -->
+      <a class="chat-btn" href="mailto:you@example.com">let's chat!</a>
+      <p class="socials">
+        <a href="https://github.com/IshaanKalra2103" target="_blank" rel="noopener">github</a>
+        <a href="#" data-todo>x / twitter</a>
+        <a href="#" data-todo>linkedin</a>
+        <a href="#" data-todo>resume</a>
+      </p>
+    </div>
+
+    <div class="frame">
+      <svg class="frame__line" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true"><g filter="url(#rough)"><path d="M14 18C90 10 200 14 286 16C290 100 288 200 284 284C200 290 100 288 16 286C10 200 12 100 14 18Z"/></g></svg>
+      <div class="juggle">
+        <p class="juggle__count" aria-live="polite">tap the ball</p>
+        <button class="juggle__ball" type="button" aria-label="Kick the ball">
+          <svg viewBox="0 0 100 100"><g filter="url(#rough-lite)"><use href="#d-ball" style="--fill:var(--cream)"/></g></svg>
+        </button>
+        <span class="juggle__shadow"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <svg class="foot__pc" viewBox="0 0 140 120" aria-hidden="true"><g filter="url(#chalk)"><use href="#d-computer"/></g></svg>
+  <div class="marquee" aria-label="¡Hala Madrid! y nada más">
+    <div class="marquee__track" aria-hidden="true">
+      <span>🎶 ¡Hala Madrid! &nbsp;·&nbsp; y nada más &nbsp;·&nbsp; ¡Hala Madrid! &nbsp;·&nbsp; y nada más &nbsp;·&nbsp;</span>
+      <span>🎶 ¡Hala Madrid! &nbsp;·&nbsp; y nada más &nbsp;·&nbsp; ¡Hala Madrid! &nbsp;·&nbsp; y nada más &nbsp;·&nbsp;</span>
+    </div>
+  </div>
+  <svg class="signature signature--foot" viewBox="0 0 230 80" aria-hidden="true">
+    <g filter="url(#rough-lite)">
+      <text x="4" y="58">Ishaan</text>
+      <circle cx="196" cy="30" r="2.2" fill="currentColor" stroke="none"/>
+      <circle cx="206" cy="30" r="2.2" fill="currentColor" stroke="none"/>
+      <path d="M192 38c4 6 14 6 18 0" fill="none"/>
+    </g>
+  </svg>
+  <p class="foot__fine">© 2026 Ishaan Kalra · every line drawn in code, College Park MD</p>
+</footer>
+
+<script>
+  /* content config read by main.js */
+  window.SITE = {
+    // [symbol id, label] for the stamp columns; hover shows the label
+    stamps: [
+      ["d-monogram", "Kalra"], ["d-turtle", "Fear the turtle"], ["d-ball", "Madridista"],
+      ["d-cursor", "Lives in the terminal"], ["d-headphones", "Always a song on"],
+      ["d-robot", "Agents do my chores"], ["d-crab", "Maryland"], ["d-crown", "¡Hala Madrid!"],
+      ["d-controller", "Occasional gamer"], ["d-plane", "Ship it rough"],
+    ],
+    // which stamps show (bigger, captioned) in the about section
+    stickers: [1, 2, 4, 5, 6, 3],
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

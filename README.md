@@ -13,6 +13,7 @@
 | [morning-debrief](skills/morning-debrief) | A daily brief page for a project: one self-contained HTML file with a public-domain painting header, the one thing to push forward, to-dos with sources, what's waiting on other people and what changed — built from Slack, meeting notes, calendar, git and local checklists, and installable as a scheduled run. |
 | [slide-craft](skills/slide-craft) | Presentations as one self-contained HTML deck: fixed 1280×720 slides, thumbnail rail, presenter mode with notes, print to PDF — plus the thinking first (audience, the one sentence, the ask) and a list of the things that make slides look generated. |
 | [pixel-showcase](skills/pixel-showcase) | A gacha-style "who's that?" reveal for pixel sprites: hold to charge a silhouette through rarity colours, then it bursts into its own pixels and reassembles in colour, with a stat card, NEW/SHINY stamps, a dex and chip-tune sound. Templates for animated Gen 1 Pokémon (live from PokeAPI) and procedurally generated creatures. |
+| [sketchbook-portfolio](skills/sketchbook-portfolio) | An illustrated personal portfolio in plain HTML/CSS/JS: a red sketchbook hero with boiling hand-drawn SVG, stamp borders and chalk doodles, Lenis smooth scroll, a 3D-hinged page, notes that pin mid-screen while polaroids parallax past, project cards that land on a tilting grid board, nav hover doodles and click ink bursts. |
 
 ## Install
 
@@ -27,6 +28,7 @@ ln -s ~/src/claude-skills/skills/ink-abstraction ~/.claude/skills/ink-abstractio
 ln -s ~/src/claude-skills/skills/morph-tile-loop ~/.claude/skills/morph-tile-loop
 ln -s ~/src/claude-skills/skills/iso-sim-town ~/.claude/skills/iso-sim-town
 ln -s ~/src/claude-skills/skills/pixel-showcase ~/.claude/skills/pixel-showcase
+ln -s ~/src/claude-skills/skills/sketchbook-portfolio ~/.claude/skills/sketchbook-portfolio
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -135,3 +137,19 @@ MIT
 **Controls:** press and hold anywhere (or hold Space) to charge; tap the revealed sprite to poke it; the bottom pills force the next rarity; mute top right.
 
 Inspired by my own pixel loot-card opener. Pokémon © Nintendo / Game Freak / The Pokémon Company; this is a fan toy.
+
+## sketchbook-portfolio
+
+![Scroll story: the sketchbook opens, notes pin while polaroids drift, cards land on the board](skills/sketchbook-portfolio/assets/scroll.jpg)
+
+![Nav hovers: a pen loop and pop-up doodles](skills/sketchbook-portfolio/assets/hover.jpg)
+
+- `SKILL.md`: the sections and what moves in each, the workflow (collect real facts → fill the template → draw the person's own doodles → verify), how to draw doodles that boil, the scroll tuning knobs, and gotchas.
+- `template/`: the placeholder site. `styles.css` + `main.js` are the engine (identical everywhere); `index.html` holds the content, the SVG doodle library and `window.SITE`.
+- `examples/ishaan/`: my own site built from it.
+- `scripts/shot.mjs`: screenshots at scroll positions, each nav hover, or phone size, tiled into a contact sheet, with console errors. Node 22+, Chrome and ffmpeg, no npm deps.
+
+**Controls:** scroll; hover the nav and the stamps; drag the project cards once they land; tap the ball.
+**URL options:** `?y=1800` opens a static frame at that scroll position (no smooth scroll), for screenshots.
+
+Inspired by [Jackie Zhang's portfolio](https://jackiezhang.co.za/). The code and illustrations are original.
