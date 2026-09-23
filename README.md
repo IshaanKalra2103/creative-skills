@@ -17,6 +17,7 @@
 | [xray-scroll](skills/xray-scroll) | A scroll-driven x-ray film from any 3D model: three.js renders it see-through with dark rims and a floor reflection, it assembles part by part as GSAP ScrollTrigger scrubs one timeline over Lenis smooth scroll, and it cuts through pixel-mosaic, green dot-grid, red scanline, NO SIGNAL and datamosh glitches, with green tracking boxes, decoding captions and a timecode HUD. Single merged meshes (AI sculpts, scans) are split into parts automatically. |
 | [scientific-figure-making](skills/scientific-figure-making) | Publication-ready matplotlib figures for papers, slides and reports: grouped bars, trends, heatmaps and multi-panel layouts in one house style (palette, fonts, spines, legend panels, print-safe hatching, vector export). By Chen Liu, from [figures4papers](https://github.com/ChenLiu-1996/figures4papers). |
 | [dither-reveal](skills/dither-reveal) | Any image as a 1-bit Floyd–Steinberg dither that the cursor peels back to colour, in one WebGL2 page. Veil mode burns a lingering hole with colour leaking into the dots at its edge; filings mode turns every dot into an iron filing that the cursor lifts like a magnet into a spiky ferrofluid blob, then lets slide home. Comes with a script that cuts any photo off its background and embeds it, and a raymarched geode whose hover lens shows its cross-section. |
+| [pixel-rebuild](skills/pixel-rebuild) | Any pixel-art video, GIF or screen recording rebuilt as a crisp canvas page, pixel for pixel: it finds the art's native grid (even non-integer upscales), splits the clip into one background, deduplicated sprites and a palette, and replays the timeline in a zero-dependency player. A Chrome check compares every frame with the source and exports a GIF. |
 
 ## Install
 
@@ -35,6 +36,7 @@ ln -s ~/src/claude-skills/skills/sketchbook-portfolio ~/.claude/skills/sketchboo
 ln -s ~/src/claude-skills/skills/scientific-figure-making ~/.claude/skills/scientific-figure-making
 ln -s ~/src/claude-skills/skills/dither-reveal ~/.claude/skills/dither-reveal
 ln -s ~/src/claude-skills/skills/xray-scroll ~/.claude/skills/xray-scroll
+ln -s ~/src/claude-skills/skills/pixel-rebuild ~/.claude/skills/pixel-rebuild
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -208,3 +210,19 @@ Copied unchanged from [ChenLiu-1996/figures4papers](https://github.com/ChenLiu-1
 **Controls:** move to reveal or gather filings, click to burst or flip polarity. On the geode, scroll moves the cut.
 
 Inspired by a screen recording of a "Dither Veil" hover demo; the code is original. The Great Wave is from [The Met's Open Access collection](https://www.metmuseum.org/art/collection/search/45434) (public domain). The morpho photo is by [Didier Descouens / MHNT](https://commons.wikimedia.org/wiki/File:Morpho_rhetenor_rhetenor_MHNT_dos.jpg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
+## pixel-rebuild
+
+![A pixel tower loop rebuilt from a 720p reel](skills/pixel-rebuild/assets/pixel-tower.gif)
+
+*A 15.5 s reel of a pixel-art tower rebuilt as a canvas page, exported with `scripts/check.py --gif`. In Chrome, each frame averages 0.26 clearly wrong pixels out of 52,900.*
+
+- `SKILL.md`: how the grid is found and the clip is split into a background, sprites and a palette; the workflow (contact sheet → extract → check images → Chrome check); how to read the log, the knobs, and the traps already hit.
+- `scripts/extract.py <clip> --out <dir>`: a video, GIF or screen recording in; `data.js` and the player out. It handles non-integer upscales, offsets, non-square art, and 30/60 fps recordings of slower art.
+- `scripts/check.py <dir> [--gif out.gif]`: compares every rendered frame with the source in real Chrome, times playback, and writes a GIF with per-frame holds.
+- `template/index.html`: the zero-dependency player.
+
+**Controls:** space to pause, ← → to step, `m` for sound (when the clip has audio).
+**URL options:** `?f=N` opens paused on frame N; `window.pixel.seek(n)` from the console.
+
+The tower art isn't mine. It's rebuilt from a pixel-art reel by its original artist and shown here only to demo the pipeline. The code is original.
