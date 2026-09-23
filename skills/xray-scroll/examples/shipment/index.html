@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shipment Trace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script>
+    // The reference film: an x-ray Ferrari assembled wheel-first. Every field: ../../references/config.md
+    window.XRAY = {
+      // Ferrari 458 Italia by vicent091036 (Sketchfab), from the three.js examples; loaded from the three.js repo, not copied here
+      model: { url: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r170/examples/models/gltf/ferrari.glb', forward: '-z', size: 4.5 },
+      stages: {
+        lead: ['^grills$', '^lights$', '^leds$', '^yellow_trim$'],
+        base: ['^wheel_(fl|fr|rl|rr)$'],
+        frame: ['^metal$', '^brakes$', '^carbon_fibre$', '^plastic_gray$', '^interior_dark$', '^blue$'],
+        core: ['^interior_light$', '^leather$', '^carpet$', '^carbon_fibre_trim$', '^trim$', '^steering_wheel$'],
+        shell: ['^body$', '^chrome$', '^wipers$', '^lights_red$'],
+        skin: ['^glass$'],
+      },
+      density: [
+        ['^body', 0.5], ['^glass', 0.2], ['^chrome', 0.55], ['^interior', 0.45], ['^leather', 0.7], ['^carpet', 0.4],
+        ['^metal', 1.1], ['^brake', 1.2], ['^tire', 0.95], ['^rim', 1.1], ['^nuts', 1.3], ['^wheel', 0.8],
+        ['^grills', 1.2], ['^light', 1.0], ['^leds', 1.0], ['^steering', 1.0],
+      ],
+      track: {
+        front: ['wheel_fl', 'wheel_fl/brake', 'carbon_fibre', 'wheel_fr/brake', 'wheel_fr'],
+        top: ['wheel_fl', 'wheel_rl', 'leather', 'steering_wheel', 'wheel_fr', 'wheel_rr'],
+        detail: ['wheel_fr/tire', 'wheel_fr/brake', 'wheel_fr/nuts', 'wheel_fr/rim', 'steering_wheel'],
+      },
+      focus: 'wheel_fr', // sits screen-left from overhead, like the reference's close-up
+    };
+  </script>
+</head>
+<body>
+  <!-- WebGL x-ray + post, then the 2D tracking-box layer -->
+  <canvas id="gl"></canvas>
+  <canvas id="hud"></canvas>
+
+  <!-- Scroll track: each chapter's height = its share of the timeline -->
+  <main class="track">
+    <section class="chap" style="--len:5" data-ch="00 / ACQUIRE">
+      <div class="cap">
+        <p class="idx">00</p>
+        <h2 data-scr>SHIPMENT // X-RAY TRACE</h2>
+        <p data-scr>Unit 07 inbound at gate 3. Scroll to run the trace.</p>
+      </div>
+    </section>
+    <section class="chap" style="--len:9" data-ch="01 / NOSE">
+      <div class="cap">
+        <p class="idx">01</p>
+        <h2 data-scr>NOSE CONE</h2>
+        <p data-scr>Front fascia, grille mesh, lamp array. First returns clean.</p>
+        <dl><dt>PASS</dt><dd>01/04</dd><dt>DENSITY</dt><dd>LOW</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:12" data-ch="02 / CHASSIS">
+      <div class="cap">
+        <p class="idx">02</p>
+        <h2 data-scr>NODE GROUP: CHASSIS</h2>
+        <p data-scr>Four wheel nodes, two brake nodes tracked. Suspension geometry locked.</p>
+        <dl><dt>NODES</dt><dd>05</dd><dt>STATUS</dt><dd>ACTIVE</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:8" data-ch="03 / CALIBRATE">
+      <div class="cap">
+        <p class="idx">03</p>
+        <h2 data-scr>CALIBRATION</h2>
+        <p data-scr>Carrier 7.1 MHz. KEY-1 accepted. Cabin volume resolving.</p>
+      </div>
+    </section>
+    <section class="chap" style="--len:12" data-ch="04 / SHELL">
+      <div class="cap">
+        <p class="idx">04</p>
+        <h2 data-scr>SHELL + GLAZING</h2>
+        <p data-scr>Body panels, glass, chrome. Full envelope reconstructed.</p>
+        <dl><dt>PASS</dt><dd>04/04</dd><dt>ENVELOPE</dt><dd>SEALED</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:7" data-ch="05 / SIGNAL">
+      <div class="cap">
+        <p class="idx">05</p>
+        <h2 data-scr>SIGNAL LOSS</h2>
+        <p data-scr>Carrier dropped. Re-acquiring from overhead array.</p>
+      </div>
+    </section>
+    <section class="chap" style="--len:19" data-ch="06 / OVERHEAD">
+      <div class="cap">
+        <p class="idx">06</p>
+        <h2 data-scr>OVERHEAD PASS</h2>
+        <p data-scr>Rebuild from the contact patches up: wheels, frame, cabin, shell.</p>
+        <dl><dt>ARRAY</dt><dd>ZENITH</dd><dt>NODES</dt><dd>06</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:18" data-ch="07 / NODE FR-01">
+      <div class="cap">
+        <p class="idx">07</p>
+        <h2 data-scr>NODE FR-01</h2>
+        <p data-scr>Front-right corner. Disc, hub, fasteners. Tolerance within spec.</p>
+        <dl><dt>DISC</dt><dd>OK</dd><dt>HUB</dt><dd>OK</dd><dt>NUTS</dt><dd>5/5</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:10" data-ch="08 / CLEARED">
+      <div class="cap">
+        <p class="idx">08</p>
+        <h2 data-scr>END OF TRACE</h2>
+        <p data-scr>17 nodes logged. Shipment cleared for release.</p>
+      </div>
+    </section>
+    <div class="end-spacer"></div>
+  </main>
+
+  <!-- Fixed HUD layers (driven by the film). .blend is one group blended with difference,
+       so its white text inverts over paper and black. -->
+  <div class="overlay">
+    <div class="markers"></div>
+    <div class="freq">Freq:: 7.1 Mhz<br>KEY-1</div>
+    <div class="logo">SHIPMENT</div>
+    <div class="nosignal">NO SIGNAL</div>
+  </div>
+  <div class="overlay blend">
+    <header class="trace-head">SHIPMENT PROJECT :/ TRACE LOG: OK // NODE GROUP: ACTIVE //</header>
+    <div class="corner tl">SHPMNT/07<br><span class="dim">XR-TRACE v2.6</span></div>
+    <div class="corner tr"><span class="pct">000.0</span>%<br><span class="dim tc">T+00:00.000</span></div>
+    <div class="corner bl"><span class="chname">00 / ACQUIRE</span></div>
+    <div class="corner br">SCROLL <span class="arrow">&darr;</span></div>
+    <div class="progress"><span></span></div>
+  </div>
+
+  <div class="loader">
+    <div>
+      <p>ACQUIRING SIGNAL</p>
+      <p class="lpct">000%</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+  <script type="module" src="engine.js"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shipment Trace</title><!-- EDIT -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script>
+    // EDIT: the film's model and how it assembles. Every field: references/config.md
+    window.XRAY = {
+      // forward: which way the model's front faces (glTF convention +z); size: its largest extent after scaling
+      model: { url: 'assets/model.glb', forward: '+z', size: 4.5 },
+      // 'auto' = front 12% leads, the rest builds bottom-up. For a real build order, map node names
+      // (as three.js sees them: node scripts/glb-parts.mjs model.glb) to stages with regexes:
+      // stages: { lead: [], base: [], frame: [], core: [], shell: [], skin: [] },
+      stages: 'auto',
+      // split: 'auto',                          // one merged mesh? split it into islands or slices ('auto' | 'islands' | 'slices' | false)
+      // fallback: 'shell',                       // stage for meshes no regex claims
+      // density: [['^glass', 0.2], ['^metal', 1.1]],  // per-mesh darkness (default 0.8)
+      // track: { front: [], top: [], detail: [] },   // tracker nodes; 'parent/child' picks a child
+      // focus: 'node_name',                      // close-up target (or [x, y, z])
+      // gain: 1.2,                               // overall darkness
+    };
+  </script>
+</head>
+<body>
+  <!-- WebGL x-ray + post, then the 2D tracking-box layer -->
+  <canvas id="gl"></canvas>
+  <canvas id="hud"></canvas>
+
+  <!-- EDIT captions. Scroll track: each chapter's height = its share of the 100-unit film (--len sums to 100) -->
+  <main class="track">
+    <section class="chap" style="--len:5" data-ch="00 / ACQUIRE">
+      <div class="cap">
+        <p class="idx">00</p>
+        <h2 data-scr>SHIPMENT // X-RAY TRACE</h2>
+        <p data-scr>Unit 07 inbound at gate 3. Scroll to run the trace.</p>
+      </div>
+    </section>
+    <section class="chap" style="--len:9" data-ch="01 / LEAD">
+      <div class="cap">
+        <p class="idx">01</p>
+        <h2 data-scr>FIRST RETURNS</h2>
+        <p data-scr>Leading edge resolves. Density low, signal clean.</p>
+        <dl><dt>PASS</dt><dd>01/04</dd><dt>DENSITY</dt><dd>LOW</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:12" data-ch="02 / FRAME">
+      <div class="cap">
+        <p class="idx">02</p>
+        <h2 data-scr>NODE GROUP: FRAME</h2>
+        <p data-scr>Five nodes tracked. Load path geometry locked.</p>
+        <dl><dt>NODES</dt><dd>05</dd><dt>STATUS</dt><dd>ACTIVE</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:8" data-ch="03 / CALIBRATE">
+      <div class="cap">
+        <p class="idx">03</p>
+        <h2 data-scr>CALIBRATION</h2>
+        <p data-scr>Carrier 7.1 MHz. KEY-1 accepted. Core volume resolving.</p>
+      </div>
+    </section>
+    <section class="chap" style="--len:12" data-ch="04 / SHELL">
+      <div class="cap">
+        <p class="idx">04</p>
+        <h2 data-scr>SHELL</h2>
+        <p data-scr>Outer panels on. Full envelope reconstructed.</p>
+        <dl><dt>PASS</dt><dd>04/04</dd><dt>ENVELOPE</dt><dd>SEALED</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:7" data-ch="05 / SIGNAL">
+      <div class="cap">
+        <p class="idx">05</p>
+        <h2 data-scr>SIGNAL LOSS</h2>
+        <p data-scr>Carrier dropped. Re-acquiring from overhead array.</p>
+      </div>
+    </section>
+    <section class="chap" style="--len:19" data-ch="06 / OVERHEAD">
+      <div class="cap">
+        <p class="idx">06</p>
+        <h2 data-scr>OVERHEAD PASS</h2>
+        <p data-scr>Rebuild from the ground contacts up.</p>
+        <dl><dt>ARRAY</dt><dd>ZENITH</dd><dt>NODES</dt><dd>06</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:18" data-ch="07 / DETAIL">
+      <div class="cap">
+        <p class="idx">07</p>
+        <h2 data-scr>NODE 01</h2>
+        <p data-scr>Close pass on the lead node. Tolerance within spec.</p>
+        <dl><dt>STATUS</dt><dd>OK</dd></dl>
+      </div>
+    </section>
+    <section class="chap" style="--len:10" data-ch="08 / CLEARED">
+      <div class="cap">
+        <p class="idx">08</p>
+        <h2 data-scr>END OF TRACE</h2>
+        <p data-scr>All nodes logged. Shipment cleared for release.</p>
+      </div>
+    </section>
+    <div class="end-spacer"></div>
+  </main>
+
+  <!-- Fixed HUD layers (driven by the film). .blend is one group blended with difference,
+       so its white text inverts over paper and black. EDIT the words. -->
+  <div class="overlay">
+    <div class="markers"></div>
+    <div class="freq">Freq:: 7.1 Mhz<br>KEY-1</div>
+    <div class="logo">SHIPMENT</div>
+    <div class="nosignal">NO SIGNAL</div>
+  </div>
+  <div class="overlay blend">
+    <header class="trace-head">SHIPMENT PROJECT :/ TRACE LOG: OK // NODE GROUP: ACTIVE //</header>
+    <div class="corner tl">SHPMNT/07<br><span class="dim">XR-TRACE v2.6</span></div>
+    <div class="corner tr"><span class="pct">000.0</span>%<br><span class="dim tc">T+00:00.000</span></div>
+    <div class="corner bl"><span class="chname">00 / ACQUIRE</span></div>
+    <div class="corner br">SCROLL <span class="arrow">&darr;</span></div>
+    <div class="progress"><span></span></div>
+  </div>
+
+  <div class="loader">
+    <div>
+      <p>ACQUIRING SIGNAL</p>
+      <p class="lpct">000%</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+  <script type="module" src="engine.js"></script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+:root {
+  --paper: #f4f4f2;
+  --ink: #0b0b0b;
+  --green: #3bf29a;
+  --red: #e3140c;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --pixel: 'Silkscreen', var(--mono);
+  --gutter: clamp(16px, 3.2vw, 44px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+body {
+  background: #000;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: .02em;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* No z-index anywhere below: everything stays in the root stacking context so
+   mix-blend-mode: difference can see the WebGL canvas behind it. */
+#gl, #hud {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+#hud { pointer-events: none; }
+
+.dim { opacity: .55; }
+
+/* ---------- scroll track + chapter captions ---------- */
+.track { position: relative; }
+.chap { position: relative; height: calc(var(--len) * 13vh); }
+.end-spacer { height: 100vh; }
+
+.cap {
+  position: sticky;
+  top: 40vh;
+  margin-left: var(--gutter);
+  max-width: 250px;
+  color: #fff;
+  mix-blend-mode: difference;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .5s, transform .6s cubic-bezier(.2, .7, .2, 1);
+}
+.cap.on { opacity: 1; transform: none; }
+.cap .idx { font-size: 10px; opacity: .5; margin-bottom: 6px; }
+.cap h2 {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+.cap p { opacity: .78; }
+.cap dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 14px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid currentColor;
+  font-size: 10px;
+}
+.cap dt { opacity: .5; }
+
+/* ---------- fixed HUD ---------- */
+.overlay { position: fixed; inset: 0; pointer-events: none; }
+/* blend on the fixed layer itself: a fixed element is its own stacking context, so
+   blending its children would only see the (empty) layer, not the canvas */
+.overlay.blend { color: #fff; mix-blend-mode: difference; }
+
+.trace-head {
+  position: absolute;
+  top: 6.5vh;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: .04em;
+  opacity: 0;
+  padding: 0 var(--gutter);
+}
+
+.markers {
+  position: absolute;
+  top: 8vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(64vw, 560px);
+  height: 30vh;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+}
+.mk { width: 30px; height: 30px; color: var(--ink); opacity: 0; visibility: hidden; }
+.mk svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+
+.freq {
+  position: absolute;
+  top: 29vh;
+  left: calc(50% + min(15vw, 150px));
+  font-size: 9px;
+  line-height: 1.3;
+  color: var(--ink);
+  opacity: 0;
+}
+
+.logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--pixel);
+  font-weight: 700;
+  font-size: clamp(34px, 6.4vw, 84px);
+  letter-spacing: .03em;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: .06em 0 0 rgba(59, 242, 154, .35), -.04em 0 0 rgba(227, 20, 12, .35);
+}
+
+.nosignal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--red);
+  color: #230200;
+  font-size: clamp(20px, 2.6vw, 30px);
+  padding: .15em .45em;
+  letter-spacing: .08em;
+  opacity: 0;
+  white-space: nowrap;
+  animation: jitter .18s steps(2) infinite;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+}
+@keyframes jitter {
+  0% { transform: translate(-50%, -50%); }
+  50% { transform: translate(calc(-50% + 2px), calc(-50% - 1px)); }
+}
+
+.corner { position: absolute; font-size: 10px; line-height: 1.35; letter-spacing: .05em; }
+.corner.tl { top: 18px; left: var(--gutter); }
+.corner.tr { top: 18px; right: var(--gutter); text-align: right; }
+.corner.bl { bottom: 22px; left: var(--gutter); }
+.corner.br { bottom: 22px; right: var(--gutter); }
+.corner .arrow { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateY(3px); } }
+
+.progress {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 14px;
+  height: 1px;
+  background: rgba(255, 255, 255, .25);
+}
+.progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #fff;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+
+/* ---------- loader ---------- */
+.loader {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: var(--green);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  letter-spacing: .12em;
+  transition: opacity .6s;
+}
+.loader .lpct { font-family: var(--pixel); font-size: 28px; margin-top: 6px; }
+.loader.done { opacity: 0; pointer-events: none; }
+.loader.err { color: var(--red); }
+
+@media (max-width: 720px) {
+  .cap { top: 74vh; max-width: 78vw; }
+  .cap h2 { font-size: 12px; margin-bottom: 4px; }
+  .cap .idx, .cap dl { display: none; }
+  .trace-head { font-size: 9px; top: 9vh; }
+  .corner.tl .dim { display: none; }
+}
