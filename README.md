@@ -20,6 +20,7 @@
 | [pixel-rebuild](skills/pixel-rebuild) | Any pixel-art video, GIF or screen recording rebuilt as a crisp canvas page, pixel for pixel: it finds the art's native grid (even non-integer upscales), splits the clip into one background, deduplicated sprites and a palette, and replays the timeline in a zero-dependency player. A Chrome check compares every frame with the source and exports a GIF. |
 | [postage-collage](skills/postage-collage) | Original postage-stamp series as a collage page in plain HTML/CSS: ten stamp families (old-master editorial, pixel-fragment portrait, botanical strips, giant condensed word, narrow window, Swiss-Japanese pair, street-label ticket, green duotone panels, red duotone poster, red-circle collage), real CSS perforations, grain, postmarks and tape, a click-to-inspect zoom, and public-domain image fetch and print treatment from Wikimedia Commons. |
 | [motion-reel](skills/motion-reel) | Short vertical motion graphics (Reels/Shorts, 1080×1920, ~20 s, with sound) rendered entirely in code with Python + skia + ffmpeg. Two templates: a flat editorial-poster explainer with a procedural beat-grid soundtrack, and a 3D-camera piece (dive, depth of field, an orbit that exposes an animate-to-camera cheat, 24 fps on twos, motion blur, cursor auto-zoom) cut to a stock track's real drops. Comes with lessons and a style catalogue from studying 30 motion-design reels, and scripts to study reference reels and to pick music and find its drops. |
+| [signal-print](skills/signal-print) | A grainy signal-orange "ops-print" identity in two sheets of 4:5 plates: rotated tape strips with tickers, a crosshair emblem, a numbered run log, barred type crossed by a ring-matrix word, a live terminal, a halftone mark with a cursor loupe, a night-shift dial and an ID badge — plus an all-SVG asset kit (icons on keylines, mark construction and lockups, a blueprint, pattern tiles, seals and rubber stamps, an animated weave diagram, dingbats, live instruments) where every asset downloads as a clean .svg. |
 
 ## Install
 
@@ -41,6 +42,7 @@ ln -s ~/src/claude-skills/skills/xray-scroll ~/.claude/skills/xray-scroll
 ln -s ~/src/claude-skills/skills/pixel-rebuild ~/.claude/skills/pixel-rebuild
 ln -s ~/src/claude-skills/skills/postage-collage ~/.claude/skills/postage-collage
 ln -s ~/src/claude-skills/skills/motion-reel ~/.claude/skills/motion-reel
+ln -s ~/src/claude-skills/skills/signal-print ~/.claude/skills/signal-print
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -262,3 +264,19 @@ Inspired by a reel of editorial stamp designs; the stamps, copy and code are ori
 - `scripts/`: `fetch-fonts.sh` (OFL fonts), `study-reels.sh` (contact sheets, cut counts, 4 fps bursts of reference videos), `pick-music.py` (list and fetch Mixkit tracks, BPM and steadiness, a 0.25 s energy/kick map, a 20 s loudness-normalised cut).
 
 Made by studying a set of motion-design tutorial reels frame by frame, then rebuilding what they teach as code. Music isn't included: Mixkit tracks are free to use but not to redistribute, so `pick-music.py` fetches them.
+
+## signal-print
+
+![Sheet 01: LOOM identity studies](skills/signal-print/assets/identity.jpg)
+
+![Sheet 02: LOOM SVG kit](skills/signal-print/assets/svg-kit.jpg)
+
+- `SKILL.md`: the workflow (read references → invent a product and one metaphor → design a one-path mark → scaffold → rewrite copy → screenshot check) and the short rules of the look.
+- `references/grammar.md`: tokens, type, copy rules, how every plate on both sheets is built, the SVG export, and the traps already hit.
+- `examples/loom/identity.html`: eight HTML/CSS/canvas plates sized in container units.
+- `examples/loom/svg-kit.html`: eight all-SVG plates. Every asset is a nested svg; clicking one downloads it, with its patterns, markers and filters included.
+- `scripts/new.sh <dest> --name X --accent '#hex'`: copies both sheets and swaps the wordmark and colours. `scripts/shot.sh`: full-sheet headless Chrome screenshot.
+
+**Controls:** hover plate 06 on sheet 01 for the halftone loupe; hover and click any asset on sheet 02 to download it.
+
+Inspired by grainy orange agent-deployment posters from a dev-tool launch campaign; the brand (LOOM), mark, copy and code are original.

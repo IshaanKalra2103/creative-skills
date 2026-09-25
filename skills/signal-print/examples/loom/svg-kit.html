@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOOM SVG Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --or:#ff5217; --ink:#1b1916; --paper:#f5f2ea; --page:#e7e4dc;
+  --mono:"Space Mono",ui-monospace,monospace;
+  --grot:"Archivo",Helvetica,Arial,sans-serif;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='1' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 11 0 0 0 -6.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --grain-lite:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='1' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 11 0 0 0 -6.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--page);color:var(--ink)}
+body{font-family:var(--mono);padding:28px 16px 80px;overflow-x:hidden}
+.sheet-head{max-width:1500px;margin:0 auto 28px;display:grid;grid-template-columns:1fr auto;gap:12px 24px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:14px}
+.sheet-head h1{font-family:var(--grot);font-weight:900;font-stretch:112%;font-size:clamp(40px,7vw,96px);letter-spacing:-.03em;line-height:.85}
+.sheet-head h1 span{color:var(--or)}
+.sheet-head .meta{font-size:12px;line-height:1.55;text-transform:uppercase;text-align:right;white-space:pre}
+.sheet-head .rule{grid-column:1/-1;font-size:12px;text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.sheet-head a{color:inherit}
+.grid{max-width:1500px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:26px}
+figure{display:flex;flex-direction:column;gap:8px}
+figcaption{font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between}
+.poster{position:relative;aspect-ratio:4/5;overflow:hidden;isolation:isolate;box-shadow:0 1px 0 rgba(0,0,0,.08),0 18px 40px -24px rgba(0,0,0,.35)}
+.poster>svg{position:absolute;inset:0;width:100%;height:100%;display:block;filter:url(#rough)}
+.poster::after{content:"";position:absolute;inset:0;background-image:var(--grain);background-size:180px;opacity:.26;mix-blend-mode:multiply;pointer-events:none}
+.poster.dark::after{background-image:var(--grain-lite);mix-blend-mode:screen;opacity:.3}
+svg text{font-family:var(--mono)}
+svg .g{font-family:var(--grot)}
+svg.a{cursor:pointer;overflow:visible}
+.hl{pointer-events:none;transition:opacity .15s}
+.toast{opacity:0;position:fixed;left:50%;bottom:22px;transform:translate(-50%,140%);background:var(--ink);color:var(--paper);padding:10px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.toast.on{transform:translate(-50%,0);opacity:1}
+.toast b{color:var(--or);font-weight:700}
+@keyframes weft{0%{stroke-dashoffset:1}35%,85%{stroke-dashoffset:0}100%{stroke-dashoffset:-1}}
+.weft{stroke-dasharray:1 1;animation:weft 7s cubic-bezier(.6,0,.3,1) infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.weft{stroke-dasharray:none}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="rough" x="-2%" y="-2%" width="104%" height="104%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="2" seed="4" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<header class="sheet-head">
+  <h1>LOOM<span>®</span> / SVG KIT<br>ASSETS — SHT.02</h1>
+  <div class="meta">[ parallel thread works ]
+<a href="identity.html">← sht.01 identity studies</a>
+rev. 2026.09.25</div>
+  <div class="rule"><span>08 plates · 80+ assets</span><span>every shape is vector</span><span>click any asset → .svg</span><span>ink #1b1916 · or #ff5217 · pa #f5f2ea</span></div>
+</header>
+
+<main class="grid" id="grid"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+const OR='#ff5217', INK='#1b1916', PA='#f5f2ea';
+const f=n=>+n.toFixed(2);
+const pol=(r,deg,cx=0,cy=0)=>[f(cx+r*Math.cos(deg*Math.PI/180)), f(cy+r*Math.sin(deg*Math.PI/180))];
+
+/* ---------- the knot mark (same as sheet 01) ---------- */
+function stadium(a,r,th){
+  const c=Math.cos(th),s=Math.sin(th),P=(x,y)=>[f(x*c-y*s),f(x*s+y*c)];
+  const [p1,p2,p3,p4]=[P(-a,-r),P(a,-r),P(a,r),P(-a,r)];
+  return `M${p1}L${p2}A${r} ${r} 0 0 1 ${p3}L${p4}A${r} ${r} 0 0 1 ${p1}Z`;
+}
+const ANG=[15,75,135];
+const STAD=ANG.map(d=>stadium(33,12.5,d*Math.PI/180));
+const MARK=STAD.join('')+'M0 -5A5 5 0 1 1 0 5A5 5 0 1 1 0 -5Z';
+const mark=(fill,tf='')=>`<path d="${MARK}" fill="${fill}" fill-rule="evenodd" ${tf?`transform="${tf}"`:''}/>`;
+
+/* an exportable asset = a nested <svg> with its own viewBox */
+const asset=(name,x,y,w,h,vb,body)=>`<svg class="a" data-name="${name}" x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${vb}">${body}</svg>`;
+const T=(x,y,s,txt,o='')=>`<text x="${x}" y="${y}" font-size="${s}" ${o}>${txt}</text>`;
+const G=(x,y,s,txt,o='')=>`<text class="g" x="${x}" y="${y}" font-size="${s}" font-weight="900" ${o}>${txt}</text>`;
+
+const posters=[];
+const P=(name,cap,bg,body,dark)=>posters.push({name,cap,bg,body,dark});
+
+/* =================== 01 GLYPHS =================== */
+const ICONS={
+  SPOOL:'M6 3h12M6 21h12M8 3v18M16 3v18M8 8l8 2M8 12l8 2M8 16l8 2',
+  SHUTTLE:'M2 12C6 6 18 6 22 12C18 18 6 18 2 12ZM9 10.5h6v3H9Z',
+  NEEDLE:'M4 20L16.5 7.5M16 5a2.5 2.5 0 1 1 3 3l-3 1.5-1.5-1.5Z',
+  SCISSORS:'M9 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8.2 7.8L21 17M8.2 16.2L21 7',
+  WARP:'M5 3v18M10 3v18M15 3v18M20 3v18M2 9h4m3 0h2m3 0h2m3 0h3M2 15h1m4 0h2m3 0h2m3 0h5',
+  BOBBIN:'M6 3h12M6 21h12M9 3c3 4 3 14 0 18M15 3c-3 4-3 14 0 18',
+  PROMPT:'M4 6l6 6-6 6M12 18h8',
+  BRANCH:'M8 5a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM8 19a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM20 9a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM6 7v10M18 11c0 4-12 2-12 6',
+  PASS:'M3 3h18v18H3ZM7 12l3 3 7-7',
+  CLOCK:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM12 6v6l4 3',
+  SIGNAL:'M4 21v-4M9 21v-8M14 21v-12M19 21V3',
+  LOCK:'M5 10h14v11H5ZM8 10V7a4 4 0 0 1 8 0v3M12 14v3',
+  RETRY:'M4 12a8 8 0 0 1 14-5.3M18 2v5h-5M20 12a8 8 0 0 1-14 5.3M6 22v-5h5',
+  UNIT:'M5 8h14v11H5ZM12 8V3M9 13h1M14 13h1M9 16h6M2 12v3M22 12v3',
+  WORLD:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c-4 5-4 13 0 18M12 3c4 5 4 13 0 18',
+  KNOT:null,
+};
+{
+  let b=`<rect width="400" height="500" fill="${PA}"/>`;
+  b+=G(24,68,44,'GLYPHS',`letter-spacing="-2" font-stretch="110%"`);
+  b+=T(376,38,9,'16 / 24PX GRID / 2PX STROKE',`text-anchor="end"`)+T(376,52,9,'SET A — WORKSHOP',`text-anchor="end"`)+T(376,66,9,'SQUARE CAPS · MITRE JOINS',`text-anchor="end"`);
+  b+=`<rect x="24" y="84" width="352" height="22" fill="${OR}"/>`+T(200,99,10,'[ CLICK ANY GLYPH TO TAKE IT ]',`text-anchor="middle" font-weight="700"`);
+  const names=Object.keys(ICONS), x0=24,y0=118,cw=88,ch=90;
+  b+=`<g stroke="${INK}" stroke-width=".7" fill="none"><rect x="${x0}" y="${y0}" width="352" height="360"/>`;
+  for(let i=1;i<4;i++) b+=`<path d="M${x0+i*cw} ${y0}v360M${x0} ${y0+i*ch}h352"/>`;
+  b+='</g>';
+  names.forEach((n,k)=>{
+    const cx=x0+(k%4)*cw, cy=y0+Math.floor(k/4)*ch;
+    // keylines: the 24px frame, circle and square every glyph is drawn inside
+    b+=`<g transform="translate(${cx+20} ${cy+14}) scale(2)" fill="none" stroke="${OR}" stroke-width=".25" opacity=".7"><rect x="0" y="0" width="24" height="24"/><circle cx="12" cy="12" r="10"/><rect x="3" y="3" width="18" height="18"/><path d="M0 0L24 24M24 0L0 24"/></g>`;
+    const body = n==='KNOT'
+      ? `<g transform="translate(12 12) scale(.2)">${mark(INK)}</g>`
+      : `<path d="${ICONS[n]}" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/>`;
+    b+=asset('glyph-'+n.toLowerCase(),cx+20,cy+14,48,48,'0 0 24 24',body);
+    b+=T(cx+6,cy+ch-8,7,`G.${String(k+1).padStart(2,'0')}`)+T(cx+cw-6,cy+ch-8,7,n,`text-anchor="end" font-weight="700"`);
+  });
+  P('Glyphs','16 icons / keylines',PA,b);
+}
+
+/* =================== 02 CONSTRUCTION =================== */
+{
+  let b=`<rect width="400" height="500" fill="${PA}"/>`;
+  b+=`<defs><pattern id="grid20" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="${INK}" stroke-width=".3" opacity=".35"/></pattern></defs>`;
+  b+=G(24,60,34,'THE KNOT',`letter-spacing="-1"`)+T(376,40,9,'M.01 — CONSTRUCTION',`text-anchor="end"`)+T(376,54,9,'3 × STADIUM 66 × 25 @ 60°',`text-anchor="end"`);
+  b+=`<rect x="24" y="72" width="352" height="306" fill="url(#grid20)" stroke="${INK}" stroke-width=".8"/>`;
+  const cx=200,cy=225,S=2.6;
+  b+=asset('knot-mark',cx-50*S,cy-50*S,100*S,100*S,'-50 -50 100 100',mark(OR));
+  // construction overlay (screen space via the same transform)
+  let c=`<g transform="translate(${cx} ${cy}) scale(${S})" fill="none" stroke="${INK}" stroke-width=".7" vector-effect="non-scaling-stroke" pointer-events="none">`;
+  STAD.forEach(d=>c+=`<path d="${d}" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>`);
+  ANG.forEach(a=>{const [x1,y1]=pol(58,a),[x2,y2]=pol(58,a+180); c+=`<path d="M${x1} ${y1}L${x2} ${y2}" stroke-dasharray="8 2 1 2" vector-effect="non-scaling-stroke"/>`});
+  const [ex,ey]=pol(33,15); c+=`<circle cx="${ex}" cy="${ey}" r="12.5" stroke="${OR}" vector-effect="non-scaling-stroke"/><circle cx="${ex}" cy="${ey}" r="1" fill="${INK}"/>`;
+  c+=`<circle r="5" stroke="${OR}" vector-effect="non-scaling-stroke"/>`;
+  const [a1x,a1y]=pol(49,-45),[a2x,a2y]=pol(49,-105);
+  c+=`<path d="M${a1x} ${a1y}A49 49 0 0 0 ${a2x} ${a2y}" vector-effect="non-scaling-stroke"/>`;
+  c+='</g>';
+  b+=c;
+  const [lx,ly]=pol(49*S+12,-75,cx,cy); b+=T(lx,ly,10,'60°',`text-anchor="middle" font-weight="700"`);
+  const [rx,ry]=[cx+ex*S,cy+ey*S];
+  b+=`<path d="M${rx} ${ry}L340 318H372" fill="none" stroke="${INK}" stroke-width=".7"/>`+T(372,313,9,'R 12.5',`text-anchor="end" font-weight="700"`);
+  b+=`<path d="M${cx-4} ${cy+4}L92 352H30" fill="none" stroke="${INK}" stroke-width=".7"/>`+T(30,347,9,'Ø 10 PIN',`font-weight="700"`);
+  b+=T(32,88,8,'A — AXIS')+T(32,100,8,'B — STADIUM')+T(368,88,8,'EVEN-ODD FILL',`text-anchor="end"`)+T(368,100,8,'2 OVERLAPS = VOID',`text-anchor="end"`);
+  // lockups
+  const L=[
+    ['lockup-horizontal',`<rect width="88" height="88" fill="${PA}"/><g transform="translate(20 44) scale(.29)">${mark(INK)}</g>${G(36,51,21,'loom',`letter-spacing="-1"`)}`],
+    ['lockup-stacked',`<rect width="88" height="88" fill="${PA}"/><g transform="translate(44 36) scale(.44)">${mark(OR)}</g>${G(44,76,14,'LOOM',`text-anchor="middle" letter-spacing="1"`)}`],
+    ['lockup-reversed',`<rect width="88" height="88" fill="${OR}"/><circle cx="44" cy="44" r="36" fill="${INK}"/><g transform="translate(44 44) scale(.64)">${mark(PA)}</g>`],
+    ['lockup-monogram',`<rect width="88" height="88" fill="${PA}"/><circle cx="44" cy="44" r="29" fill="none" stroke="${INK}" stroke-width="6"/>${G(45,57,36,'L',`text-anchor="middle"`)}`],
+  ];
+  L.forEach(([n,body],i)=>{b+=asset(n,24+i*88,390,88,88,'0 0 88 88',body)});
+  b+=`<g fill="none" stroke="${INK}" stroke-width=".8"><rect x="24" y="390" width="352" height="88"/><path d="M112 390v88M200 390v88M288 390v88"/></g>`;
+  ['L.A','L.B','L.C','L.D'].forEach((t,i)=>b+=T(28+i*88,400,7,t,i==2?`fill="${INK}"`:''));
+  P('Construction','mark geometry / lockups',PA,b);
+}
+
+/* =================== 03 BLUEPRINT =================== */
+{
+  let b=`<rect width="400" height="500" fill="${PA}"/>`;
+  b+=`<defs>
+    <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V5" stroke="${INK}" stroke-width="1.1"/></pattern>
+    <pattern id="hatchO" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="4" height="4" fill="${OR}"/><path d="M0 0V4" stroke="${INK}" stroke-width=".6"/></pattern>
+    <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1L10 5L0 9Z" fill="${INK}"/></marker>
+    <clipPath id="shuttleClip"><path d="M50 150C110 110 290 110 350 150C290 190 110 190 50 150Z"/></clipPath>
+  </defs>`;
+  b+=G(24,50,26,'SHUTTLE, WEFT',`letter-spacing="-.5"`)+T(376,34,8,'PLAN + SECTION A–A',`text-anchor="end"`)+T(376,46,8,'ALL DIMS IN MM',`text-anchor="end"`);
+  // plan view as an asset
+  const shuttle=`<path d="M50 150C110 110 290 110 350 150C290 190 110 190 50 150Z" fill="${PA}" stroke="${INK}" stroke-width="1.6"/>
+    <g clip-path="url(#shuttleClip)"><rect x="40" y="100" width="42" height="100" fill="url(#hatch)"/><rect x="318" y="100" width="42" height="100" fill="url(#hatch)"/><path d="M82 110v80M318 110v80" stroke="${INK}" stroke-width="1"/></g>
+    <rect x="150" y="136" width="100" height="28" rx="14" fill="${INK}"/>
+    <rect x="160" y="141" width="80" height="18" rx="3" fill="${OR}"/>
+    <path d="M168 141v18M232 141v18M170 146h60M170 150h60M170 154h60" stroke="${INK}" stroke-width=".8"/>
+    <circle cx="262" cy="150" r="3" fill="none" stroke="${INK}" stroke-width="1.2"/>`;
+  b+=asset('shuttle-plan',40,100,320,100,'40 100 320 100',shuttle);
+  b+=`<path d="M28 150H372" stroke="${INK}" stroke-width=".6" stroke-dasharray="12 3 2 3"/>`;
+  // dimensions
+  b+=`<g stroke="${INK}" stroke-width=".7" fill="none"><path d="M50 156V212M350 156V212"/><path d="M52 206H348" marker-start="url(#arr)" marker-end="url(#arr)"/>
+      <path d="M200 120H384M200 180H384"/><path d="M378 122V178" marker-start="url(#arr)" marker-end="url(#arr)"/></g>`;
+  b+=`<rect x="186" y="199" width="28" height="12" fill="${PA}"/>`+T(200,209,9,'300',`text-anchor="middle" font-weight="700"`);
+  b+=T(372,154,8,'60',`text-anchor="end" font-weight="700"`);
+  // callouts
+  [[62,138,70],[118,128,125],[200,146,180],[262,150,250],[330,146,330]].forEach(([x,y,bx],i)=>{
+    b+=`<path d="M${x} ${y}L${bx} 88" stroke="${INK}" stroke-width=".6"/><circle cx="${bx}" cy="80" r="8" fill="${i==2?OR:PA}" stroke="${INK}" stroke-width=".9"/>`+T(bx,83.5,9,i+1,`text-anchor="middle" font-weight="700"`);
+  });
+  // section A–A
+  const sec=`<path d="M50 262C110 240 290 240 350 262C290 284 110 284 50 262Z" fill="url(#hatch)" stroke="${INK}" stroke-width="1.4"/><rect x="150" y="252" width="100" height="16" rx="3" fill="${PA}" stroke="${INK}"/><rect x="160" y="255" width="80" height="10" fill="url(#hatchO)" stroke="${INK}" stroke-width=".6"/>`;
+  b+=asset('shuttle-section',40,236,320,52,'40 236 320 52',sec);
+  b+=T(24,236,8,'SECTION A–A',`font-weight="700"`)+T(376,236,8,'SCALE 1:1',`text-anchor="end"`);
+  // parts list
+  const parts=[['1','TIP','STEEL, HARDENED'],['2','BODY','BOXWOOD'],['3','BOBBIN','WEFT, 4096 PICKS'],['4','EYE','CERAMIC'],['5','TIP','STEEL, HARDENED']];
+  b+=`<g stroke="${INK}" stroke-width=".7" fill="none"><rect x="24" y="304" width="352" height="96"/><path d="M52 304v96M150 304v96"/>`;
+  for(let i=1;i<6;i++) b+=`<path d="M24 ${304+i*16}h352"/>`;
+  b+='</g>'+T(38,316,8,'NO',`text-anchor="middle" font-weight="700"`)+T(58,316,8,'PART',`font-weight="700"`)+T(156,316,8,'MATERIAL / NOTE',`font-weight="700"`);
+  parts.forEach(([n,p,m],i)=>{b+=T(38,332+i*16,8,n,`text-anchor="middle"`)+T(58,332+i*16,8,p)+T(156,332+i*16,8,m)});
+  // title block
+  b+=`<g stroke="${INK}" stroke-width=".9"><rect x="24" y="412" width="352" height="66" fill="none"/><rect x="24" y="412" width="120" height="66" fill="${OR}"/><path d="M144 434H376M144 456H376M260 434V478" fill="none"/></g>`;
+  b+=G(34,442,22,'LM-0007')+T(34,466,8,'DWG NO.')+T(152,427,9,'LOOM — PARALLEL THREAD WORKS',`font-weight="700"`)+T(152,449,8,'DRAWN: THREAD 07')+T(268,449,8,'SHT 03 / 08')+T(152,471,8,'REV C · 2026.09.25')+T(268,471,8,'THIRD ANGLE ⊕')+'';
+  P('Blueprint','technical drawing',PA,b);
+}
+
+/* =================== 04 SWATCHES =================== */
+{
+  let b=`<rect width="400" height="500" fill="${PA}"/>`;
+  b+=`<defs>
+    <pattern id="p-twill" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${OR}"/><path d="M0 0h2v2H0ZM2 2h2v2H2ZM4 4h2v2H4ZM6 6h2v2H6ZM4 0h2v2H4ZM6 2h2v2H6ZM0 4h2v2H0ZM2 6h2v2H2Z" fill="${INK}"/></pattern>
+    <pattern id="p-herring" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="${PA}"/><path d="M0 4L8 -4M0 12L8 4M0 20L8 12M8 -4L16 4M8 4L16 12M8 12L16 20" stroke="${INK}" stroke-width="2.2"/></pattern>
+    <pattern id="p-gingham" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="${PA}"/><rect width="10" height="20" fill="${OR}" opacity=".55"/><rect width="20" height="10" fill="${OR}" opacity=".55"/></pattern>
+    <pattern id="p-selvage" width="26" height="10" patternUnits="userSpaceOnUse"><rect width="26" height="10" fill="${PA}"/><rect width="3" height="10" fill="${INK}"/><rect x="6" width="10" height="10" fill="${OR}"/><rect x="19" width="1.2" height="10" fill="${INK}"/><rect x="22" width="1.2" height="10" fill="${INK}"/></pattern>
+    <pattern id="p-dots" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="${OR}"/><circle cx="4.5" cy="4.5" r="2.2" fill="${INK}"/></pattern>
+    <pattern id="p-plain" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="${INK}"/><rect x="1" y="2" width="6" height="4" rx="2" fill="${OR}"/><rect x="10" y="1" width="4" height="6" rx="2" fill="${PA}"/><rect x="2" y="9" width="4" height="6" rx="2" fill="${PA}"/><rect x="9" y="10" width="6" height="4" rx="2" fill="${OR}"/></pattern>
+  </defs>`;
+  b+=G(24,66,40,'SWATCHES',`letter-spacing="-2"`)+T(376,40,8,'06 TILES · SEAMLESS',`text-anchor="end"`)+T(376,54,8,'SVG &lt;pattern&gt;',`text-anchor="end"`);
+  const sw=[['twill','TWILL 2/2','8 × 8'],['herring','HERRINGBONE','16 × 16'],['gingham','GINGHAM','20 × 20'],['selvage','SELVAGE STRIPE','26 × 10'],['dots','SCREEN 45°','9 × 9'],['plain','PLAIN WEAVE','16 × 16']];
+  sw.forEach(([id,n,s],i)=>{
+    const x=24+(i%2)*184, y=82+Math.floor(i/2)*134;
+    b+=asset('swatch-'+id,x,y,168,108,'0 0 168 108',`<rect width="168" height="108" fill="url(#p-${id})"/>`);
+    b+=`<rect x="${x}" y="${y}" width="168" height="108" fill="none" stroke="${INK}" stroke-width="1"/>`;
+    b+=`<rect x="${x}" y="${y+108}" width="168" height="16" fill="${INK}"/>`+T(x+6,y+119.5,8,`S.0${i+1} ${n}`,`fill="${PA}" font-weight="700"`)+T(x+162,y+119.5,8,s,`fill="${OR}" text-anchor="end"`);
+  });
+  P('Swatches','seamless pattern tiles',PA,b);
+}
+
+/* =================== 05 STAMPS =================== */
+{
+  let b=`<rect width="400" height="500" fill="${PA}"/>`;
+  b+=`<defs>
+    <filter id="worn"><feTurbulence type="fractalNoise" baseFrequency="0.08 0.9" numOctaves="3" seed="11"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 0 0 0 -5.2" result="spots"/><feComposite in="SourceGraphic" in2="spots" operator="out"/></filter>
+    <pattern id="caution" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="16" height="16" fill="${OR}"/><rect width="8" height="16" fill="${INK}"/></pattern>
+  </defs>`;
+  // circular seal with type on a path, rotating
+  const ring='LOOM · PARALLEL THREAD WORKS · EST. 2026 · ';
+  const seal=`<circle cx="100" cy="100" r="96" fill="${PA}" stroke="${INK}" stroke-width="3"/><circle cx="100" cy="100" r="70" fill="none" stroke="${INK}" stroke-width="1.5"/>
+    <path id="ringPath" d="M100 100m-83 0a83 83 0 1 1 166 0a83 83 0 1 1-166 0" fill="none"/>
+    <g><text font-size="13.4" font-weight="700" letter-spacing="2.2"><textPath href="#ringPath">${ring}</textPath></text><animateTransform attributeName="transform" type="rotate" from="0 100 100" to="360 100 100" dur="30s" repeatCount="indefinite"/></g>
+    <g transform="translate(100 100) scale(1.28)">${mark(OR)}</g>`;
+  b+=asset('stamp-seal',22,26,180,180,'0 0 200 200',seal);
+  // starburst
+  let star='M'; for(let i=0;i<48;i++){const [x,y]=pol(i%2?74:62,i*7.5-90,80,80); star+=`${x} ${y}${i<47?'L':'Z'}`}
+  b+=asset('sticker-burst',222,30,160,160,'0 0 160 160',`<path d="${star}" fill="${OR}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>${G(80,78,25,'0 SNAGS',`text-anchor="middle" letter-spacing="-.5"`)}${T(80,96,9,'SINCE 07.2026',`text-anchor="middle" font-weight="700"`)}${T(80,110,9,'★ ★ ★',`text-anchor="middle"`)}`);
+  // worn rubber stamp
+  b+=asset('stamp-inspected',70,220,270,130,'0 0 270 130',`<g transform="rotate(-7 135 65)" filter="url(#worn)" fill="${OR}" stroke="${OR}"><rect x="16" y="22" width="238" height="86" fill="none" stroke-width="5"/><rect x="24" y="30" width="222" height="70" fill="none" stroke-width="1.5"/>${G(135,74,38,'INSPECTED',`text-anchor="middle" stroke="none" letter-spacing="1"`)}${T(135,92,10,'PASS — LIGHT TABLE 04 — 0 FLAWS',`text-anchor="middle" stroke="none" font-weight="700"`)}</g>`);
+  // parcel label
+  b+=asset('label-this-way',24,362,120,90,'0 0 120 90',`<rect x="1" y="1" width="118" height="88" fill="${PA}" stroke="${INK}" stroke-width="2"/><path d="M30 70V36h-12l20-24 20 24H46v34ZM70 70V36H58l20-24 20 24H86v34Z" fill="${INK}"/>${T(60,84,8,'THIS WAY UP',`text-anchor="middle" font-weight="700"`)}`);
+  b+=asset('label-parcel',156,362,220,90,'0 0 220 90',`<rect x="1" y="1" width="218" height="88" fill="${INK}"/><rect x="8" y="8" width="60" height="74" fill="${OR}"/>${G(38,60,40,'07',`text-anchor="middle"`)}${T(78,24,8,'FROM: WARP FLOOR',`fill="${PA}"`)}${T(78,38,8,'TO:   MAIN',`fill="${PA}"`)}${T(78,52,8,'CONTENTS: 1 BOLT',`fill="${PA}"`)}${G(78,76,16,'HANDLE WARM',`fill="${OR}"`)}`);
+  // caution band
+  b+=asset('tape-caution',0,462,400,38,'0 0 400 38',`<rect width="400" height="38" fill="url(#caution)"/><rect y="9" width="400" height="20" fill="${INK}"/>${T(200,23,10,'DO NOT CUT THE THREAD ·· DO NOT CUT THE THREAD ·· DO NOT CUT THE THREAD',`text-anchor="middle" fill="${OR}" font-weight="700"`)}`);
+  P('Stamps','seals / stickers / labels',PA,b);
+}
+
+/* =================== 06 WEAVE DIAGRAM =================== */
+{
+  let b=`<rect width="400" height="500" fill="${INK}"/>`;
+  b+=G(24,56,32,'HOW A THREAD RUNS',`fill="${PA}" letter-spacing="-.5"`);
+  b+=T(24,76,8,'PLAIN WEAVE · 10 WARP × 9 WEFT · OVER / UNDER / OVER',`fill="${OR}"`);
+  const X=i=>90+i*26, Y=j=>116+j*30, N=10, M=9;
+  let w='';
+  for(let i=0;i<N;i++) w+=`<path d="M${X(i)} 96V${Y(M-1)+22}" stroke="${PA}" stroke-width="9"/>`;
+  for(let j=0;j<M;j++){
+    const d=`M66 ${Y(j)}H${X(N-1)+26}`;
+    w+=`<path d="${d}" stroke="${INK}" stroke-width="14"/><path class="weft" style="animation-delay:${(j*.18).toFixed(2)}s" d="${d}" pathLength="1" stroke="${OR}" stroke-width="9" fill="none"/>`;
+    for(let i=0;i<N;i++) if((i+j)%2===0) w+=`<path d="M${X(i)} ${Y(j)-9}V${Y(j)+9}" stroke="${INK}" stroke-width="13"/><path d="M${X(i)} ${Y(j)-12}V${Y(j)+12}" stroke="${PA}" stroke-width="9"/>`;
+  }
+  b+=asset('weave-plain',60,92,300,280,'60 92 300 280',`<rect x="60" y="92" width="300" height="280" fill="${INK}"/>${w}`);
+  for(let j=0;j<M;j++) b+=T(24,Y(j)+3,7,`PICK ${String(j+1).padStart(2,'0')}`,`fill="${PA}"`);
+  for(let i=0;i<N;i+=3) b+=T(X(i),388,7,`W${String(i+1).padStart(2,'0')}`,`fill="${PA}" text-anchor="middle"`);
+  b+=T(372,104,8,'WARP ↓',`fill="${PA}" text-anchor="end"`);
+  // three-step legend with little diagrams
+  const steps=[['1','SHED','lift odd warps',`<path d="M4 30L20 10M12 30L20 10M20 30V10" stroke="${PA}" stroke-width="2"/>`],
+               ['2','PICK','throw the weft',`<path d="M2 20H38" stroke="${OR}" stroke-width="3"/><path d="M26 14l8 6-8 6" fill="none" stroke="${OR}" stroke-width="3"/>`],
+               ['3','BEAT','press it home',`<path d="M4 8H36M4 14H36" stroke="${PA}" stroke-width="2"/><path d="M4 30H36" stroke="${OR}" stroke-width="3"/><path d="M20 20v6M16 22l4 4 4-4" stroke="${PA}" stroke-width="2" fill="none"/>`]];
+  steps.forEach(([n,t,s,icon],k)=>{
+    const x=24+k*120;
+    b+=`<rect x="${x}" y="404" width="110" height="74" fill="none" stroke="${PA}" stroke-width=".8"/>`;
+    b+=asset('step-'+t.toLowerCase(),x+64,414,40,40,'0 0 40 40',icon);
+    b+=G(x+8,440,28,n,`fill="${OR}"`)+T(x+8,460,9,t,`fill="${PA}" font-weight="700"`)+T(x+8,472,7,s.toUpperCase(),`fill="${PA}"`);
+  });
+  P('Weave','animated diagram',INK,b,true);
+}
+
+/* =================== 07 DINGBATS =================== */
+{
+  let b=`<rect width="400" height="500" fill="${OR}"/>`;
+  b+=G(24,68,40,'DINGBATS',`letter-spacing="-2"`)+T(376,40,8,'20 MARKS · 40PX',`text-anchor="end"`)+T(376,54,8,'FOR MARGINS & ERRORS',`text-anchor="end"`);
+  const s=`fill="none" stroke="${INK}" stroke-width="3.2"`;
+  const D=[
+    `<path d="M4 15h19V7l13 13-13 13v-8H4Z" fill="${INK}"/>`,
+    `<path d="M4 15h19V7l13 13-13 13v-8H4Z" ${s} stroke-linejoin="miter"/>`,
+    `<path d="M6 8l12 12-12 12M19 8l12 12-12 12" ${s}/>`,
+    `<path d="M9 5v19h21M24 18l6 6-6 6" ${s}/>`,
+    `<path d="M33 7v14H9M16 14l-7 7 7 7" ${s}/>`,
+    `<path d="M12 5H5v30h7M28 5h7v30h-7" ${s}/>`,
+    `<path d="M20 4v32M6 12l28 16M6 28l28-16" ${s}/>`,
+    `<circle cx="20" cy="20" r="11" ${s}/><path d="M20 2v36M2 20h36" fill="none" stroke="${INK}" stroke-width="1.6"/>`,
+    `<circle cx="20" cy="20" r="12" ${s}/><path d="M20 20V8A12 12 0 0 1 32 20Z M20 20V32A12 12 0 0 1 8 20Z" fill="${INK}"/><path d="M20 1v38M1 20h38" stroke="${INK}" stroke-width="1.4"/>`,
+    `<path d="M20 2C22 16 24 18 38 20C24 22 22 24 20 38C18 24 16 22 2 20C16 18 18 16 20 2Z" fill="${INK}"/>`,
+    `<path d="M9 4l23 14-11 3-5 11Z" fill="${INK}"/>`,
+    `<rect x="5" y="5" width="30" height="30" ${s}/><path d="M20 11v18M11 20h18" ${s}/>`,
+    [0,1,2].map(r=>[0,1,2].map(c=>`<circle cx="${9+c*11}" cy="${9+r*11}" r="${(r+c)%2?2:4}" fill="${INK}"/>`).join('')).join(''),
+    `<circle cx="20" cy="20" r="14" ${s}/><path d="M20 6a14 14 0 0 1 0 28Z" fill="${INK}"/>`,
+    `<path d="M23 2L7 23h11l-3 15 18-22H22Z" fill="${INK}"/>`,
+    `<path d="M7 35L17 5M16 35L26 5M25 35L35 5" ${s}/>`,
+    `<circle cx="20" cy="20" r="16" ${s}/><circle cx="20" cy="20" r="9" ${s}/><circle cx="20" cy="20" r="3" fill="${INK}"/>`,
+    `<path d="M3 20C10 9 30 9 37 20C30 31 10 31 3 20Z" ${s}/><circle cx="20" cy="20" r="5" fill="${INK}"/>`,
+    `<path d="M5 30c0-18 30-18 30 0 0 7-11 7-11 0 0-5 7-6 7 1" ${s} stroke-linecap="round"/>`,
+    `<g transform="translate(20 20) scale(.36)">${mark(INK)}</g>`,
+  ];
+  const names=['arrow-solid','arrow-outline','chevrons','turn','return','brackets','asterisk','crosshair','registration','spark','cursor','add','matrix','half','bolt','slashes','target','eye','loop','knot'];
+  b+=`<g stroke="${INK}" stroke-width=".7" fill="none"><rect x="24" y="86" width="352" height="390"/>`;
+  for(let i=1;i<4;i++) b+=`<path d="M${24+i*88} 86v390"/>`;
+  for(let i=1;i<5;i++) b+=`<path d="M24 ${86+i*78}h352"/>`;
+  b+='</g>';
+  D.forEach((d,k)=>{
+    const x=24+(k%4)*88, y=86+Math.floor(k/4)*78;
+    b+=asset('dingbat-'+names[k],x+26,y+12,36,36,'0 0 40 40',d);
+    b+=T(x+6,y+70,7,`D.${String(k+1).padStart(2,'0')}`)+T(x+82,y+70,7,names[k].toUpperCase(),`text-anchor="end" font-weight="700"`);
+  });
+  P('Dingbats','arrows / marks / symbols',OR,b);
+}
+
+/* =================== 08 INSTRUMENTS =================== */
+{
+  let b=`<rect width="400" height="500" fill="${PA}"/>`;
+  b+=G(24,52,28,'INSTRUMENTS',`letter-spacing="-.5"`)+T(376,34,8,'LIVE · 1.6 HZ',`text-anchor="end" fill="${OR}" font-weight="700"`)+T(376,46,8,'PANEL 07-L',`text-anchor="end"`);
+  // gauge
+  let g=`<path d="M40 200A160 160 0 0 1 360 200" fill="none" stroke="${INK}" stroke-width="1.5"/><path d="${(()=>{const [x1,y1]=pol(146,-36,200,200),[x2,y2]=pol(146,0,200,200);return `M${x1} ${y1}A146 146 0 0 1 ${x2} ${y2}`})()}" fill="none" stroke="${OR}" stroke-width="16"/>`;
+  for(let i=0;i<=50;i++){const a=180+i*3.6, long=i%5===0; const [x1,y1]=pol(long?128:138,a,200,200),[x2,y2]=pol(154,a,200,200);
+    g+=`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${INK}" stroke-width="${long?2:.8}"/>`;
+    if(i%10===0){const [tx,ty]=pol(112,a,200,200); g+=T(tx,ty+3,9,i*2,`text-anchor="middle" font-weight="700"`)}}
+  g+=`<g id="needle"><path d="M196 200L200 64L204 200Z" fill="${INK}"/></g><circle cx="200" cy="200" r="10" fill="${OR}" stroke="${INK}" stroke-width="2"/>`;
+  b+=asset('gauge',30,40,340,176,'30 40 340 176',g);
+  b+=T(24,232,8,'TENSION')+G(376,244,30,'72%',`text-anchor="end" id="gval"`);
+  // segmented meter
+  let m=''; for(let i=0;i<24;i++) m+=`<rect class="seg" x="${i*14.6}" y="0" width="11" height="26" fill="${INK}"/>`;
+  b+=`<path d="M24 256h352" stroke="${INK}" stroke-width=".7"/>`+T(24,272,8,'THROUGHPUT')+T(376,272,8,'PICKS / S',`text-anchor="end"`);
+  b+=asset('meter-segments',24,280,350,26,'0 0 350 26',m);
+  // sparkline
+  b+=`<g stroke="${INK}" stroke-width=".5" stroke-dasharray="2 3">${[330,356,382,408].map(y=>`<path d="M24 ${y}H376"/>`).join('')}</g>`;
+  b+=T(24,324,8,'LATENCY p50 — 60 S')+T(376,324,8,'MS',`text-anchor="end"`);
+  b+=asset('sparkline',24,330,352,78,'0 0 352 78',`<path id="sparkA" d="" fill="${OR}" opacity=".35"/><path id="sparkL" d="" fill="none" stroke="${INK}" stroke-width="2"/><circle id="sparkD" r="4" fill="${OR}" stroke="${INK}" stroke-width="2"/>`);
+  // knob + toggles
+  let k=`<circle cx="40" cy="40" r="26" fill="${INK}"/><circle cx="40" cy="40" r="20" fill="${PA}" stroke="${INK}"/>`;
+  for(let i=0;i<11;i++){const a=135+i*27,[x1,y1]=pol(30,a,40,40),[x2,y2]=pol(36,a,40,40); k+=`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${INK}" stroke-width="1.3"/>`}
+  k+=`<g id="knobI"><path d="M40 40L40 22" stroke="${OR}" stroke-width="4" stroke-linecap="round"/></g>`;
+  b+=asset('knob',296,418,80,80,'0 0 80 80',k);
+  const tog=(on,lab)=>`<rect x="0" y="0" width="54" height="24" rx="12" fill="${on?OR:PA}" stroke="${INK}" stroke-width="2"/><circle cx="${on?42:12}" cy="12" r="8" fill="${INK}"/>`;
+  b+=asset('toggle-on',24,428,54,24,'0 0 54 24',tog(true))+T(86,444,8,'AUTO-RETRY',`font-weight="700"`);
+  b+=asset('toggle-off',24,460,54,24,'0 0 54 24',tog(false))+T(86,476,8,'HUMAN IN LOOP');
+  b+=G(200,462,14,'SHUTTLES',`text-anchor="middle"`)+G(200,484,20,'32 / 32',`text-anchor="middle" fill="${OR}"`);
+  P('Instruments','gauge / meter / sparkline',PA,b);
+}
+
+/* ---------- mount ---------- */
+const grid=document.getElementById('grid');
+posters.forEach((p,i)=>{
+  grid.insertAdjacentHTML('beforeend',`<figure><div class="poster${p.dark?' dark':''}" style="background:${p.bg}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" data-poster="${p.name}">${p.body}<rect class="hl" x="0" y="0" width="0" height="0" fill="none" stroke="${p.bg===OR?INK:OR}" stroke-width="1.5" stroke-dasharray="4 3" opacity="0"/></svg></div><figcaption><span>${String(i+1).padStart(2,'0')} — ${p.name}</span><span>${p.cap}</span></figcaption></figure>`);
+});
+
+/* ---------- hover highlight + click-to-download ---------- */
+const toast=document.getElementById('toast'); let tt;
+document.querySelectorAll('svg.a').forEach(a=>{
+  const root=a.ownerSVGElement.closest('[data-poster]'), hl=root.querySelector('.hl');
+  a.addEventListener('mouseenter',()=>{['x','y','width','height'].forEach(k=>hl.setAttribute(k,+a.getAttribute(k)+(k==='x'||k==='y'?-3:6))); hl.setAttribute('opacity',1)});
+  a.addEventListener('mouseleave',()=>hl.setAttribute('opacity',0));
+  a.addEventListener('click',()=>download(a,root));
+});
+function download(a,root){
+  const c=a.cloneNode(true);
+  const [,, w,h]=c.getAttribute('viewBox').split(/[\s,]+/).map(Number);
+  ['x','y','class','data-name'].forEach(k=>c.removeAttribute(k));
+  c.setAttribute('xmlns','http://www.w3.org/2000/svg'); c.setAttribute('width',w*4); c.setAttribute('height',h*4);
+  // pull in any patterns / markers / filters / clipPaths the asset references
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','defs'); const seen=new Set();
+  const collect=html=>{for(const m of html.matchAll(/(?:url\(#|href="#)([\w-]+)/g)){const id=m[1]; if(seen.has(id)||c.querySelector('#'+id)) continue; const el=root.querySelector('#'+id); if(el){seen.add(id); const k=el.cloneNode(true); defs.appendChild(k); collect(k.outerHTML)}}};
+  collect(c.outerHTML); if(defs.childNodes.length) c.insertBefore(defs,c.firstChild);
+  c.insertAdjacentHTML('afterbegin','<style>text{font-family:"Space Mono",monospace}.g{font-family:"Archivo",Helvetica,sans-serif}</style>');
+  const blob=new Blob([`<?xml version="1.0" encoding="UTF-8"?>\n`+c.outerHTML],{type:'image/svg+xml'});
+  const u=URL.createObjectURL(blob), l=document.createElement('a'); l.href=u; l.download=`loom-${a.dataset.name}.svg`; l.click(); setTimeout(()=>URL.revokeObjectURL(u),1000);
+  toast.innerHTML=`saved <b>loom-${a.dataset.name}.svg</b>`; toast.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('on'),1600);
+}
+
+/* ---------- live instruments ---------- */
+const needle=document.getElementById('needle'), gval=document.getElementById('gval'), segs=[...document.querySelectorAll('.seg')];
+const knob=document.getElementById('knobI'); const series=Array.from({length:40},()=>30+Math.random()*20);
+let v=72;
+function live(){
+  v=Math.max(35,Math.min(96,v+(Math.random()-.45)*9));
+  needle.setAttribute('transform',`rotate(${f(-90+v*1.8)} 200 200)`);
+  gval.textContent=Math.round(v)+'%';
+  const on=Math.round(8+Math.random()*16); segs.forEach((s,i)=>s.setAttribute('fill',i<on?(i>19?OR:INK):'#d6d1c4'));
+  knob.setAttribute('transform',`rotate(${-135+v*2.7} 40 40)`);
+  series.push(Math.max(8,Math.min(70,series.at(-1)+(Math.random()-.5)*16))); series.shift();
+  const pts=series.map((y,i)=>[f(i*352/39),f(78-y)]);
+  const d='M'+pts.map(p=>p.join(' ')).join('L');
+  document.getElementById('sparkL').setAttribute('d',d);
+  document.getElementById('sparkA').setAttribute('d',d+'L352 78L0 78Z');
+  const [lx,ly]=pts.at(-1); const dot=document.getElementById('sparkD'); dot.setAttribute('cx',lx); dot.setAttribute('cy',ly);
+}
+live(); setInterval(live,620);
+</script>
+</body>
+</html>

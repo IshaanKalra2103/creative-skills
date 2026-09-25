@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOOM Identity Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Space+Mono:wght@400;700&family=Doto:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --or:#ff5217;         /* signal orange */
+  --or-hi:#ff9a5c;      /* speckle */
+  --ink:#1b1916;
+  --paper:#f5f2ea;
+  --page:#e7e4dc;
+  --blue:#2437ff;
+  --red:#e0201b;
+  --mono:"Space Mono",ui-monospace,monospace;
+  --grot:"Archivo",Helvetica,Arial,sans-serif;
+  --dots:"Doto",var(--mono);
+  /* light-orange speckle that lives inside every orange fill */
+  --speckle:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.66 0 0 0 0 0.42 15 0 0 0 -9.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* dark print grain for the whole sheet */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='1' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 11 0 0 0 -6.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --grain-lite:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='1' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 11 0 0 0 -6.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--page);color:var(--ink)}
+body{font-family:var(--mono);padding:28px 16px 80px;overflow-x:hidden}
+
+/* ---------- sheet header ---------- */
+.sheet-head{max-width:1500px;margin:0 auto 28px;display:grid;grid-template-columns:1fr auto;gap:12px 24px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:14px}
+.sheet-head h1{font-family:var(--grot);font-weight:900;font-stretch:112%;font-size:clamp(40px,7vw,96px);letter-spacing:-.03em;line-height:.85}
+.sheet-head h1 span{color:var(--or)}
+.sheet-head .meta{font-size:12px;line-height:1.55;text-transform:uppercase;text-align:right;white-space:pre}
+.sheet-head .rule{grid-column:1/-1;font-size:12px;text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+.grid{max-width:1500px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:26px}
+figure{display:flex;flex-direction:column;gap:8px}
+figcaption{font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between}
+
+/* ---------- poster base ---------- */
+.poster{position:relative;aspect-ratio:4/5;container-type:inline-size;overflow:hidden;background:var(--paper);isolation:isolate;box-shadow:0 1px 0 rgba(0,0,0,.08),0 18px 40px -24px rgba(0,0,0,.35)}
+.poster .print{position:absolute;inset:0;filter:url(#rough)}
+.poster::after{content:"";position:absolute;inset:0;background-image:var(--grain);background-size:180px;opacity:.28;mix-blend-mode:multiply;pointer-events:none;z-index:50}
+.poster.dark::after{background-image:var(--grain-lite);mix-blend-mode:screen;opacity:.35}
+.or{background-color:var(--or);background-image:var(--speckle);background-size:190px}
+.mono{font-family:var(--mono);text-transform:uppercase}
+.grot{font-family:var(--grot);font-weight:800}
+.mark{display:block}
+
+/* ============ 01 TAPE ============ */
+.tape{background:#fff}
+.tape .strip{position:absolute;top:0;height:100%;overflow:hidden}
+.tape .s1{left:7%;width:23%}.tape .s2{left:38.5%;width:22%}.tape .s3{left:69%;width:23%}
+/* each strip is laid out horizontally at poster-height length, then turned 90deg so it reads top to bottom */
+.tape .in{position:absolute;left:0;top:0;width:125cqw;height:var(--w);transform-origin:0 0;transform:rotate(90deg) translateY(-100%);display:flex;align-items:center;color:var(--ink);white-space:pre}
+.tape .s1 .in{--w:23cqw;padding:0 4cqw;gap:5cqw;font-size:2.7cqw;line-height:1.5}
+.tape .s1 .big{font-family:var(--grot);font-weight:900;font-size:17cqw;line-height:1;margin-left:auto;letter-spacing:-.03em}
+.tape .s1 .coord{align-self:flex-start;margin-top:2cqw;font-size:2.2cqw}
+.tape .s2 .in{--w:22cqw;padding:0 3cqw;gap:3.4cqw;font-size:2.9cqw;line-height:1.3}
+.tape .s2 .name{font-family:var(--grot);font-weight:600;font-size:13cqw;letter-spacing:.04em;line-height:1}
+.tape .s2 .bar{width:12cqw;height:5cqw;background:var(--ink)}
+.tape .s2 .mk{width:15cqw;height:15cqw;flex:none;animation:spin 22s linear infinite}
+.tape .s3 .in{--w:23cqw;flex-direction:column;align-items:stretch;justify-content:center;gap:2.4cqw;border-top:.5cqw solid var(--ink);box-shadow:inset 0 1.3cqw 0 -.8cqw var(--or),inset 0 1.5cqw 0 -.8cqw var(--ink)}
+.tape .run{display:flex;width:max-content;animation:tapeRun 18s linear infinite;font-size:6.4cqw;font-weight:700}
+.tape .run.small{font-size:2.8cqw;font-weight:400;animation-duration:26s;animation-direction:reverse}
+@keyframes tapeRun{to{transform:translateX(-50%)}}
+
+/* ============ 02 EMBLEM ============ */
+.emblem{display:grid;grid-template-columns:12.5% 1fr 12.5%}
+.emblem .ruler{position:relative;border-top:1px solid var(--ink);background:
+  repeating-linear-gradient(to bottom,transparent 0 calc(3.2cqw - 1px),var(--ink) calc(3.2cqw - 1px) 3.2cqw) left top/2.6cqw 100% no-repeat,
+  repeating-linear-gradient(to bottom,transparent 0 calc(16cqw - 1px),var(--ink) calc(16cqw - 1px) 16cqw) left top/5cqw 100% no-repeat}
+.emblem .ruler.r{background-position:right top,right top}
+.emblem .ruler i{position:absolute;height:2.6cqw;width:65%;background:var(--ink);right:0}
+.emblem .ruler.r i{left:0;right:auto}
+.emblem .mid{border-left:1px solid var(--ink);border-right:1px solid var(--ink);display:grid;grid-template-rows:auto auto 1fr auto auto auto}
+.emblem .title{font-family:var(--grot);font-weight:900;font-stretch:108%;font-size:20.5cqw;line-height:.9;text-align:center;letter-spacing:-.02em;padding:2cqw 0 1.4cqw}
+.emblem .sub{font-family:var(--grot);font-weight:700;font-size:4.2cqw;text-align:center;padding:1.3cqw 0;letter-spacing:.01em}
+.emblem .field{position:relative;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.emblem .field svg.cross{position:absolute;inset:0;width:100%;height:100%}
+.emblem .field .mk{position:absolute;inset:6%;width:88%;height:88%;animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.emblem .coords{font-size:2.7cqw;letter-spacing:.32em;white-space:nowrap;text-align:center;padding:1.4cqw 0;font-weight:700;border-bottom:1px solid var(--ink)}
+.emblem .ref{display:grid;grid-template-columns:28% 1fr;font-family:var(--grot);font-weight:700;font-size:4.2cqw;border-bottom:1px solid var(--ink)}
+.emblem .ref>div{padding:2cqw 3cqw}
+.emblem .ref>div+div{border-left:1px solid var(--ink);text-align:center}
+.emblem .foot{background:var(--ink);color:var(--paper);font-family:var(--grot);font-weight:700;font-size:4.3cqw;text-align:center;padding:2.6cqw 0}
+
+/* ============ 03 SEQUENCE ============ */
+.seq{display:grid;grid-template-rows:repeat(5,1fr);background:#fbfaf6}
+.seq .row{display:grid;grid-template-columns:27% 1fr;border-bottom:1px solid var(--ink)}
+.seq .row:last-child{border-bottom:0}
+.seq .n{border-right:1px solid var(--ink);font-family:var(--grot);font-weight:900;font-size:15cqw;line-height:1;display:flex;align-items:center;justify-content:flex-end;padding-right:3cqw;position:relative}
+.seq .n::before{content:"";position:absolute;inset:0 42% 0 0;background:var(--or);background-image:var(--speckle);background-size:190px;z-index:-1}
+.seq .log{padding:2.6cqw 4cqw;font-size:2.55cqw;line-height:1.42;text-transform:uppercase;white-space:pre}
+.seq .log .dash{display:block;overflow:hidden;white-space:nowrap;letter-spacing:.1em;color:#6a655d}
+.seq .stamp{position:absolute;left:33%;top:41%;font-family:var(--grot);font-weight:800;font-size:17cqw;color:var(--or);mix-blend-mode:multiply;letter-spacing:-.04em;transform:rotate(-4deg);opacity:.9;z-index:4;pointer-events:none}
+.seq .seal{position:absolute;right:6%;bottom:5%;width:15cqw;height:15cqw;border:1.1cqw solid var(--ink);border-radius:50%;display:grid;place-items:center;font-family:var(--grot);font-weight:900;font-size:8cqw;background:#fbfaf6}
+.seq .typed::after{content:"\2588";animation:blink 1s steps(1) infinite;margin-left:.2em}
+@keyframes blink{50%{opacity:0}}
+
+/* ============ 04 STRIPE ============ */
+.stripe{background:#fff}
+.stripe .head{position:absolute;left:6%;top:5%;right:6%;font-family:var(--grot);font-weight:800;font-size:7cqw;line-height:1;letter-spacing:-.01em}
+.stripe .word{position:absolute;left:5%;right:5%;top:31%;font-family:var(--grot);font-weight:900;font-stretch:118%;font-size:25cqw;line-height:.8;letter-spacing:-.02em;text-align:center;
+  color:transparent;background:repeating-linear-gradient(to bottom,var(--ink) 0 2.3cqw,transparent 2.3cqw 3.9cqw);-webkit-background-clip:text;background-clip:text}
+.stripe canvas.rings{position:absolute;left:62%;top:0;width:24%;height:100%;z-index:3}
+.stripe .low{position:absolute;left:6%;right:6%;top:62%;display:grid;grid-template-columns:30% 1fr 1fr;row-gap:2.2cqw;align-items:center;font-size:5cqw}
+.stripe .low .mk{grid-row:1/4;width:24cqw;height:24cqw;animation:spin 18s linear infinite reverse}
+.stripe .low .r{text-align:right}
+.stripe .low .act{color:var(--or);font-weight:700}
+.stripe .fine{position:absolute;left:6%;right:40%;bottom:4.5%;font-size:2cqw;line-height:1.45;white-space:pre}
+
+/* ============ 05 TERMINAL ============ */
+.term{background:#12110f;color:var(--or)}
+.term .wrap{position:absolute;inset:5%;display:flex;flex-direction:column;gap:2.4cqw}
+.term .top{display:flex;justify-content:space-between;font-size:2.4cqw;border-bottom:1px dashed rgba(255,82,23,.6);padding-bottom:1.6cqw}
+.term .cmd{font-size:3.2cqw}
+.term .cmd b{color:#fff;font-weight:400}
+.term .big{font-family:var(--grot);font-weight:900;font-stretch:80%;font-size:34cqw;line-height:.8;letter-spacing:-.03em;color:var(--or);text-shadow:0 0 6cqw rgba(255,82,23,.35)}
+.term .lbl{font-size:3cqw;display:flex;justify-content:space-between;color:#fff}
+.term .bars{display:flex;align-items:flex-end;gap:.6cqw;height:17cqw;border-bottom:1px solid var(--or)}
+.term .bars i{flex:1;background:var(--or);transition:height .5s steps(4)}
+.term .feed{flex:1;font-size:2.5cqw;line-height:1.55;overflow:hidden;white-space:pre;color:#d9d3c7;mask-image:linear-gradient(to bottom,transparent,#000 40%)}
+.term .feed .ok{color:var(--or)}
+.term .bc{height:7cqw;display:flex;align-items:stretch;gap:0}
+
+/* ============ 06 HALFTONE ============ */
+.half{background-color:var(--or)}
+.half canvas{position:absolute;inset:0;width:100%;height:100%}
+.half .hud{position:absolute;inset:4.5%;pointer-events:none;font-size:2.5cqw;text-transform:uppercase}
+.half .corner{position:absolute;width:7cqw;height:7cqw;border:0 solid var(--ink)}
+.half .c1{left:0;top:0;border-width:.5cqw 0 0 .5cqw}.half .c2{right:0;top:0;border-width:.5cqw .5cqw 0 0}
+.half .c3{left:0;bottom:0;border-width:0 0 .5cqw .5cqw}.half .c4{right:0;bottom:0;border-width:0 .5cqw .5cqw 0}
+.half .fig{position:absolute;left:9cqw;top:1.4cqw;font-weight:700}
+.half .fig2{position:absolute;right:9cqw;top:1.4cqw;text-align:right}
+.half .scale{position:absolute;left:9cqw;bottom:2cqw;width:40cqw}
+.half .scale .b{height:1.6cqw;background:repeating-linear-gradient(90deg,var(--ink) 0 10cqw,transparent 10cqw 20cqw);border:.3cqw solid var(--ink)}
+.half .scale .t{display:flex;justify-content:space-between;margin-top:.8cqw}
+.half .name{position:absolute;right:9cqw;bottom:1.4cqw;font-family:var(--grot);font-weight:900;font-size:13cqw;line-height:.8;letter-spacing:-.03em;text-transform:none}
+
+/* ============ 07 NIGHT SHIFT ============ */
+.night{background:var(--blue);color:#fff}
+.night .t1{position:absolute;left:6%;top:5%;font-family:var(--grot);font-weight:900;font-stretch:70%;font-size:17cqw;line-height:.82;letter-spacing:-.01em}
+.night .t1 span{display:block;color:var(--or)}
+.night .ts{position:absolute;right:6%;top:6%;text-align:right;font-size:2.6cqw;line-height:1.5;white-space:pre}
+.night svg.dial{position:absolute;left:14%;top:37%;width:72cqw;height:72cqw}
+.night .bottom{position:absolute;left:6%;right:6%;bottom:4.5%;display:flex;justify-content:space-between;align-items:flex-end;font-size:2.6cqw;border-top:1px solid #fff;padding-top:1.8cqw}
+.night .bottom b{font-family:var(--grot);font-weight:800;font-size:4.6cqw;text-transform:uppercase}
+.night .clock{font-family:var(--dots);font-weight:900;font-size:7cqw;letter-spacing:.04em;position:absolute;left:50%;top:calc(37% + 36cqw);transform:translate(-50%,-50%);color:#fff}
+
+/* ============ 08 BADGE ============ */
+.badge{background:#d9d5cb}
+.badge .lan{position:absolute;left:50%;top:-2%;width:13cqw;height:22%;transform:translateX(-50%);background:var(--ink);
+  background-image:repeating-linear-gradient(0deg,transparent 0 3cqw,rgba(255,255,255,.14) 3cqw 3.4cqw)}
+.badge .lan::after{content:"LOOM · LOOM · LOOM · LOOM";position:absolute;inset:0;writing-mode:vertical-rl;color:var(--or);font-family:var(--grot);font-weight:900;font-size:4.6cqw;display:grid;place-items:center;letter-spacing:.1em}
+.badge .clip{position:absolute;left:50%;top:18%;width:18cqw;height:7cqw;transform:translateX(-50%);background:linear-gradient(#bbb,#777);border-radius:1cqw;z-index:2;box-shadow:inset 0 0 0 .4cqw #555}
+.badge .card{position:absolute;left:17%;right:17%;top:21%;bottom:6%;background:#fbfaf6;border-radius:2.4cqw;transform:rotate(-2.2deg);box-shadow:0 2cqw 4cqw -2cqw rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column}
+.badge .slot{margin:3cqw auto 0;width:14cqw;height:2.6cqw;border-radius:2cqw;background:#d9d5cb;box-shadow:inset 0 .3cqw .5cqw rgba(0,0,0,.3)}
+.badge .band{margin-top:3cqw;padding:2cqw 4cqw;display:flex;justify-content:space-between;align-items:center;font-family:var(--grot);font-weight:800;font-size:4.2cqw}
+.badge .num{font-family:var(--grot);font-weight:900;font-stretch:62%;font-size:44cqw;line-height:.78;padding:3cqw 4cqw 0;letter-spacing:-.04em;display:flex;align-items:flex-end;justify-content:space-between}
+.badge .num .mk{width:15cqw;height:15cqw;margin-bottom:3cqw}
+.badge .rows{padding:2cqw 4cqw;font-size:2.4cqw;line-height:1.6;text-transform:uppercase}
+.badge .rows div{display:flex;justify-content:space-between;border-bottom:1px dotted #9a958b}
+.badge .perf{border-top:.5cqw dashed var(--ink);margin:auto 0 0}
+.badge .stub{display:flex;align-items:center;gap:3cqw;padding:2.2cqw 4cqw 3cqw}
+.badge .stub .bc{flex:1;height:8cqw;display:flex}
+.badge .stub small{font-size:2.2cqw;writing-mode:vertical-rl;transform:rotate(180deg)}
+
+.bc i{display:block;background:currentColor;height:100%}
+.bc i.g{background:transparent}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- print roughness: nudges every edge by a pixel or two so type looks pressed, not rendered -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="rough" x="-2%" y="-2%" width="104%" height="104%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="2" seed="4" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<header class="sheet-head">
+  <h1>LOOM<span>®</span> / IDENTITY<br>STUDIES — SHT.01</h1>
+  <div class="meta">[ parallel thread works ]
+38°59'N · 76°56'W
+rev. 2026.09.25</div>
+  <div class="rule"><span>08 plates · <a href="svg-kit.html" style="color:inherit">sht.02 svg kit →</a></span><span>ink: signal orange / carbon / cobalt</span><span>warp → weft → woven</span><span>hover plate 06</span></div>
+</header>
+
+<main class="grid">
+
+<!-- 01 TAPE -->
+<figure><div class="poster tape"><div class="print">
+  <div class="strip s1 or mono"><div class="in"><span>INTERFACE: CLI / EDITOR  /  ARMED
+COMPONENT: THREAD WEAVING RUNTIME
+›  DOMAIN: SHARED MONOREPO    /
+›  STATUS: TENSIONED - - - - - - -</span><span class="coord">38.9869° N · 76.9426° W</span><span class="big">©26</span></div></div>
+  <div class="strip s2 or mono"><div class="in"><span class="name">LOOM</span><span class="bar"></span><span>MANY
+THREADS
+ONE CLOTH
+24 / 7</span><svg class="mk mark" viewBox="-50 -50 100 100" data-mark data-color="var(--ink)" data-outline="1"></svg><span>[WARP] - CP / BAL / DC
+TENSION: EVEN
+0 SNAGS - 0 DROPS</span></div></div>
+  <div class="strip s3 or mono"><div class="in">
+    <div class="run small"><span>TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- </span><span>TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- </span></div>
+    <div class="run"><span>[WARP] :: [WEFT] :: [WOVEN] :: [WARP] :: [WEFT] :: [WOVEN] ::&nbsp;</span><span>[WARP] :: [WEFT] :: [WOVEN] :: [WARP] :: [WEFT] :: [WOVEN] ::&nbsp;</span></div>
+    <div class="run small" style="animation-direction:normal"><span>TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- </span><span>TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- TERMINAL → REVIEW -- CP / BAL / DC -- STATE: WEAVING -- </span></div>
+  </div></div>
+</div></div><figcaption><span>01 — Tape</span><span>strips / ticker</span></figcaption></figure>
+
+<!-- 02 EMBLEM -->
+<figure><div class="poster emblem"><div class="print" style="display:grid;grid-template-columns:12.5% 1fr 12.5%">
+  <div class="ruler" data-tabs></div>
+  <div class="mid">
+    <div class="title">LOOM</div>
+    <div class="sub or">[ PARALLEL THREAD WORKS ]</div>
+    <div class="field">
+      <svg class="cross" viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="#1b1916" stroke-width=".25" vector-effect="non-scaling-stroke" fill="none"><path d="M0 0L100 100M100 0L0 100M50 0V100M0 50H100" vector-effect="non-scaling-stroke"/><circle cx="50" cy="50" r="30" vector-effect="non-scaling-stroke" stroke-dasharray="1 1.4"/></g></svg>
+      <svg class="mk mark" viewBox="-50 -50 100 100" data-mark data-color="var(--or)" data-speckle="1"></svg>
+    </div>
+    <div class="coords mono">38°59'12" N · 76°56'33" W</div>
+    <div class="ref"><div>REF</div><div>THR - 4096 - (∞) / LM</div></div>
+    <div class="foot">UNIT 07 - L / WEAVING JOBS</div>
+  </div>
+  <div class="ruler r" data-tabs></div>
+</div></div><figcaption><span>02 — Emblem</span><span>crosshair / rulers</span></figcaption></figure>
+
+<!-- 03 SEQUENCE -->
+<figure><div class="poster seq"><div class="print" style="display:grid;grid-template-rows:repeat(5,1fr)">
+  <div class="row"><div class="n">1</div><div class="log">SOURCE: ISSUE #2291
+ACTION: CAST ON
+<span class="dash" data-dash></span>[ WARP THREADED ]
+[ TENSION SET ]</div></div>
+  <div class="row"><div class="n">2</div><div class="log">SCOPE: 14 PACKAGES
+STATE: CARDED
+<span class="dash" data-dash></span>[ FIBRES SORTED ]
+[ PATTERN DRAFTED ]</div></div>
+  <div class="row"><div class="n">3</div><div class="log">MODE: 32 SHUTTLES
+PICKS: RUNNING
+<span class="dash" data-dash></span><span data-type>[ WEFT ] PARSER REWRITTEN</span>
+[ WEFT ] CACHE LAYER ADDED</div></div>
+  <div class="row"><div class="n">4</div><div class="log">INSPECTION: LIGHT TABLE
+FLAWS: 0
+<span class="dash" data-dash></span>[ 812 TESTS HOLD ]
+[ SELVAGE CLEAN ]</div></div>
+  <div class="row"><div class="n">5</div><div class="log">BOLT: CUT
+DEST: MAIN
+<span class="dash" data-dash></span>[ ROLLED OUT ]
+[ NO LOOSE ENDS ]</div></div>
+  <div class="stamp">©2026</div>
+  <div class="seal">L</div>
+</div></div><figcaption><span>03 — Sequence</span><span>five-pick run log</span></figcaption></figure>
+
+<!-- 04 STRIPE -->
+<figure><div class="poster stripe"><div class="print">
+  <div class="head">UNIT 07 - L / WEAVING<br>[ HIGH THREAD COUNT ]</div>
+  <div class="word">LOOM</div>
+  <canvas class="rings" data-rings="SHUTTLE"></canvas>
+  <div class="low mono">
+    <svg class="mk mark" viewBox="-50 -50 100 100" data-mark data-color="var(--or)"></svg>
+    <div>2.4</div><div class="r">RUNTIME</div>
+    <div>WEFT</div><div class="r">© 2026</div>
+    <div>///&nbsp;&nbsp;››</div><div class="r act">WEAVING</div>
+  </div>
+  <div class="fine mono">INTERFACE: CLI / EDITOR  /  ARMED
+COMPONENT: THREAD WEAVING RUNTIME
+›  DOMAIN: SHARED MONOREPO    /
+›  STATUS: TENSIONED - - - - - - -</div>
+</div></div><figcaption><span>04 — Stripe</span><span>barred type / ring matrix</span></figcaption></figure>
+
+<!-- 05 TERMINAL -->
+<figure><div class="poster term dark"><div class="print"><div class="wrap mono">
+  <div class="top"><span>LOOM://WARP-07</span><span data-clock-small>00:00:00</span><span>TTY/S003</span></div>
+  <div class="cmd">$ <b>loom weave --threads 4096 --until done</b></div>
+  <div class="big" data-count>4096</div>
+  <div class="lbl"><span>[ THREADS IN TENSION ]</span><span data-pps>— PICKS/S</span></div>
+  <div class="bars" data-bars></div>
+  <div class="feed" data-feed></div>
+  <div class="bc" data-barcode="LOOM-07-WARP" style="color:var(--or)"></div>
+</div></div></div><figcaption><span>05 — Terminal</span><span>live feed</span></figcaption></figure>
+
+<!-- 06 HALFTONE -->
+<figure><div class="poster half"><div class="print">
+  <canvas data-halftone></canvas>
+  <div class="hud mono">
+    <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+    <div class="fig">FIG. 03 — KNOT, PLAN VIEW</div>
+    <div class="fig2">SCREEN 42 LPI<br>ANGLE 45°</div>
+    <div class="scale"><div class="b"></div><div class="t"><span>0</span><span>20</span><span>40 MM</span></div></div>
+    <div class="name">loom.</div>
+  </div>
+</div></div><figcaption><span>06 — Halftone</span><span>cursor = loupe</span></figcaption></figure>
+
+<!-- 07 NIGHT SHIFT -->
+<figure><div class="poster night dark"><div class="print">
+  <div class="t1">NIGHT<br>SHIFT<span>NEVER ENDS</span></div>
+  <div class="ts mono">[ 00:00 — 06:00 EST ]
+THREADS DON'T SLEEP
+YOU DO</div>
+  <svg class="dial" viewBox="-50 -50 100 100" data-dial></svg>
+  <div class="clock" data-clock>00:00</div>
+  <div class="bottom mono"><b>Loom / unattended</b><span>SHT.07 — COBALT</span></div>
+</div></div><figcaption><span>07 — Night shift</span><span>real-time dial</span></figcaption></figure>
+
+<!-- 08 BADGE -->
+<figure><div class="poster badge"><div class="print">
+  <div class="lan"></div><div class="clip"></div>
+  <div class="card">
+    <div class="slot"></div>
+    <div class="band or"><span>OPERATOR</span><span class="mono" style="font-size:2.6cqw;font-weight:700">ACCESS: WARP FLOOR</span></div>
+    <div class="num">07<svg class="mk mark" viewBox="-50 -50 100 100" data-mark data-color="var(--ink)"></svg></div>
+    <div class="rows mono">
+      <div><span>NAME</span><span>SHUTTLE-07</span></div>
+      <div><span>CLASS</span><span>LONG-RUNNING</span></div>
+      <div><span>SHIFT</span><span>24 / 7 / 365</span></div>
+      <div><span>ISSUED</span><span>2026.09.25</span></div>
+    </div>
+    <div class="perf"></div>
+    <div class="stub"><div class="bc" data-barcode="SHUTTLE-07"></div><small class="mono">NO.0007</small></div>
+  </div>
+</div></div><figcaption><span>08 — Badge</span><span>credential</span></figcaption></figure>
+
+</main>
+
+<script>
+/* ---------- the mark: three stadiums at 0/60/120°, filled even-odd, plus a pin-hole ----------
+   overlaps of two cancel out, the triple overlap in the middle fills back in — a woven knot. */
+function stadium(a, r, th){
+  const c=Math.cos(th), s=Math.sin(th), P=(x,y)=>[(x*c-y*s).toFixed(2),(x*s+y*c).toFixed(2)];
+  const [p1,p2,p3,p4]=[P(-a,-r),P(a,-r),P(a,r),P(-a,r)];
+  return `M${p1}L${p2}A${r} ${r} 0 0 1 ${p3}L${p4}A${r} ${r} 0 0 1 ${p1}Z`;
+}
+const MARK = [0,1,2].map(i=>stadium(33,12.5,i*Math.PI/3+Math.PI/12)).join('') + 'M0 -5A5 5 0 1 1 0 5A5 5 0 1 1 0 -5Z';
+
+let sp=0;
+document.querySelectorAll('[data-mark]').forEach(svg=>{
+  const col=svg.dataset.color, id='spk'+(sp++);
+  let fill=col;
+  if(svg.dataset.speckle){
+    svg.insertAdjacentHTML('beforeend',`<defs><filter id="${id}"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 .66 0 0 0 0 .42 15 0 0 0 -9.4"/><feComposite in2="SourceGraphic" operator="in"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode/></feMerge></filter></defs>`);
+  }
+  const outline = svg.dataset.outline;
+  svg.insertAdjacentHTML('beforeend',
+    `<path d="${MARK}" fill-rule="evenodd" ${outline?`fill="none" stroke="${col}" stroke-width="3.2" stroke-linejoin="round"`:`fill="${fill}"`} ${svg.dataset.speckle?`filter="url(#${id})"`:''}/>`);
+});
+
+/* ---------- rulers: black tabs at irregular intervals ---------- */
+document.querySelectorAll('[data-tabs]').forEach((r,k)=>{
+  [17,38,59,80].forEach(p=>{const i=document.createElement('i');i.style.top=(p+(k?1:0))+'%';r.appendChild(i)});
+});
+
+/* ---------- dashed separators sized to their box ---------- */
+document.querySelectorAll('[data-dash]').forEach(d=>d.textContent='-'.repeat(60));
+
+/* ---------- barcodes (deterministic from the label) ---------- */
+function barcode(el){
+  let h=0; for(const ch of el.dataset.barcode) h=(h*31+ch.charCodeAt(0))>>>0;
+  const rnd=()=>(h=(h*1664525+1013904223)>>>0)/4294967296;
+  let html=''; for(let i=0;i<58;i++){const w=1+Math.floor(rnd()*4); html+=`<i style="flex:${w}" class="${i%2?'g':''}"></i>`}
+  el.innerHTML=html;
+}
+document.querySelectorAll('[data-barcode]').forEach(barcode);
+
+/* ---------- 04: dot-matrix word made of rings ---------- */
+function drawRings(cv){
+  const r=cv.getBoundingClientRect(), dpr=devicePixelRatio||1;
+  cv.width=r.width*dpr; cv.height=r.height*dpr;
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const cell=Math.max(5,r.width/7.2);            // ~7 rings across the letter height
+  const cols=Math.floor(r.width/cell), rows=Math.floor(r.height/cell);
+  const off=document.createElement('canvas'); off.width=rows; off.height=cols;  // drawn horizontally, then rotated
+  const o=off.getContext('2d');
+  o.fillStyle='#000'; o.textBaseline='middle'; o.font=`900 ${cols*1.02}px Archivo`;
+  const txt=cv.dataset.rings; const tw=o.measureText(txt).width;
+  o.save(); o.scale(rows/tw*.98,1); o.fillText(txt,0,cols/2+.5); o.restore();
+  const d=o.getImageData(0,0,rows,cols).data;
+  const x0=(r.width-cols*cell)/2;
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    // rotate 90° clockwise: text reads top→bottom
+    const sx=y, sy=cols-1-x;
+    if(d[(sy*rows+sx)*4+3]>110){
+      const cx=x0+x*cell+cell/2, cy=y*cell+cell/2;
+      ctx.strokeStyle='#ff8a1d'; ctx.lineWidth=cell*.2;
+      ctx.beginPath(); ctx.arc(cx,cy,cell*.36,0,Math.PI*2); ctx.stroke();
+    }
+  }
+}
+
+/* ---------- 06: halftone mark with a loupe under the cursor ---------- */
+function halftone(cv){
+  const host=cv.parentElement; let pt=null, raf=0, src=null, W=0, H=0;
+  function build(){
+    const r=cv.getBoundingClientRect(); W=r.width; H=r.height;
+    const dpr=devicePixelRatio||1; cv.width=W*dpr; cv.height=H*dpr;
+    cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+    const o=document.createElement('canvas'); o.width=W; o.height=H; const c=o.getContext('2d');
+    c.filter=`blur(${W*.018}px)`; c.translate(W/2,H*.47); c.rotate(.18); const s=W*.0085; c.scale(s,s);
+    c.fillStyle='#000'; c.fill(new Path2D(MARK),'evenodd');
+    src=c.getImageData(0,0,W,H).data; draw();
+  }
+  function draw(){
+    const ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H);
+    const step=W/58; ctx.fillStyle='#1b1916';
+    const ang=Math.PI/4, ca=Math.cos(ang), sa=Math.sin(ang), R=Math.hypot(W,H);
+    for(let v=-R; v<R; v+=step) for(let u=-R; u<R; u+=step){
+      const x=W/2+u*ca-v*sa, y=H/2+u*sa+v*ca;
+      if(x<0||y<0||x>=W||y>=H) continue;
+      let a=src[((y|0)*W+(x|0))*4+3]/255;
+      let boost=1;
+      if(pt){const d2=(x-pt.x)**2+(y-pt.y)**2, k=Math.exp(-d2/(W*W*.012)); boost=1+k*1.1; a=Math.max(a,k*.35);}
+      const rad=Math.min(step*.75, Math.sqrt(a)*step*.62*boost);
+      if(rad<.35) continue;
+      ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2); ctx.fill();
+    }
+  }
+  host.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect(); pt={x:e.clientX-r.left,y:e.clientY-r.top}; cancelAnimationFrame(raf); raf=requestAnimationFrame(draw)});
+  host.addEventListener('pointerleave',()=>{pt=null; draw()});
+  return build;
+}
+
+/* ---------- 05: live terminal ---------- */
+const bars=document.querySelector('[data-bars]'); for(let i=0;i<32;i++) bars.appendChild(document.createElement('i'));
+const feed=document.querySelector('[data-feed]');
+const verbs=['WEFT','WEFT','WEFT','CHECK','KNOT','WEFT','SPLICE'];
+const things=['auth/session.ts','api/retry.go','ui/table.tsx','db/migrate_31.sql','cli/flags.rs','docs/README.md','infra/queue.tf','core/sched.py','tests/e2e.spec','lib/cache.ts'];
+let n=0, lines=[];
+function tick(){
+  const now=new Date();
+  document.querySelector('[data-clock-small]').textContent=now.toTimeString().slice(0,8);
+  const v=verbs[Math.random()*verbs.length|0], t=things[Math.random()*things.length|0];
+  const id=String(1+Math.random()*4095|0).padStart(4,'0');
+  const res = v==='CHECK' ? '<span class="ok">PASS</span>' : v==='KNOT' ? '<span class="ok">TIED</span>' : 'OK';
+  lines.push(`T${id} [${v.padEnd(6)}] ${t.toUpperCase().padEnd(20)} ${res}`);
+  if(lines.length>14) lines.shift();
+  feed.innerHTML=lines.join('\n');
+  bars.querySelectorAll('i').forEach((b,i)=>{ if(i===n%32 || Math.random()<.12) b.style.height=(20+Math.random()*80)+'%'});
+  document.querySelector('[data-pps]').textContent=(11800+Math.random()*900|0).toLocaleString()+' PICKS/S';
+  n++;
+}
+bars.querySelectorAll('i').forEach(b=>b.style.height=(20+Math.random()*80)+'%');
+tick(); setInterval(tick,650);
+
+/* ---------- 03: retyping log line ---------- */
+const typed=document.querySelector('[data-type]'); const full=typed.textContent; typed.classList.add('typed');
+const variants=[full,'[ WEFT ] AUTH FLOW PATCHED','[ WEFT ] QUEUE DRAINED','[ WEFT ] SCHEMA MIGRATED'];
+let vi=0;
+(async function loop(){
+  for(;;){
+    const s=variants[vi++%variants.length];
+    for(let i=0;i<=s.length;i++){typed.textContent=s.slice(0,i); await new Promise(r=>setTimeout(r,55))}
+    await new Promise(r=>setTimeout(r,2200));
+    for(let i=s.length;i>=8;i--){typed.textContent=s.slice(0,i); await new Promise(r=>setTimeout(r,18))}
+  }
+})();
+
+/* ---------- 07: dial ---------- */
+const dial=document.querySelector('[data-dial]');
+let dh='<circle r="47" fill="none" stroke="#fff" stroke-width=".4"/>';
+for(let i=0;i<120;i++){const a=i/120*Math.PI*2, long=i%10===0, r1=long?38:43;
+  dh+=`<line x1="${(Math.sin(a)*r1).toFixed(2)}" y1="${(-Math.cos(a)*r1).toFixed(2)}" x2="${(Math.sin(a)*46).toFixed(2)}" y2="${(-Math.cos(a)*46).toFixed(2)}" stroke="#fff" stroke-width="${long?1.2:.4}"/>`;}
+dh+='<path d="M0 0L0 -47A47 47 0 0 1 47 0Z" fill="#ff5217" opacity=".9" data-sweep/>';
+dh+='<g data-hand><line x1="0" y1="6" x2="0" y2="-44" stroke="#fff" stroke-width="1"/><circle r="1.8" fill="#fff"/></g>';
+dh+='<text y="-28" text-anchor="middle" font-family="Space Mono" font-size="3.4" fill="#fff">00</text><text x="30" y="1.2" text-anchor="middle" font-family="Space Mono" font-size="3.4" fill="#fff">15</text><text y="31" text-anchor="middle" font-family="Space Mono" font-size="3.4" fill="#fff">30</text><text x="-30" y="1.2" text-anchor="middle" font-family="Space Mono" font-size="3.4" fill="#fff">45</text>';
+dial.innerHTML=dh;
+function clock(){
+  const d=new Date(), s=d.getSeconds()+d.getMilliseconds()/1000;
+  dial.querySelector('[data-hand]').setAttribute('transform',`rotate(${s*6})`);
+  document.querySelector('[data-clock]').textContent=d.toTimeString().slice(0,5);
+  requestAnimationFrame(clock);
+}
+clock();
+
+/* ---------- canvas layouts ---------- */
+const buildHalf=halftone(document.querySelector('[data-halftone]'));
+function layout(){ document.querySelectorAll('[data-rings]').forEach(drawRings); buildHalf(); }
+document.fonts.ready.then(layout);
+let rt; addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(layout,120)});
+</script>
+</body>
+</html>
