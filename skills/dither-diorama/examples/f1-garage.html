@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Box Box</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<script type="module">
+// Example: an F1 team garage an hour before qualifying. The car sits in its bay
+// and runs a pit-stop drill on a loop (jacks up, wheels off, new tyres on, down).
+// Engineers watch the timing wall, paddock guests get accredited, take photos
+// over the rope and drink in hospitality. The last step pulls back to a street
+// circuit: the garage's block is the lap, with kerbs on every corner.
+import { createDiorama } from '../assets/engine.js';
+
+const CAR = { x: .3, z: -.35 };
+const PIT = 16;                     // seconds per pit-stop drill
+
+createDiorama({
+  title: 'Box, box — garage 07',
+  accent: 0xe10600, uiAccent: '#e10600',
+  room: { x0: -3, x1: 3, z0: -2.4, z1: 2.6, wallH: 1.2, door: { z0: 1.45, z1: 2.1 } },
+
+  build(k) {
+    const { slab, box, accent, block, THREE } = k;
+    const smooth = x => x * x * (3 - 2 * x);
+
+    // team band around the far walls + the garage bay markings
+    k.group('room');
+    slab(-3, 3, 1.0, 1.06, -2.4, -2.38, 1, k.scene, k.ACCENT);
+    slab(-3, -2.98, 1.0, 1.06, -2.4, 2.6, 1, k.scene, k.ACCENT);
+    for (const [x0, x1, z0, z1] of [[-1.1, 1.9, -1.2, -1.17], [-1.1, 1.9, .47, .5], [-1.1, -1.07, -1.2, .5], [1.87, 1.9, -1.2, .5]])
+      slab(x0, x1, 0, .004, z0, z1, .55);
+    k.digits('07', 2.7, .72, -2.38, .12, .22, .2, .04);
+
+    // ── the car, on its own group so it can lift, and wheels that come off
+    k.group('car');
+    const car = new THREE.Group(); car.position.set(CAR.x, 0, CAR.z); k.scene.add(car);
+    const body = new THREE.Group(); car.add(body);
+    box(0, .05, 0, 1.7, .03, .6, .15, body);                         // floor
+    box(.1, .08, 0, 1.0, .12, .24, .2, body);                         // tub
+    box(.8, .08, 0, .5, .07, .14, .2, body);                          // nose
+    accent(.72, .15, 0, .3, .005, .08, 1, body);
+    box(1.12, .05, 0, .16, .02, .72, .18, body);                      // front wing
+    for (const s of [-1, 1]) accent(1.12, .05, s * .36, .15, .07, .015, 1, body);
+    for (const s of [-1, 1]) { box(-.05, .08, s * .2, .6, .14, .14, .22, body); accent(-.05, .22, s * .2, .45, .006, .1, 1, body); }
+    box(-.35, .08, 0, .5, .2, .2, .2, body);                          // engine cover
+    accent(-.45, .28, 0, .35, .08, .012, 1, body);                    // fin
+    box(-.12, .2, 0, .12, .14, .12, .15, body);                       // airbox
+    box(.12, .21, 0, .28, .02, .16, .35, body);                       // halo
+    box(.06, .16, 0, .09, .08, .09, .97, body);                       // helmet
+    box(.1, .19, 0, .012, .025, .07, .1, body);                       // visor
+    box(-.75, .3, 0, .13, .02, .56, .1, body);                        // rear wing
+    for (const s of [-1, 1]) { box(-.75, .12, s * .28, .17, .2, .015, .15, body); accent(-.75, .28, s * .28, .17, .03, .016, 1, body); }
+    const wheels = [[.72, .4], [.72, -.4], [-.5, .41], [-.5, -.41]].map(([x, z]) => {
+      const w = new THREE.Group(); w.position.set(x, 0, z); w.userData.home = z; body.add(w);
+      box(0, 0, 0, .3, .3, .15, .1, w);
+      const soft = accent(0, .1, Math.sign(z) * .076, .2, .1, .004, 1, w);        // red sidewall = softs
+      const hard = box(0, .1, Math.sign(z) * .076, .2, .1, .004, .97, w);         // white sidewall = hards
+      hard.visible = false;
+      box(0, .12, Math.sign(z) * .08, .06, .06, .004, .5, w);
+      return { w, soft, hard };
+    });
+    // jacks at both ends
+    const jackF = box(CAR.x + 1.35, 0, CAR.z, .25, .06, .1, .3), jackR = box(CAR.x - 1.0, 0, CAR.z, .25, .06, .1, .3);
+    block(CAR.x - .9, CAR.x + 1.25, CAR.z - .38, CAR.z + .38);
+    let lastCycle = -1;
+    k.tick(t => {
+      const c = t % PIT, cycle = Math.floor(t / PIT);
+      const up = c < 2 ? 0 : c < 2.6 ? smooth((c - 2) / .6) : c < 5.6 ? 1 : c < 6.2 ? 1 - smooth((c - 5.6) / .6) : 0;
+      const off = c < 2.6 ? 0 : c < 3.4 ? smooth((c - 2.6) / .8) : c < 4.6 ? 1 : c < 5.4 ? 1 - smooth((c - 4.6) / .8) : 0;
+      body.position.y = .06 * up;
+      jackF.scale.y = jackR.scale.y = .06 + .06 * up; jackF.position.y = jackR.position.y = jackF.scale.y / 2;
+      if (cycle !== lastCycle && c > 4) { lastCycle = cycle; }
+      for (const { w, soft, hard } of wheels) {
+        w.position.z = w.userData.home + Math.sign(w.userData.home) * .32 * off;
+        const fresh = c > 4 && c < PIT;                                // new set goes on at the far point
+        const softs = (cycle % 2 === 0) ? !fresh : fresh;
+        soft.visible = softs; hard.visible = !softs;
+      }
+    });
+
+    // ── pit wall: timing screen, desk, monitors
+    k.group('pitwall');
+    slab(-2.5, -.3, .55, 1.0, -2.4, -2.38, .08);
+    k.digits('121', -2.25, .86, -2.38, .1, .18, .95, .05);
+    slab(-1.93, -1.9, .77, .8, -2.38, -2.37, .95);
+    k.digits('847', -1.8, .86, -2.38, .1, .18, 1, .05, k.ACCENT);
+    for (let i = 0; i < 5; i++) slab(-.95, -.95 + (.25 + (i * 37 % 5) * .08), .6 + i * .07, .64 + i * .07, -2.38, -2.37, i === 0 ? .6 : .85);
+    slab(-2.5, -.3, 0, .42, -2.38, -2.02, .9);            block(-2.5, -.3, -2.38, -2.02);
+    for (const x of [-2.2, -1.65, -1.1, -.55]) {
+      const m = box(x, .42, -2.2, .34, .22, .02, .08); m.rotation.x = -.2;
+      for (let i = 0; i < 3; i++) slab(x - .12, x - .12 + .08 + i * .05, .47 + i * .05, .48 + i * .05, -2.18, -2.17, i === 1 ? .5 : .9);
+    }
+
+    // ── tyre wall: sets in blankets, the current compound on top
+    k.group('crew');
+    for (let i = 0; i < 7; i++) {
+      const x = .7 + i * .34, h = 3 + (i % 2);
+      for (let j = 0; j < h; j++) (j === h - 1 || (i + j) % 3 === 0 ? accent : box)(x, j * .075, -2.2, .26, .072, .26, j === h - 1 ? 1 : (i + j) % 3 === 0 ? .8 : .12);
+    }
+    block(.55, 2.95, -2.36, -2.04);
+    // left wall: tool chests and a rack of spare front wings
+    slab(-2.98, -2.5, 0, .55, -1.95, -.95, .86);          block(-2.98, -2.5, -1.95, -.95);
+    for (let i = 0; i < 6; i++) slab(-2.5, -2.49, .06 + i * .08, .07 + i * .08, -1.9, -1.0, .45);
+    slab(-2.98, -2.9, .1, 1.0, -.7, .7, .5);
+    for (let i = 0; i < 3; i++) { slab(-2.9, -2.86, .3 + i * .22, .35 + i * .22, -.62, .62, .15); accent(-2.86, .28 + i * .22, -.64, .02, .09, .03); accent(-2.86, .28 + i * .22, .64, .02, .09, .03); }
+
+    // ── hospitality: glass line, rope, high tables, accreditation desk
+    k.group('hospitality');
+    slab(-3, -.45, 0, .5, .93, .97, .97);
+    for (let x = -.4; x <= 2.15; x += .5) box(x, 0, 1.0, .03, .3, .03, .3);
+    slab(-.4, 2.1, .26, .28, .992, 1.008, 1, k.scene, k.ACCENT);
+    block(-.45, 2.15, .98, 1.02);
+    k.staffOnly(-3, 3, -2.4, .95);
+    slab(-2.98, -2.72, 0, .5, 1.15, 2.4, .9);             block(-2.98, -2.72, 1.15, 2.4);
+    for (let i = 0; i < 4; i++) box(-2.85, .5, 1.35 + i * .28, .05, .08, .05, i % 2 ? .95 : .3);
+    for (const [tx, tz] of [[-1.85, 1.5], [-.8, 1.5], [-1.35, 2.2]]) {
+      box(tx, 0, tz, .06, .5, .06, .4); box(tx, .5, tz, .3, .03, .3, .97); box(tx, 0, tz, .2, .015, .2, .4);
+      block(tx - .15, tx + .15, tz - .15, tz + .15);
+      for (const s of [-1, 1]) {
+        const sx = tx + s * .38;
+        box(sx, 0, tz, .03, .34, .03, .35); box(sx, .34, tz, .15, .03, .15, .7);
+        k.seat({ x: sx, z: tz, yaw: s > 0 ? -Math.PI / 2 : Math.PI / 2, anim: 'talk', plate: [tx + s * .08, .53, tz] });
+      }
+    }
+    slab(2.3, 2.52, 0, .45, 1.0, 1.38, .93);              block(2.3, 2.52, 1.0, 1.38);
+    slab(2.28, 2.54, .45, .47, .98, 1.4, .3);
+    k.staffOnly(2.52, 3, .95, 1.4);
+    k.plant(-.2, 2.35, .9);
+  },
+
+  staff: [
+    // pit crew at each corner, jack operators at each end
+    ...[[CAR.x + .72, CAR.z + 1.0, Math.PI], [CAR.x + .72, CAR.z - 1.0, 0], [CAR.x - .5, CAR.z + 1.0, Math.PI], [CAR.x - .5, CAR.z - 1.0, 0]]
+      .map(([x, z, yaw]) => ({ group: 'crew', at: [x, z], yaw, anim: 'load', tone: .18, head: .9 })),
+    { group: 'crew', at: [CAR.x + 1.62, CAR.z], yaw: -Math.PI / 2, anim: 'reach', tone: .18, head: .9 },
+    { group: 'crew', at: [CAR.x - 1.28, CAR.z], yaw: Math.PI / 2, anim: 'load', tone: .18, head: .9 },
+    // engineers on headsets, and the race engineer walking between car and screens
+    { group: 'pitwall', at: [-1.9, -1.72], yaw: Math.PI, anim: 'type', tone: .25, head: .08 },
+    { group: 'pitwall', at: [-.9, -1.72], yaw: Math.PI, anim: 'type', tone: .25, head: .08 },
+    { group: 'pitwall', role: 'patrol', holds: 'clipboard', tone: .25, head: .12, at: [-1.4, -1.5], stops: [
+      { at: [-1.4, -1.5], yaw: Math.PI, t: [4, 6], anim: 'write' }, { at: [2.1, -.95], yaw: -Math.PI / 2, t: [3, 5], anim: 'talk' },
+      { at: [-.9, .55], yaw: 0, t: [3, 4], anim: 'write' } ] },
+    // hospitality: accreditation host and a floor host
+    { group: 'hospitality', at: [2.75, 1.19], yaw: -Math.PI / 2, anim: 'serve', tone: .7, head: .15 },
+    { group: 'hospitality', role: 'patrol', tone: .7, head: .5, at: [-1.35, 1.1], stops: [
+      { at: [-1.35, 1.1], yaw: Math.PI, t: [3, 5], anim: 'talk' }, { at: [-.3, 1.95], yaw: -Math.PI / 2, t: [3, 5], anim: 'talk' },
+      { at: [-2.35, 1.85], yaw: Math.PI / 2, t: [2, 4], anim: 'idle' } ] },
+  ],
+
+  visitors: {
+    max: 12, startSeated: 3, rate: [4, 7], rushRate: [2, 3.5], tone: [.35, .75],
+    route: [
+      { type: 'queue', slot: i => [1.95 - i * .3, 1.8], max: 4, face: Math.PI / 2 },
+      { type: 'counter', spots: [{ x: 2.05, z: 1.19, yaw: Math.PI / 2 }], dwell: [1.5, 2.5], give: 'pass' },
+      { type: 'visit', anim: 'reach', dwell: [4, 7], points: [-.15, .35, .85, 1.35].map(x => [x, 1.28, Math.PI]) },
+      { type: 'seat', anim: 'talk', dwell: [10, 18], startItem: 'cup' },
+    ],
+  },
+  items: {
+    pass: { hand: true, build: (k, g) => { k.box(0, 0, 0, .05, .07, .01, .97, g); k.accent(0, .05, 0, .05, .015, .012, 1, g); } },
+  },
+
+  steps: [
+    { title: 'Garage', body: 'Saturday, an hour before qualifying. The crew runs pit-stop drills on a loop: jacks up, wheels off, a new set on, down.', show: null },
+    { title: 'Crew', body: 'Four wheel crews, two jack operators, and the tyre wall: softs in red, the next set in blankets.', show: ['crew', 'car'] },
+    { title: 'Pit wall', body: 'Two engineers on the timing screens, and the race engineer walking the car with a clipboard.', show: ['pitwall'] },
+    { title: 'Paddock', body: 'Guests collect a pass, take photos over the rope, then settle in hospitality with a drink.', show: ['visitors', 'hospitality'] },
+    { title: 'Circuit', body: 'Pull back: the garage block is the lap. Red-and-white kerbs on every corner, the field streaming past.', city: true },
+  ],
+  hud: { inside: 'Guests', queued: 'At accreditation', seated: 'In hospitality', served: 'Tours done' },
+  city: { stores: 2, seed: 16, race: { cars: 10, speed: 7, accentCars: 4 } },
+});
+</script>
+</body>
+</html>

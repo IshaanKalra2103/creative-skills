@@ -570,7 +570,7 @@ export function createDiorama(cfg) {
   }
 
   // ───────────────────────────────────────────────────────────── city ──
-  const CITY = { stores: 4, seed: 11, maxHeight: 6.2, ...(cfg.city || {}) };
+  const CITY = { stores: 4, seed: 11, maxHeight: 6.2, race: null, ...(cfg.city || {}) };
   const crnd = mulberry(CITY.seed);
   const cr = (a, b) => a + (b - a) * crnd();
   const S = Math.max(R.x1 - R.x0, R.z1 - R.z0) / 6;
@@ -655,14 +655,10 @@ export function createDiorama(cfg) {
         tower((bx0 + bx1) / 2 + cr(-.1, .1), (bz0 + bz1) / 2 + cr(-.1, .1), w, d, H, crnd() < .15 ? cr(.5, .6) : cr(.78, .9), del + k * .04);
       }
     }
-    cityMesh = new THREE.InstancedMesh(GEO, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55 }), cityItems.length);
-    cityMesh.castShadow = cityMesh.receiveShadow = true; cityMesh.frustumCulled = false;
-    const c = new THREE.Color();
-    cityItems.forEach((it, i) => cityMesh.setColorAt(i, it.tint ? c.copy(it.tint) : c.setScalar(it.tone)));
-    scene.add(cityMesh);
     for (const [axis, list, span] of [['x', ZS, [EXT.x0, EXT.x1]], ['z', XS, [EXT.z0, EXT.z1]]])
       for (const at of list) {
-        for (const lane of [-1, 1]) {
+        const onCircuit = CITY.race && (at === XS[2] || at === XS[3] || at === ZS[2] || at === ZS[3]);
+        for (const lane of onCircuit ? [] : [-1, 1]) {
           const n = 2 + ((crnd() * 2) | 0);
           for (let k = 0; k < n; k++) movers.push({ car: true, axis, lane: at + lane * .32 * S, dir: lane, span,
             speed: 1.1 + crnd() * .8, phase: (k + crnd() * .7) / n, tone: crnd() < .5 ? .1 + crnd() * .1 : .75 + crnd() * .2, cab: .55 + crnd() * .35 });
@@ -670,7 +666,38 @@ export function createDiorama(cfg) {
         for (let k = 0; k < 6; k++) movers.push({ car: false, axis, lane: at + (k % 2 ? 1 : -1) * (SW / 2 + .3), dir: crnd() < .5 ? 1 : -1,
           span, speed: .28 + crnd() * .12, phase: crnd(), tone: .25 + crnd() * .35 });
       }
-    moverMesh = new THREE.InstancedMesh(GEO, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55 }), movers.length * 2);
+    // street circuit: racers lap the ring of streets around the store's block,
+    // with red-and-white kerbs on the inside of every corner
+    if (CITY.race) {
+      const ring = [[XS[2], ZS[3]], [XS[3], ZS[3]], [XS[3], ZS[2]], [XS[2], ZS[2]]];
+      const n = CITY.race.cars ?? 8;
+      for (let k = 0; k < n; k++) movers.push({ racer: true, ring, phase: k / n + crnd() * .03, speed: (CITY.race.speed ?? 6) * (1 + (crnd() - .5) * .06),
+        lane: (k % 2 ? 1 : -1) * .18 * S, livery: k < (CITY.race.accentCars ?? 2) ? 'accent' : pick([.12, .2, .85, .95, .5]) });
+      // pale track surface over the lap, kerbs down both edges, a chequered start line
+      const K = .28;
+      ring.forEach((a, i) => {
+        const b = ring[(i + 1) % 4], along = a[1] === b[1];
+        const x0 = Math.min(a[0], b[0]) - (along ? SW / 2 : 0), x1 = Math.max(a[0], b[0]) + (along ? SW / 2 : 0);
+        const z0 = Math.min(a[1], b[1]) - (along ? 0 : SW / 2), z1 = Math.max(a[1], b[1]) + (along ? 0 : SW / 2);
+        const cx = along ? (x0 + x1) / 2 : a[0], cz = along ? a[1] : (z0 + z1) / 2;
+        citem(cx, -.075, cz, along ? x1 - x0 : SW, .02, along ? SW : z1 - z0, .55, cityDelay(cx, cz), 'ground');
+        const len = along ? x1 - x0 : z1 - z0;
+        for (let k = 0; k * K < len; k++) for (const side of [-1, 1]) {
+          const u = (along ? x0 : z0) + (k + .5) * K;
+          const x = along ? u : a[0] + side * (SW / 2 - .09), z = along ? a[1] + side * (SW / 2 - .09) : u;
+          citem(x, -.06, z, along ? K : .18, .03, along ? .18 : K, 1, cityDelay(x, z), 'ground', k % 2 ? null : ACCENT);
+        }
+      });
+      const [sx, sz] = [(ring[0][0] + ring[1][0]) / 2, ring[0][1]];
+      for (let r = 0; r < 2; r++) for (let c = 0; c < 8; c++)
+        citem(sx + (r - .5) * .12, -.055, sz - SW / 2 + .1 + c * (SW - .2) / 8 + .04, .12, .012, (SW - .2) / 8, (r + c) % 2 ? .08 : 1, cityDelay(sx, sz), 'ground');
+    }
+    cityMesh = new THREE.InstancedMesh(GEO, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55 }), cityItems.length);
+    cityMesh.castShadow = cityMesh.receiveShadow = true; cityMesh.frustumCulled = false;
+    const c = new THREE.Color();
+    cityItems.forEach((it, i) => cityMesh.setColorAt(i, it.tint ? c.copy(it.tint) : c.setScalar(it.tone)));
+    scene.add(cityMesh);
+    moverMesh = new THREE.InstancedMesh(GEO, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55 }), movers.length * 5);
     moverMesh.castShadow = true; moverMesh.frustumCulled = false;
     moverMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     scene.add(moverMesh);
@@ -698,9 +725,28 @@ export function createDiorama(cfg) {
     let n = 0;
     const put = (x, y, z, w, h, d, tone) => {
       tmpO.position.set(x, y + h / 2 * g, z); tmpO.scale.set(w * g + 1e-4, h * g + 1e-4, d * g + 1e-4);
-      tmpO.updateMatrix(); moverMesh.setMatrixAt(n, tmpO.matrix); moverMesh.setColorAt(n, tmpC.setScalar(tone)); n++;
+      tmpO.updateMatrix(); moverMesh.setMatrixAt(n, tmpO.matrix);
+      moverMesh.setColorAt(n, tone === 'accent' ? tmpC.copy(ACCENT) : tmpC.setScalar(tone)); n++;
     };
     for (const m of movers) {
+      if (m.racer) {
+        const r = m.ring, lens = r.map((a, i) => { const b = r[(i + 1) % 4]; return Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]); });
+        const total = lens.reduce((a, b) => a + b, 0);
+        let u = ((m.phase + t * m.speed / total) % 1) * total, i = 0;
+        while (u > lens[i]) { u -= lens[i]; i++; }
+        const a = r[i], b = r[(i + 1) % 4], f = u / lens[i];
+        const dx = Math.sign(b[0] - a[0]), dz = Math.sign(b[1] - a[1]);
+        const x = a[0] + (b[0] - a[0]) * f - dz * m.lane, z = a[1] + (b[1] - a[1]) * f + dx * m.lane;
+        const L = (w, d) => dx ? [w, d] : [d, w];
+        const [bw, bd] = L(1.2, .34), [fw, fd] = L(.1, .52), [rw, rd] = L(.14, .44), [hw, hd] = L(.13, .13), [sw_, sd_] = L(.5, .5);
+        const body = m.livery;
+        put(x, -.06, z, bw, .1, bd, body);                                                   // tub
+        put(x - dx * .1, -.06, z - dz * .1, sw_, .13, sd_, body === 'accent' ? .15 : 'accent'); // sidepods / wheels
+        put(x + dx * .62, -.06, z + dz * .62, fw, .04, fd, body === 'accent' ? .95 : 'accent'); // front wing
+        put(x - dx * .58, .0, z - dz * .58, rw, .12, rd, .08);                                // rear wing
+        put(x - dx * .02, .02, z - dz * .02, hw, .09, hd, .97);                              // helmet
+        continue;
+      }
       const len = m.span[1] - m.span[0];
       let u = (m.phase + t * m.speed / len) % 1;
       if (m.dir < 0) u = 1 - u;
@@ -709,6 +755,8 @@ export function createDiorama(cfg) {
       if (m.car) { put(x, -.06, z, along ? .8 : .38, .2, along ? .38 : .8, m.tone); put(x, .08, z, along ? .42 : .32, .15, along ? .32 : .42, m.tone * m.cab + .3); }
       else { const bob = .012 * Math.abs(Math.sin(t * 7 + m.phase * 20)); put(x, .02 + bob, z, .12, .3, .1, m.tone); put(x, .32 + bob, z, .1, .1, .1, .15); }
     }
+    tmpO.scale.setScalar(1e-4); tmpO.position.set(0, -5, 0); tmpO.updateMatrix();
+    while (n < moverMesh.count) moverMesh.setMatrixAt(n++, tmpO.matrix);
     moverMesh.instanceMatrix.needsUpdate = true;
     if (moverMesh.instanceColor) moverMesh.instanceColor.needsUpdate = true;
   }

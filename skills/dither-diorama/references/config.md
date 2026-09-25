@@ -96,13 +96,14 @@ The built-in items are `tray bag cup box paper laptop`. `hand:true` items are ca
 ## city
 
 ```js
-{ stores=4, seed=11, maxHeight=6.2, camera:{ az, el, zoom } }   // or false
+{ stores=4, seed=11, maxHeight=6.2, camera:{ az, el, zoom }, race?: { cars=8, speed=6, accentCars=2 } }   // or false
 ```
 
 - Streets are laid out on a grid scaled to the room, with the store's block in the middle.
 - Towers get taller toward the back and stay low on the camera side, so they never hide the store.
 - `stores` extra low buildings get blue marker pillars; the store's own roof gets one too.
 - Cars run both ways on every street and pedestrians walk the sidewalks.
+- `race` turns the streets around the store's block into a street circuit. You get a pale track surface, red-and-white kerbs down both edges, a chequered start line, and F1-style cars lapping it (`accentCars` of them in the accent livery). Ordinary traffic keeps off those streets.
 
 ## Returned api / URL flags
 

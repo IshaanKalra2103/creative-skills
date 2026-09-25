@@ -9,6 +9,7 @@ One engine (`assets/engine.js`, three.js from a CDN importmap, no build step) tu
 
 - `template/index.html` — a counter-service restaurant. Guests queue at 2 registers, a runner brings trays, guests sit and eat, and a clerk counts stock in the back room. Its steps are Floor / Staff / Stock / City. Preview: `assets/restaurant-steps.png`.
 - `examples/laundromat.html` — "Spin Cycle", a 24-hour laundromat at 2:47 a.m. People arrive with baskets and load washers, which spin up when loaded. They read on the bench, then fold. An attendant mops, a black cat walks the dryer tops, and a neon "24" glows in coral. Preview: `assets/laundromat.png`. It shows custom items, `k.tick` machines that react to people, `chance` stations and a non-crowd highlight group (the cat).
+- `examples/f1-garage.html` — "Box, box", an F1 team garage before qualifying. The car sits on jacks and runs a pit-stop drill on a loop: wheels slide off, the compound changes, then the jacks come down. Engineers work the timing wall, and paddock guests get accredited, take photos over the rope and drink in hospitality. Its five steps end on `city.race`, where the garage block becomes a street circuit. Preview: `assets/f1-garage.png`. It shows a hero prop animated in `k.tick` (lift, wheels, tyre swap), five steps, and the race city.
 
 ## How the look is built
 
