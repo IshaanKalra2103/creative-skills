@@ -19,6 +19,7 @@
 | [dither-reveal](skills/dither-reveal) | Any image as a 1-bit Floyd–Steinberg dither that the cursor peels back to colour, in one WebGL2 page. Veil mode burns a lingering hole with colour leaking into the dots at its edge; filings mode turns every dot into an iron filing that the cursor lifts like a magnet into a spiky ferrofluid blob, then lets slide home. Comes with a script that cuts any photo off its background and embeds it, and a raymarched geode whose hover lens shows its cross-section. |
 | [pixel-rebuild](skills/pixel-rebuild) | Any pixel-art video, GIF or screen recording rebuilt as a crisp canvas page, pixel for pixel: it finds the art's native grid (even non-integer upscales), splits the clip into one background, deduplicated sprites and a palette, and replays the timeline in a zero-dependency player. A Chrome check compares every frame with the source and exports a GIF. |
 | [postage-collage](skills/postage-collage) | Original postage-stamp series as a collage page in plain HTML/CSS: ten stamp families (old-master editorial, pixel-fragment portrait, botanical strips, giant condensed word, narrow window, Swiss-Japanese pair, street-label ticket, green duotone panels, red duotone poster, red-circle collage), real CSS perforations, grain, postmarks and tape, a click-to-inspect zoom, and public-domain image fetch and print treatment from Wikimedia Commons. |
+| [motion-reel](skills/motion-reel) | Short vertical motion graphics (Reels/Shorts, 1080×1920, ~20 s, with sound) rendered entirely in code with Python + skia + ffmpeg. Two templates: a flat editorial-poster explainer with a procedural beat-grid soundtrack, and a 3D-camera piece (dive, depth of field, an orbit that exposes an animate-to-camera cheat, 24 fps on twos, motion blur, cursor auto-zoom) cut to a stock track's real drops. Comes with lessons and a style catalogue from studying 30 motion-design reels, and scripts to study reference reels and to pick music and find its drops. |
 
 ## Install
 
@@ -39,6 +40,7 @@ ln -s ~/src/claude-skills/skills/dither-reveal ~/.claude/skills/dither-reveal
 ln -s ~/src/claude-skills/skills/xray-scroll ~/.claude/skills/xray-scroll
 ln -s ~/src/claude-skills/skills/pixel-rebuild ~/.claude/skills/pixel-rebuild
 ln -s ~/src/claude-skills/skills/postage-collage ~/.claude/skills/postage-collage
+ln -s ~/src/claude-skills/skills/motion-reel ~/.claude/skills/motion-reel
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -246,3 +248,17 @@ The tower art isn't mine. It's rebuilt from a pixel-art reel by its original art
 **URL options:** `?z=N` opens stamp N, `?still` skips the entrance animation.
 
 Inspired by a reel of editorial stamp designs; the stamps, copy and code are original. Every image is public domain: Vermeer, Friedrich, Michelangelo, Botticelli, Millais, Hokusai, Redouté, Haeckel, the Wright brothers (1903) and NASA Apollo 8 and 17, via Wikimedia Commons.
+
+## motion-reel
+
+![flat-poster: STOP GUESSING, 2 fps contact sheet](skills/motion-reel/assets/flat-poster-frames.jpg)
+
+![depth-camera: EVERY FRAME IS A LIE, 2 fps contact sheet](skills/motion-reel/assets/depth-camera-frames.jpg)
+
+- `SKILL.md`: the workflow (brief → timing table → theme → edit scenes → music map → preview stills → render → verify → compare versions), and engine notes (skia + ffmpeg pipe, a tiny pinhole 3D camera with perspective cards, depth of field, sub-frame motion blur, on-twos timing, grain blend modes, SFX synthesis).
+- `templates/flat-poster/`: *STOP GUESSING*. Hook slam, Gestalt layout snapping to a thirds grid with an F-path eye trail, a ×1.618 type ladder, kiki vs bouba easing, colour-is-relative, and a match cut to the end card. Procedural 120 BPM sound design.
+- `templates/depth-camera/`: *EVERY FRAME IS A LIE*. A Fight-Club-style dive, flat → foreground/mid/background staging with depth of field and parallax, a city that is perfect from the shot camera and broken when the camera orbits, ones/twos/threes, and a cursor click with auto-zoom. Cut to Mixkit's "Stylz".
+- `references/lessons.md`: design and animation rules learned from 30 @aevyvideoschool reels, a checklist, and an honest comparison of the two templates. `references/styles.md`: the 11 visual styles those reels use, one card per reel, and a build recipe per style.
+- `scripts/`: `fetch-fonts.sh` (OFL fonts), `study-reels.sh` (contact sheets, cut counts, 4 fps bursts of reference videos), `pick-music.py` (list and fetch Mixkit tracks, BPM and steadiness, a 0.25 s energy/kick map, a 20 s loudness-normalised cut).
+
+Made by studying a set of motion-design tutorial reels frame by frame, then rebuilding what they teach as code. Music isn't included: Mixkit tracks are free to use but not to redistribute, so `pick-music.py` fetches them.

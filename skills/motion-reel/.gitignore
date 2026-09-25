@@ -1,0 +1,7 @@
+templates/*/fonts/
+templates/*/music.wav
+**/prev_*.png
+**/*.mp4
+**/mix.wav
+**/audio.wav
+music/
