@@ -18,6 +18,7 @@
 | [scientific-figure-making](skills/scientific-figure-making) | Publication-ready matplotlib figures for papers, slides and reports: grouped bars, trends, heatmaps and multi-panel layouts in one house style (palette, fonts, spines, legend panels, print-safe hatching, vector export). By Chen Liu, from [figures4papers](https://github.com/ChenLiu-1996/figures4papers). |
 | [dither-reveal](skills/dither-reveal) | Any image as a 1-bit Floyd–Steinberg dither that the cursor peels back to colour, in one WebGL2 page. Veil mode burns a lingering hole with colour leaking into the dots at its edge; filings mode turns every dot into an iron filing that the cursor lifts like a magnet into a spiky ferrofluid blob, then lets slide home. Comes with a script that cuts any photo off its background and embeds it, and a raymarched geode whose hover lens shows its cross-section. |
 | [pixel-rebuild](skills/pixel-rebuild) | Any pixel-art video, GIF or screen recording rebuilt as a crisp canvas page, pixel for pixel: it finds the art's native grid (even non-integer upscales), splits the clip into one background, deduplicated sprites and a palette, and replays the timeline in a zero-dependency player. A Chrome check compares every frame with the source and exports a GIF. |
+| [postage-collage](skills/postage-collage) | Original postage-stamp series as a collage page in plain HTML/CSS: ten stamp families (old-master editorial, pixel-fragment portrait, botanical strips, giant condensed word, narrow window, Swiss-Japanese pair, street-label ticket, green duotone panels, red duotone poster, red-circle collage), real CSS perforations, grain, postmarks and tape, a click-to-inspect zoom, and public-domain image fetch and print treatment from Wikimedia Commons. |
 
 ## Install
 
@@ -37,6 +38,7 @@ ln -s ~/src/claude-skills/skills/scientific-figure-making ~/.claude/skills/scien
 ln -s ~/src/claude-skills/skills/dither-reveal ~/.claude/skills/dither-reveal
 ln -s ~/src/claude-skills/skills/xray-scroll ~/.claude/skills/xray-scroll
 ln -s ~/src/claude-skills/skills/pixel-rebuild ~/.claude/skills/pixel-rebuild
+ln -s ~/src/claude-skills/skills/postage-collage ~/.claude/skills/postage-collage
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -226,3 +228,21 @@ Inspired by a screen recording of a "Dither Veil" hover demo; the code is origin
 **URL options:** `?f=N` opens paused on frame N; `window.pixel.seek(n)` from the console.
 
 The tower art isn't mine. It's rebuilt from a pixel-art reel by its original artist and shown here only to demo the pipeline. The code is original.
+
+## postage-collage
+
+![The Long Post: ten original stamps on a colour-field grid](skills/postage-collage/assets/the-long-post.jpg)
+
+![Every stamp in the zoom view](skills/postage-collage/assets/stamps.jpg)
+
+- `SKILL.md`: what makes these read as stamps (perforation, denomination, stacked micro-copy, one human line, treated imagery), the workflow (reference frames → concept → images → scaffold → write → screenshot check), the system rules, and image lessons.
+- `references/families.md`: the ten families: the parts of each, sizes, the image it needs, the treatment and the copy rules.
+- `assets/stamp.css` + `stamp.js`: the shared runtime: perforation mask, paper grain, speckle, icon kit and postmark, seeded barcodes and QRs, pixel-fragment grids, entrance and zoom view.
+- `template/`: the page shell plus one snippet per family. `scripts/new.sh <dest> [family …]` puts together a page that renders immediately.
+- `scripts/images.py`: Wikimedia Commons search and fetch, then crop and grain from a `recipes.json` (duotones are CSS blend modes, so one bw file serves every palette). `ref-frames.sh` pulls unique designs out of a reference reel, and `shot.sh` makes desktop, phone and per-stamp screenshots.
+- `examples/the-long-post/`: the finished set, "mail for a later world".
+
+**Controls:** hover lifts a stamp; click opens it full-screen; ← → leaf through; `esc` closes.
+**URL options:** `?z=N` opens stamp N, `?still` skips the entrance animation.
+
+Inspired by a reel of editorial stamp designs; the stamps, copy and code are original. Every image is public domain: Vermeer, Friedrich, Michelangelo, Botticelli, Millais, Hokusai, Redouté, Haeckel, the Wright brothers (1903) and NASA Apollo 8 and 17, via Wikimedia Commons.

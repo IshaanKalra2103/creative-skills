@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Long Post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter+Tight:ital,wght@0,400..900;1,700..900&family=Noto+Sans+JP:wght@700;900&family=Noto+Serif+JP:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stamp.css">
+<style>
+/* page-only: masthead + colophon */
+/* masthead + colophon */
+.mast{position:absolute;inset:0;padding:5cqw 5.5cqw;color:var(--ink);display:grid;grid-template-rows:auto 1fr auto}
+.mast .kicker{font-size:1.25cqw;display:flex;justify-content:space-between;border-bottom:1px solid var(--ink);padding-bottom:1.2cqw}
+.mast h1{font-family:var(--serif);font-weight:400;font-size:13.4cqw;line-height:.86;letter-spacing:-.02em;margin-top:3cqw}
+.mast h1 em{display:block;font-size:.36em;letter-spacing:0;margin-top:1.4cqw}
+.mast .index{display:grid;grid-template-columns:repeat(5,1fr);gap:.6cqw 2cqw;font-size:1.05cqw;border-top:1px solid var(--ink);padding-top:1.4cqw}
+.mast .index b{font-family:var(--serif);font-size:2.2cqw;font-weight:400;display:block;letter-spacing:0;text-transform:none}
+.mast .airmail{position:absolute;right:5cqw;top:17cqw;transform:rotate(6deg);border:.35cqw solid var(--ink);padding:1cqw 2cqw;font-family:var(--grot);font-weight:800;font-size:2.4cqw;letter-spacing:.08em;
+  background:linear-gradient(var(--field-cream),var(--field-cream)) padding-box,repeating-linear-gradient(-45deg,var(--red) 0 1.4cqw,var(--field-cream) 1.4cqw 2.8cqw,var(--blue) 2.8cqw 4.2cqw,var(--field-cream) 4.2cqw 5.6cqw) border-box;border-color:transparent;border-width:1cqw}
+.mast .airmail small{display:block;font-family:var(--mono);font-weight:500;font-size:1cqw;letter-spacing:.2em}
+.colo{position:absolute;inset:0;padding:8cqw 8cqw;color:var(--ink);display:flex;flex-direction:column;gap:3cqw}
+.colo h3{font-family:var(--serif);font-weight:400;font-size:9cqw;line-height:.9}
+.colo h3 em{font-size:.6em}
+.colo .mc{font-size:2.1cqw;line-height:1.55}
+.colo .hint{margin-top:auto;font-family:var(--serif);font-style:italic;font-size:4.4cqw;line-height:1.1}
+.colo .hint kbd{font-family:var(--mono);font-style:normal;font-size:.5em;border:1px solid var(--ink);padding:.1em .45em;border-radius:.3em}
+
+</style>
+</head>
+<body>
+
+
+<main class="board">
+
+  <!-- ═════ masthead ═════ -->
+  <section class="tile t-cream wide">
+    <div class="mast">
+      <div class="kicker mc"><span>Series 01 · Ten issues · MMXXVI</span><span>A catalogue of stamps</span><span>No. 0001</span></div>
+      <h1>The Long Post<em>mail for a later world.</em></h1>
+      <div class="index mc">
+        <div><b>A</b>Rumour</div><div><b>B</b>Pieces</div><div><b>C</b>Undergrowth</div><div><b>D</b>Elsewhere</div><div><b>E</b>Tide</div>
+        <div><b>F</b>Distance</div><div><b>G</b>Someday</div><div><b>H</b>Orbits</div><div><b>I</b>Until</div><div><b>J</b>First flight</div>
+      </div>
+      <div class="airmail">PAR AVION<small>BY LATER MAIL</small></div>
+    </div>
+    <div class="x pm" style="right:30cqw;top:24cqw;width:22cqw;color:var(--ink);opacity:.55;transform:rotate(-8deg)"><svg><use href="#postmark"/></svg></div>
+  </section>
+
+<!-- @STAMPS -->
+
+  <!-- ═════ colophon ═════ -->
+  <section class="tile t-cream">
+    <div class="colo">
+      <h3>Colophon<br><em>&amp; credits</em></h3>
+      <div class="mc">Images from public-domain works:<br>Vermeer · Friedrich · Michelangelo · Botticelli · Millais · Hokusai · Redouté · Haeckel · the Wright brothers · NASA Apollo 8 &amp; 17.<br><br>Set in Instrument Serif, Inter Tight, Anton, Archivo, IBM Plex Mono &amp; Noto JP.</div>
+      <p class="hint">Click any stamp to hold it up to the light. <kbd>←</kbd> <kbd>→</kbd> to leaf through, <kbd>esc</kbd> to put it back.</p>
+    </div>
+    <div class="x pm" style="left:-6cqw;top:40cqw;width:36cqw;color:var(--red);opacity:.5;transform:rotate(12deg)"><svg><use href="#postmark"/></svg></div>
+  </section>
+
+</main>
+
+<script>window.POSTMARK = { ring: 'THE LONG POST ✦ 25 SEP 2026 ✦ SERIES 01 ✦', center: ['LATER', 'STILL', 'ARRIVES'] };</script>
+<script src="stamp.js"></script>
+</body>
+</html>

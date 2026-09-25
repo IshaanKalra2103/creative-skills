@@ -1,0 +1,243 @@
+{
+ "sources": {
+  "pearl": "File:1665 Girl with a Pearl Earring.jpg",
+  "astronomer": "File:Johannes Vermeer - The Astronomer - 1668.jpg",
+  "wanderer": "File:Caspar David Friedrich - Wanderer above the sea of fog.jpg",
+  "haeckel": "File:Haeckel Basimycetes.jpg",
+  "rose1": "File:Henry Joseph Redouté - Les Roses- Rosa indica - 1955.473 - Cleveland Museum of Art.jpg",
+  "rose2": "File:Henry Joseph Redouté - Les Roses- Rosa cinnamomea - 1955.472 - Cleveland Museum of Art.jpg",
+  "wave": "File:Tsunami by hokusai 19th century.jpg",
+  "earth": "File:The Earth seen from Apollo 17.jpg",
+  "earthrise": "File:NASA-Apollo8-Dec24-Earthrise.jpg",
+  "adam": "File:Creation of Adam (Michelangelo) Detail.jpg",
+  "venus": "File:Sandro Botticelli - La nascita di Venere - Google Art Project - edited.jpg",
+  "moon": "File:FullMoon2010.jpg",
+  "ophelia": "File:John Everett Millais - Ophelia - Google Art Project.jpg",
+  "wright": "File:First flight2.jpg"
+ },
+ "recipes": {
+  "pearl": {
+   "src": "pearl",
+   "crop": [
+    0.04,
+    0.02,
+    0.96,
+    0.92
+   ],
+   "mode": "color"
+  },
+  "pearl_bw": {
+   "src": "pearl",
+   "crop": [
+    0.22,
+    0.12,
+    0.8,
+    0.66
+   ],
+   "mode": "bw",
+   "contrast": 1.35
+  },
+  "astronomer": {
+   "src": "astronomer",
+   "crop": [
+    0.26,
+    0.16,
+    1.0,
+    0.86
+   ],
+   "mode": "color",
+   "sat": 1.1
+  },
+  "wanderer": {
+   "src": "wanderer",
+   "crop": [
+    0.0,
+    0.0,
+    1.0,
+    1.0
+   ],
+   "mode": "color"
+  },
+  "wanderer_bw": {
+   "src": "wanderer",
+   "crop": [
+    0.1,
+    0.1,
+    0.9,
+    1.0
+   ],
+   "mode": "bw",
+   "contrast": 1.5,
+   "gamma": 1.1,
+   "grain": 12
+  },
+  "hand_adam": {
+   "src": "adam",
+   "crop": [
+    0.0,
+    0.12,
+    0.5,
+    0.62
+   ],
+   "mode": "bw",
+   "contrast": 1.3
+  },
+  "hand_god": {
+   "src": "adam",
+   "crop": [
+    0.44,
+    0.02,
+    0.98,
+    0.56
+   ],
+   "mode": "bw",
+   "contrast": 1.3
+  },
+  "venus_bw": {
+   "src": "venus",
+   "crop": [
+    0.47,
+    0.07,
+    0.575,
+    0.25
+   ],
+   "mode": "bw",
+   "contrast": 1.3
+  },
+  "moon": {
+   "src": "moon",
+   "crop": [
+    0.0,
+    0.0,
+    1.0,
+    1.0
+   ],
+   "mode": "bw",
+   "contrast": 1.2,
+   "grain": 14
+  },
+  "earthrise": {
+   "src": "earthrise",
+   "crop": [
+    0.0,
+    0.1,
+    1.0,
+    1.0
+   ],
+   "mode": "bw",
+   "contrast": 1.25
+  },
+  "earth": {
+   "src": "earth",
+   "crop": [
+    0.0,
+    0.0,
+    1.0,
+    1.0
+   ],
+   "mode": "color",
+   "sat": 1.2
+  },
+  "earth_bw": {
+   "src": "earth",
+   "crop": [
+    0.0,
+    0.0,
+    1.0,
+    1.0
+   ],
+   "mode": "bw",
+   "contrast": 1.6
+  },
+  "wave": {
+   "src": "wave",
+   "crop": [
+    0.0,
+    0.0,
+    1.0,
+    1.0
+   ],
+   "mode": "color"
+  },
+  "wave_bw": {
+   "src": "wave",
+   "crop": [
+    0.0,
+    0.1,
+    0.62,
+    1.0
+   ],
+   "mode": "bw",
+   "contrast": 1.4
+  },
+  "fungi": {
+   "src": "haeckel",
+   "crop": [
+    0.06,
+    0.02,
+    0.94,
+    0.98
+   ],
+   "mode": "ink",
+   "contrast": 1.2,
+   "grain": 10
+  },
+  "rose1": {
+   "src": "rose1",
+   "crop": [
+    0.06,
+    0.03,
+    0.96,
+    0.8
+   ],
+   "mode": "color",
+   "sat": 1.15,
+   "grain": 8
+  },
+  "rose2": {
+   "src": "rose2",
+   "crop": [
+    0.04,
+    0.03,
+    0.96,
+    0.78
+   ],
+   "mode": "color",
+   "sat": 1.15,
+   "grain": 8
+  },
+  "ophelia": {
+   "src": "ophelia",
+   "crop": [
+    0.0,
+    0.3,
+    0.55,
+    0.95
+   ],
+   "mode": "color"
+  },
+  "wright": {
+   "src": "wright",
+   "crop": [
+    0.02,
+    0.02,
+    0.98,
+    0.96
+   ],
+   "mode": "bw",
+   "contrast": 1.25,
+   "grain": 18
+  },
+  "ophelia_bw": {
+   "src": "ophelia",
+   "crop": [
+    0.02,
+    0.4,
+    0.42,
+    0.85
+   ],
+   "mode": "bw",
+   "contrast": 1.4
+  }
+ }
+}
