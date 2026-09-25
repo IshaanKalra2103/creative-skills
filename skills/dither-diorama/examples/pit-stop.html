@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pit Stop</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<script type="module">
+// Example: a Formula 1 pit stop, out in the open (room.open). The car brakes
+// into its box, seventeen crew run out, jacks in, four wheel guns, old tyres
+// off, new tyres on, jacks down, lollipop up, car launches. The crew walk back
+// carrying the old set. Every person here is scripted with kit.person + a tick.
+import { createDiorama } from '../assets/engine.js';
+
+const L = 13;                      // seconds per loop
+const CZ = -.2;                    // car centreline in its box
+const T = { in0: 1.2, stop: 4.5, jack: 4.55, off0: 4.8, off1: 5.2, on0: 5.25, on1: 5.75, down: 6.0, go: 6.68, out: 8.7, back0: 7.0, back1: 9.2, crew0: 2.0, crew1: 3.6 };
+const ss = x => x * x * (3 - 2 * x);
+const cl = (v, a, b) => Math.min(b, Math.max(a, v));
+const span = (t, a, b) => cl((t - a) / (b - a), 0, 1);
+let stops = 0, lastStop = '-';
+
+createDiorama({
+  title: 'Box, box',
+  accent: 0xe10600, uiAccent: '#e10600',
+  room: { open: true, x0: -14, x1: 14, z0: -2.6, z1: 4.4, wallH: .9, fit: { x0: -3.3, x1: 3.3, z0: -2.3, z1: 1.9 } },
+  camera: { az: .42, el: .95 },
+
+  build(k) {
+    const { slab, box, accent, THREE } = k;
+
+    // ── ground: garage apron, pit lane, pit wall, main straight
+    k.group('lane');
+    slab(-14, 14, -.16, 0, -2.1, -1.1, .93);                             // apron
+    slab(-14, 14, -.16, -.002, -1.1, 1.6, .42);                          // pit lane
+    for (let x = -14; x < 14; x += .6) slab(x, x + .35, 0, .004, .5, .56, 1);        // fast-lane dashes
+    slab(-14, 14, 0, .004, -1.12, -1.08, 1);
+    // our box: white outline, red stop line, painted team box
+    for (const [x0, x1, z0, z1] of [[-1.35, 1.6, -1.05, -1.0], [-1.35, 1.6, .5, .55], [-1.35, -1.3, -1.05, .55]]) slab(x0, x1, 0, .005, z0, z1, 1);
+    accent(1.58, 0, CZ, .06, .006, .7);
+    for (const x of [-.9, -.3, .3, .9]) slab(x - .1, x + .1, 0, .005, CZ - .02, CZ + .02, .85);   // wheel marks
+    // neighbours' boxes
+    for (const x0 of [-6.2, 3.4]) for (const [a, b, c, d] of [[0, 2.8, -1.05, -1.0], [0, 2.8, .5, .55]]) slab(x0 + a, x0 + b, 0, .005, c, d, 1);
+
+    k.group('track');
+    slab(-14, 14, -.16, .05, 1.6, 1.78, .9);                             // pit wall
+    slab(-14, 14, .05, .08, 1.62, 1.76, .6);
+    slab(-14, 14, -.16, -.004, 1.78, 3.9, .3);                           // main straight
+    slab(-14, 14, 0, .004, 1.86, 1.92, 1); slab(-14, 14, 0, .004, 3.8, 3.86, 1);
+    for (let x = -14; x < 14; x += .5) slab(x, x + .25, 0, .006, 3.86, 3.98, 1, k.scene, (x * 2) % 2 ? null : k.ACCENT);  // kerb
+    slab(-14, 14, -.16, .22, 4.05, 4.15, .92);                           // barrier
+    for (let x = -13; x < 14; x += 1.4) slab(x, x + .03, .22, .55, 4.08, 4.12, .5);   // fence posts
+    // cars on the straight: a couple of the field flashing past
+    const racers = [0, 1, 2].map(i => {
+      const g = new THREE.Group(); k.scene.add(g);
+      const tone = [.15, .85, .45][i];
+      box(0, .03, 0, 1.2, .1, .34, tone, g); box(-.1, .03, 0, .5, .13, .5, .1, g);
+      box(.6, .03, 0, .1, .04, .52, .9, g); box(-.58, .1, 0, .14, .12, .44, .08, g); box(0, .1, 0, .13, .09, .13, .97, g);
+      return { g, lane: i % 2 ? 3.3 : 2.6, phase: i * .37, speed: 13 + i };
+    });
+    k.tick(t => racers.forEach(r => { const u = (t * r.speed / 60 + r.phase) % 1; r.g.position.set(-16 + u * 60, 0, r.lane); }));   // 60-unit loop, mostly offscreen
+
+    // ── pit wall gantry with engineers
+    k.group('pitwall');
+    slab(-3.3, 3.3, .08, .12, 1.58, 1.8, .85);                           // desk on the wall
+    for (let x = -2.4; x <= 2.4; x += .8) { const m = box(x, .12, 1.72, .3, .18, .03, .1); m.rotation.x = -.2; }
+    for (const x of [-2.4, -.8, .8, 2.4]) { box(x, 0, 1.3, .04, .38, .04, .35); box(x, .38, 1.3, .18, .03, .18, .5); }
+    for (const x of [-2.4, -.8, .8]) k.person({ at: [x, 1.35], yaw: 0, tone: .2, head: .08, group: 'pitwall' }).anim = 'type';
+
+    // ── garage fronts: ours in the middle with the stop clock, neighbours either side
+    k.group('garage');
+    slab(-14, 14, 0, 1.05, -2.3, -2.1, .95);
+    for (const [x, ours, num] of [[-4.8, false, '44'], [0, true, '16'], [4.8, false, '55']]) {
+      slab(x - 1.2, x + 1.2, 0, .64, -2.1, -2.095, .12);                   // open shutter, dark inside
+      for (let i = 0; i < 4; i++) slab(x - 1.0 + i * .5, x - .7 + i * .5, .1, .3 + (i % 2) * .12, -2.095, -2.09, .5);
+      slab(x - 1.25, x + 1.25, .64, .68, -2.1, -2.09, .4);
+      if (ours) {
+        slab(x - 1.25, x + 1.25, .98, 1.05, -2.1, -2.09, 1, k.scene, k.ACCENT);
+        k.digits(num, x - 1.02, .83, -2.09, .1, .2, .2, .04);
+      } else k.digits(num, x - .08, .84, -2.09, .1, .2, .3, .04);
+    }
+    // tyre sets waiting outside the garages
+    for (const [x0, ours] of [[-6.1, false], [-1.9, true], [1.6, true], [3.5, false]])
+      for (let j = 0; j < 3; j++) (ours && j === 2 ? accent : box)(x0 + (j % 2) * .02, j * .075, -1.9, .26, .072, .26, ours && j === 2 ? 1 : .12);
+    // live stop clock above our garage: 2.18
+    k.group('timer');
+    slab(.2, 1.15, .7, .96, -2.1, -2.088, .08);
+    const clock = k.display(3, .38, .83, -2.087, .11, .18, 1, .07, k.ACCENT);
+    slab(.46, .48, .74, .76, -2.087, -2.08, 1, k.scene, k.ACCENT);
+    clock.set('   ');
+
+    // ── the car
+    k.group('car');
+    const car = new THREE.Group(); k.scene.add(car);
+    const body = new THREE.Group(); car.add(body);
+    box(0, .05, 0, 1.7, .03, .6, .15, body); box(.1, .08, 0, 1.0, .12, .24, .2, body); box(.8, .08, 0, .5, .07, .14, .2, body);
+    accent(.72, .15, 0, .3, .005, .08, 1, body);
+    box(1.12, .05, 0, .16, .02, .72, .18, body); for (const s of [-1, 1]) accent(1.12, .05, s * .36, .15, .07, .015, 1, body);
+    for (const s of [-1, 1]) { box(-.05, .08, s * .2, .6, .14, .14, .22, body); accent(-.05, .22, s * .2, .45, .006, .1, 1, body); }
+    box(-.35, .08, 0, .5, .2, .2, .2, body); accent(-.45, .28, 0, .35, .08, .012, 1, body);
+    box(-.12, .2, 0, .12, .14, .12, .15, body); box(.12, .21, 0, .28, .02, .16, .35, body);
+    box(.06, .16, 0, .09, .08, .09, .97, body); box(.1, .19, 0, .012, .025, .07, .1, body);
+    box(-.75, .3, 0, .13, .02, .56, .1, body);
+    for (const s of [-1, 1]) { box(-.75, .12, s * .28, .17, .2, .015, .15, body); accent(-.75, .28, s * .28, .17, .03, .016, 1, body); }
+
+    // wheels live in the scene, not on the car: they move between hub and hands
+    k.group('wheels');
+    const makeWheel = soft => { const w = new THREE.Group(); k.scene.add(w);
+      box(0, 0, 0, .3, .3, .15, .1, w); (soft ? accent : box)(0, .1, .076, .2, .1, .004, soft ? 1 : .97, w);
+      (soft ? accent : box)(0, .1, -.076, .2, .1, .004, soft ? 1 : .97, w); box(0, .12, .08, .06, .06, .004, .5, w); return w; };
+    const CORNERS = [[.72, 1], [.72, -1], [-.5, 1], [-.5, -1]];   // [x offset, side]; side +1 = pit-lane side
+    let onCar = CORNERS.map(() => makeWheel(false)), spares = CORNERS.map(() => makeWheel(true));
+
+    // ── the crew
+    const crew = (group, at, yaw, holds) => { const p = k.person({ group, at, yaw, tone: .18, head: .9, holds }); p.frames = []; return p; };
+    const waitAt = (i, n, z) => [-3.2 + i * (6.4 / (n - 1)), z];
+    const wheelCrew = [];
+    CORNERS.forEach(([wx, s], i) => {
+      const out = wx > 0 ? 1 : -1, faceCar = s > 0 ? Math.PI : 0;
+      for (const [role, dx, dz] of [['gun', 0, .8], ['off', .3 * out, .88], ['on', -.3 * out, .88]]) {
+        const w = waitAt(wheelCrew.length, 12, s > 0 ? -1.45 : -1.75);
+        const p = crew('wheels', w, 0);
+        p.role_ = role; p.corner = i; p.wait = w; p.work = [wx + dx, CZ + s * dz]; p.face = faceCar;
+        p.back = [wx + dx + .25 * out, CZ + s * 1.25];
+        wheelCrew.push(p);
+      }
+    });
+    k.group('jacks');
+    const jackF = crew('jacks', [3.2, -1.5], 0), jackR = crew('jacks', [-3.4, -1.5], 0);
+    jackF.work = [1.85, CZ]; jackF.face = -Math.PI / 2; jackF.wait = [3.2, -1.5];
+    jackR.ready = [-1.75, CZ - .75]; jackR.work = [-1.4, CZ]; jackR.face = Math.PI / 2; jackR.wait = [-3.4, -1.5];
+    const jackBarF = box(0, 0, 0, .5, .05, .09, .3), jackBarR = box(0, 0, 0, .5, .05, .09, .3);
+    const stabs = [1, -1].map(s => { const p = crew('jacks', [s > 0 ? 2.6 : -2.6, -1.3], 0); p.work = [.1, CZ + s * .72]; p.face = s > 0 ? Math.PI : 0; p.wait = [...p.pos.toArray().filter((_, j) => j !== 1)]; return p; });
+    k.group('release');
+    const lolli = crew('release', [2.4, -1.25], 0); lolli.work = [2.05, CZ + .65]; lolli.face = -Math.PI * .75; lolli.wait = [2.4, -1.25];
+    const stick = box(0, 0, 0, .02, .5, .02, .5), discStop = accent(0, 0, 0, .2, .2, .02), discGo = box(0, 0, 0, .2, .2, .02, .97);
+
+    // ── choreography
+    const at = (p, from, to, t0, t1, t, face) => {
+      const u = span(t, t0, t1), e = ss(u);
+      const x = from[0] + (to[0] - from[0]) * e, z = from[1] + (to[1] - from[1]) * e;
+      const d = Math.hypot(x - p.pos.x, z - p.pos.z);
+      p.walking = u > 0 && u < 1 && d > 1e-4;
+      if (p.walking) { p.walked += d; p.targetYaw = Math.atan2(to[0] - from[0], to[1] - from[1]); } else if (face != null) p.targetYaw = face;
+      p.pos.x = x; p.pos.z = z;
+      return u;
+    };
+    const hands = (p, w, y = .2) => { w.position.set(p.pos.x + Math.sin(p.yaw) * .22, y, p.pos.z + Math.cos(p.yaw) * .22); w.rotation.set(0, 0, 0); };
+    let cycle = -1;
+    k.tick(t => {
+      const c = t % L, n = Math.floor(t / L);
+      if (n !== cycle) {                                // new lap: last lap's new set is on the car, old set becomes the spares
+        if (cycle >= 0) { const old = onCar; onCar = spares; spares = old; }
+        cycle = n;
+      }
+      // car: brakes in, sits, launches
+      const x = c < T.in0 ? -14 : c < T.stop ? -12 * (1 - ss(span(c, T.in0, T.stop)) ) ** 1.4 : c < T.go ? 0 : c < T.out ? 14 * span(c, T.go, T.out) ** 2 : 16;
+      const lift = c < T.jack ? 0 : c < T.jack + .2 ? ss(span(c, T.jack, T.jack + .2)) : c < T.down ? 1 : c < T.down + .2 ? 1 - ss(span(c, T.down, T.down + .2)) : 0;
+      car.position.set(x, 0, CZ); body.position.y = .07 * lift;
+      // stop clock
+      if (c >= T.stop && c < T.go) clock.set(String(Math.floor((c - T.stop) * 100)).padStart(3, '0'));
+      if (c >= T.go && lastStop !== (T.go - T.stop).toFixed(2) + ' s') { lastStop = (T.go - T.stop).toFixed(2) + ' s'; }
+      if (c < T.stop) clock.set(c < T.in0 ? '218' : '000');
+
+      // wheel crews: out, work, back
+      for (const p of wheelCrew) {
+        const i = p.corner, [wx, s] = CORNERS[i];
+        const hub = [x + wx, CZ + s * .42 - s * .075];
+        if (c < T.crew1 + .1) at(p, p.wait, p.work, T.crew0, T.crew1, c, p.face);
+        else if (c < T.back0) {
+          if (p.role_ === 'off') at(p, p.work, p.back, T.off0 + .1, T.off1, c, p.face);
+          else if (p.role_ === 'on') at(p, p.work, [wx + (p.work[0] - wx) * .2, p.work[1]], T.on0, T.on1 - .1, c, p.face);
+          else at(p, p.work, p.work, 0, 1, 2, p.face);
+        } else at(p, p.role_ === 'off' ? p.back : p.work, p.wait, T.back0, T.back1, c, 0);
+        p.anim = c > T.stop && c < T.down + .2 ? (p.role_ === 'gun' ? 'load' : 'idle') : 'idle';
+        p.item = null;
+        const oldW = onCar[i], newW = spares[i];
+        if (p.role_ === 'off') {
+          if (c < T.off0) { oldW.position.set(hub[0], .07 * lift, hub[1]); }
+          else if (c < T.back1) { hands(p, oldW); p.item = oldW; }
+          else oldW.position.set(p.wait[0] + .25, 0, p.wait[1] - .2);
+        }
+        if (p.role_ === 'on') {
+          if (c < T.on0) { if (c > T.crew0 - .5) { hands(p, newW); p.item = newW; } else newW.position.set(p.wait[0] + .25, 0, p.wait[1] - .2); }
+          else if (c < T.on1) { const u = ss(span(c, T.on0, T.on1)); const hx = p.pos.x + Math.sin(p.yaw) * .22, hz = p.pos.z + Math.cos(p.yaw) * .22;
+            newW.position.set(hx + (hub[0] - hx) * u, .2 + (.07 * lift - .2) * u, hz + (hub[1] - hz) * u); }
+          else newW.position.set(hub[0], .07 * lift, hub[1]);
+        }
+      }
+      for (const w of [...onCar, ...spares]) w.userData.hand = false;
+      // jacks
+      at(jackF, jackF.wait, jackF.work, T.crew0 - .4, T.crew1 - .6, c < T.back0 ? c : 0, jackF.face);
+      if (c >= T.back0) at(jackF, [jackF.work[0] + 1.2, CZ + .9], jackF.wait, T.back0, T.back1, c, 0);
+      else if (c > T.go - .3) at(jackF, jackF.work, [jackF.work[0] + 1.2, CZ + .9], T.go - .3, T.go, c, jackF.face);
+      if (c < T.stop) at(jackR, jackR.wait, jackR.ready, T.crew0, T.crew1, c, Math.PI / 2);
+      else if (c < T.back0) at(jackR, jackR.ready, jackR.work, T.stop, T.jack, c, jackR.face);
+      else at(jackR, jackR.work, jackR.wait, T.back0, T.back1, c, 0);
+      jackF.anim = jackR.anim = c > T.stop && c < T.down + .2 ? 'load' : 'idle';
+      jackBarF.position.set(jackF.pos.x - .3, .025 + .03 * lift, CZ); jackBarR.position.set(jackR.pos.x + .3, .025 + .03 * lift, CZ);
+      for (const p of stabs) { if (c < T.back0) at(p, p.wait, p.work, T.crew0, T.crew1, c, p.face); else at(p, p.work, p.wait, T.back0, T.back1, c, 0); p.anim = c > T.stop && c < T.down ? 'load' : 'idle'; }
+      // lollipop: red board over the nose while stopped, flips to white and lifts at the release
+      if (c < T.back0) at(lolli, lolli.wait, lolli.work, T.crew0, T.crew1, c, lolli.face); else at(lolli, lolli.work, lolli.wait, T.back0, T.back1, c, 0);
+      const up = c > T.go - .05 && c < T.back0;
+      lolli.anim = up ? 'raise' : c > T.crew1 && c < T.back0 ? 'point' : 'idle';
+      const reach = up ? .15 : .38, h = up ? .95 : .5;
+      const lx = lolli.pos.x + Math.sin(lolli.yaw) * reach, lz = lolli.pos.z + Math.cos(lolli.yaw) * reach;
+      stick.position.set(lx, h - .25, lz); discStop.position.set(lx, h, lz); discGo.position.set(lx, h, lz);
+      discStop.rotation.y = discGo.rotation.y = lolli.yaw;
+      discStop.visible = !up; discGo.visible = up;
+    });
+    // count stops for the HUD
+    k.tick(t => { stops = Math.floor((t - T.go) / L) + 1; if (stops < 1) stops = 0; });
+  },
+
+  steps: [
+    { title: 'Box, box', body: 'The car brakes into its box. Seventeen crew are already out. Jacks in, four guns, tyres off, tyres on, jacks down, gone.', show: null },
+    { title: 'Twelve on wheels', body: 'Three per corner: one on the gun, one pulls the old tyre, one fits the new set. Red sidewalls: softs.', show: ['wheels', 'car'] },
+    { title: 'Jacks & release', body: 'Front jack waits in the car’s path, rear jack slides in behind, two hold it steady. The lollipop flips white: go.', show: ['jacks', 'release', 'car'] },
+    { title: 'Quarter speed', body: 'The same stop at a quarter of real time, so you can follow a single wheel from hub to hands and back.', show: null, speed: .25 },
+    { title: 'Pit wall', body: 'Engineers on the gantry watch the straight. The clock above the garage stops when the lollipop lifts.', show: ['pitwall', 'timer', 'track'] },
+  ],
+  hud: { stops: 'Stops', last: 'Last stop' },
+  stats: () => ({ stops, last: lastStop }),
+  city: false,
+});
+</script>
+</body>
+</html>

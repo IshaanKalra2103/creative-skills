@@ -4,7 +4,7 @@
 # ///
 """Screenshot a dither-diorama page at each step and tile them into one sheet.
 
-  uv run scripts/shot.py <page.html> <out.png> [--steps 0,1,2,3] [--warm 8] [--speed 5]
+  uv run scripts/shot.py <page.html> <out.png> [--steps 0,1,2,3] [--warm 8] [--speed 5] [--times 2.5,5,7]
 
 Serves the page's folder over HTTP (ES modules won't load from file://), runs
 the sim at --speed for --warm seconds, pins each step with ?step=, and prints
@@ -31,14 +31,23 @@ async def main(a):
     port = serve(root)
     url = f"http://127.0.0.1:{port}/{page_path.relative_to(root).as_posix()}?speed={a.speed}&step=0"
     steps = [float(s) for s in a.steps.split(",")]
+    times = [float(x) for x in a.times.split(",")] if a.times else []
     shots, errors = [], []
     async with async_playwright() as p:
         b = await p.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
         pg = await b.new_page(viewport={"width": a.width, "height": a.height})
         pg.on("pageerror", lambda e: errors.append(str(e)))
         pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
-        await pg.goto(url)
-        await pg.wait_for_timeout(int(a.warm * 1000))
+        if times:                      # freeze the sim clock at each time (?t=) instead of stepping
+            for tt in times:
+                await pg.goto(url.replace("step=0", f"step={steps[0]:g}") + f"&t={tt}")
+                await pg.wait_for_timeout(int(a.settle * 1000))
+                out = pathlib.Path(a.out).with_name(f"{pathlib.Path(a.out).stem}_t{tt:g}.png")
+                await pg.screenshot(path=str(out)); print(f"t={tt:g}"); shots.append(out)
+            steps = []
+        else:
+            await pg.goto(url)
+            await pg.wait_for_timeout(int(a.warm * 1000))
         for s in steps:
             await pg.evaluate(f"window.__diorama && __diorama.setStep({s})")
             await pg.wait_for_timeout(int(a.settle * 1000))
@@ -65,6 +74,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("page"); ap.add_argument("out")
     ap.add_argument("--steps", default="0,1,2,3")
+    ap.add_argument("--times", default="", help="comma list of sim seconds to freeze at (?t=), shot at the first --steps value")
     ap.add_argument("--warm", type=float, default=8)
     ap.add_argument("--settle", type=float, default=4)
     ap.add_argument("--speed", type=float, default=5)

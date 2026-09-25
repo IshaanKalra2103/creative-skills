@@ -1,6 +1,6 @@
 ---
 name: dither-diorama
-description: Build a live isometric cutaway diorama of any place — a restaurant, laundromat, office, shop, clinic, warehouse floor — rendered in three.js through a 1-bit-ish square-dot dither shader (one square per 3-px cell sized by tone, soft grey contour ink, one accent colour kept in colour), with a crowd that walks in through the door, queues, gets served, sits, uses machines and leaves on grid pathfinding, staff at posts or on patrol or running orders, and a scroll story that highlights one group at a time (everything else washes out to ghost outlines), then pulls back so the store closes up and a city grows around it with traffic and location pins. Use when the user wants the meuze.ai-style "how it works" workspace animation, a dithered/halftone/pixel-dot isometric scene with people, a scroll-driven explainer where parts of a room light up per step, an "our store in the city" pull-back, or asks to make any business, room or operation into an animated isometric diorama.
+description: Build a live isometric cutaway diorama of any place — a restaurant, laundromat, office, shop, clinic, warehouse floor — rendered in three.js through a 1-bit-ish square-dot dither shader (one square per 3-px cell sized by tone, soft grey contour ink, one accent colour kept in colour), with a crowd that walks in through the door, queues, gets served, sits, uses machines and leaves on grid pathfinding, staff at posts or on patrol or running orders, and a scroll story that highlights one group at a time (everything else washes out to ghost outlines), then pulls back so the store closes up and a city grows around it with traffic and location pins. Also does open-air scenes with no room (a pit stop, a stage, a street corner) where every person is choreographed. Use when the user wants the meuze.ai-style "how it works" workspace animation, a dithered/halftone/pixel-dot isometric scene with people, a scroll-driven explainer where parts of a room light up per step, an "our store in the city" pull-back, or asks to make any business, room or operation into an animated isometric diorama.
 ---
 
 # Dither diorama
@@ -9,7 +9,7 @@ One engine (`assets/engine.js`, three.js from a CDN importmap, no build step) tu
 
 - `template/index.html` — a counter-service restaurant. Guests queue at 2 registers, a runner brings trays, guests sit and eat, and a clerk counts stock in the back room. Its steps are Floor / Staff / Stock / City. Preview: `assets/restaurant-steps.png`.
 - `examples/laundromat.html` — "Spin Cycle", a 24-hour laundromat at 2:47 a.m. People arrive with baskets and load washers, which spin up when loaded. They read on the bench, then fold. An attendant mops, a black cat walks the dryer tops, and a neon "24" glows in coral. Preview: `assets/laundromat.png`. It shows custom items, `k.tick` machines that react to people, `chance` stations and a non-crowd highlight group (the cat).
-- `examples/f1-garage.html` — "Box, box", an F1 team garage before qualifying. The car sits on jacks and runs a pit-stop drill on a loop: wheels slide off, the compound changes, then the jacks come down. Engineers work the timing wall, and paddock guests get accredited, take photos over the rope and drink in hospitality. Its five steps end on `city.race`, where the garage block becomes a street circuit. Preview: `assets/f1-garage.png`. It shows a hero prop animated in `k.tick` (lift, wheels, tyre swap), five steps, and the race city.
+- `examples/pit-stop.html` — "Box, box", a Formula 1 pit stop out in the open (`room.open`: no walls, you draw the ground). The car brakes into its box, 17 scripted crew run out, jacks go in, wheel guns fire, tyres swap between hub and hands, and the lollipop flips. The car launches and the crew walk back carrying the old set. A live clock counts the stop. Steps highlight the wheel crews, then the jacks and release, then play a quarter-speed replay (`speed: .25`), then the pit wall. Preview: `assets/pit-stop.png` (frozen at 3.6 / 5.0 / 5.5 / 6.75 s). It shows choreography with `kit.person` + `k.tick`, a `kit.display` readout, custom `stats`, and `?t=`.
 
 ## How the look is built
 
@@ -46,11 +46,14 @@ Keep all of these; each one is part of why it reads as "that" style and not just
    - the accent shows up in 2–4 places, not everywhere;
    - the city doesn't cover the store.
 6. **Hand over**:
-   - Open the file in a browser. `?step=N` pins a step and `?speed=4` fast-forwards.
+   - Open the file in a browser. `?step=N` pins a step, `?speed=4` fast-forwards and `?t=5.2` freezes the sim clock.
    - The page needs to be served over HTTP, or opened directly in a browser that allows module imports from `file://` (Chrome does for inline modules with a CDN importmap). If the import fails, run `python3 -m http.server`.
    - Remind the user the stills were checked headless; the fades and the scroll switching should be watched live.
 
 ## Traps
+
+- **Not everything is a room.** If the subject is an event (a pit stop, a heist, a kitchen rush, a relay), use `room.open` and choreograph `kit.person`s on a looped timeline in `k.tick`. Don't wrap an event in a building. Verify timelines with `shot.py --times`, which freezes the clock with `?t=`, rather than waiting on real time.
+- **Near and tall hides far:** anything tall on the camera side (+x/+z), like a gantry, a wall or a crowd, covers what's behind it. Lower it, or raise `camera.el` (0.9+ is close to top-down).
 
 - **Yaw:** `Math.atan2(dx, dz)` toward the thing faced. 0 faces +z, π faces −z (the far wall), −π/2 faces −x (the left far wall).
 - **Visit points and seat positions must sit outside `block` padding** (0.1 + a 0.06 grid cell), or the path ends at the nearest free cell and the person stands beside the spot.

@@ -23,7 +23,8 @@ createDiorama({ title, accent, marker, uiAccent, seed, look, room, camera, build
 | `uiAccent` | `#2c63ff` | active step title colour |
 | `seed` | 7 | rng seed for build + crowd |
 | `look` | see `DEFAULT_LOOK` | `cellCss` (3), `levels` (5), `minBlock/maxBlock` (.09/.42), `black/white` (.24/.86), `pen` (.6), `light/dark` RGB arrays |
-| `room` | `{x0:-3,x1:3,z0:-2.4,z1:2.6,wallH:1.15,frontH:.26,porch:.75,door:{z0,z1}}` | the shell the engine builds for you |
+| `room` | `{x0:-3,x1:3,z0:-2.4,z1:2.6,wallH:1.15,frontH:.26,porch:.75,door:{z0,z1}}` | the shell the engine builds for you. `open: true` builds no floor, walls, door or porch: `build()` draws everything and `x0..z1` only bounds walking. `fit: {x0,x1,z0,z1}` frames the camera on that rectangle, not the whole room |
+| `stats` | — | `() => ({key: value})`, merged into the HUD stats (pair with `hud: {key: 'Label'}`) |
 | `camera` | `{az:.785, el:.62, margin:1}` | room shot; auto-fitted to the room + porch, and pushed right of the step list on wide screens |
 | `ui` | true | inject step list, scroll track, HUD, hint. `false` = bring your own (`host` element, call `api.setStep`) |
 | `hud` | inside/in line/seated/served | `{statKey: label}`; stat keys are `inside, queued, seated, served` |
@@ -41,6 +42,8 @@ All geometry is boxes. Every mesh is stamped with the **current group** (`k.grou
 - `k.seat({ x, z, yaw, pool='default', anim?, plate:[x,y,z]? })` — where a visitor sits. `yaw` = facing (`Math.atan2(dx, dz)` toward what they face: 0 = +z, π = −z, π/2 = +x, −π/2 = −x). `plate` = where their carried item is set down.
 - `k.digits('247', cx, cy, zWall, w, h, tone=.95, gap=.05, tint?)` — seven-segment numbers on a wall facing +z.
 - `k.plant(x, z, scale=1)` — a potted plant, with its obstacle.
+- `k.person({ at:[x,z], yaw, group, tone, head, holds })` returns a person you drive yourself from a tick. Set `p.pos.x/z`, `p.targetYaw`, `p.anim`, and `p.walking = true` while moving (add the distance moved to `p.walked` so the legs swing). Set `p.item = someGroup` to hold both arms out as if carrying it; you position the group.
+- `k.display(len, cx, cy, zWall, w, h, tone, gap, tint)` returns `{ set(str) }`, a live seven-segment readout (clocks, counters, lap times).
 - `k.tick((t, dt, world) => {})` — per-frame hook. `world.people` holds every person (`p.visitor`, `p.state`, `p.visitPt`, `p.pos`); use it to make machines react to people.
 - `k.scene`, `k.THREE`, `k.rnd()`, `k.rr(a,b)`, `k.pick(arr)`, `k.room`, `k.porch`, `k.ACCENT`, `k.MARKER`.
 
@@ -57,7 +60,7 @@ For moving props (drums, fans, a cat), make a `THREE.Group`, build into it with 
 - `patrol` walks between `stops`, pausing `t` seconds at each one and playing that stop's `anim`.
 - `courier` waits at `at` until a counter station with `fetch.courier === name` places an order. Then it carries the item to `fetch.stand(...)`, drops it at `fetch.drop(...)`, and walks back.
 
-**Animations:** `idle cook stir type serve write order talk read reach load fold mop eat`.
+**Animations:** `idle cook stir type serve write order talk read reach load fold mop eat raise point`.
 - `serve` types only while a visitor is within 1.0 of the person.
 - Seated people use the seat's `anim`, falling back to the station's `anim`, then `eat`.
 
@@ -85,11 +88,12 @@ The built-in items are `tray bag cup box paper laptop`. `hand:true` items are ca
 ## steps: [...]
 
 ```js
-{ title, body, show: null | ['group', ...], city?: true }
+{ title, body, show: null | ['group', ...], city?: true, speed?: 1 }
 ```
 
 - `show: null` inks everything.
 - A list keeps only those groups inked. Every other group is washed out: it fades to paper with outlines at half strength, and loses its colour.
+- `speed` scales sim time while the step is active (`.25` = slow-motion replay). It eases in and out.
 - `city: true` moves the camera. It drops to elevation .3 and zooms out to `city.camera.zoom` (.4). The store's front walls rise, the roof drops on, and the city grows out of the ground around it.
 - Scrolling picks a step by fixed thresholds, like the reference site. Clicking a title scrolls to that step.
 
@@ -110,5 +114,6 @@ The built-in items are `tray bag cup box paper laptop`. `hand:true` items are ca
 `api = { scene, camera, kit, people, seats, route, stats(), T, setStep(n) }`, also exposed as `window.__diorama`.
 
 - `?step=N` pins a step (fractions work) and ignores scrolling.
+- `?t=S` freezes the sim clock at S seconds. Ticks still run and people still settle, so looped choreography can be shot frame by frame (`shot.py --times`).
 - `?speed=N` speeds up the sim.
 - `prefers-reduced-motion` halves the sim speed and makes the step changes snap instead of fading.

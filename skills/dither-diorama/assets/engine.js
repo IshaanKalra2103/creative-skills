@@ -90,6 +90,7 @@ export function createDiorama(cfg) {
     return matCache.get(k);
   };
   let G = 'room';
+  const people = [];
   const tagged = [], groupsSeen = new Set(['room']);
   const obstacles = [], staffZones = [], seats = [], ticks = [];
   function box(x, y, z, w, h, d, tone, parent = scene, tint = null) {
@@ -114,6 +115,25 @@ export function createDiorama(cfg) {
     seat(s) { const seat = { pool: 'default', anim: null, ...s, pos: V(s.x, s.z), who: null,
         plate: s.plate ? new THREE.Vector3(...s.plate) : null }; seats.push(seat); return seat; },
     tick(fn) { ticks.push(fn); },
+    // a person you drive yourself from a tick: set p.pos, p.targetYaw, p.anim,
+    // p.walking (legs swing; bump p.walked by distance moved) and p.item
+    person: (o = {}) => makePersonLater(o),
+    // live seven-segment readout on a +z-facing wall plane: returns set(str)
+    display(len, cx, cy, z, w, h, tone = .95, gap = .05, tint = null) {
+      const cells = [];
+      for (let i = 0; i < len; i++) {
+        const x = cx + i * (w + gap), segs = {};
+        for (const sname of 'abcdefg') {
+          const [x0, y0, x1, y1] = SEG[sname], t = Math.max(.012, w * .18);
+          const X0 = x - w/2 + x0*w, X1 = x - w/2 + x1*w, Y0 = cy - h/2 + y0*h, Y1 = cy - h/2 + y1*h;
+          segs[sname] = Y0 === Y1 ? slab(Math.min(X0, X1) - t/2, Math.max(X0, X1) + t/2, Y0 - t/2, Y0 + t/2, z, z + .012, tone, scene, tint)
+                                  : slab(X0 - t/2, X0 + t/2, Math.min(Y0, Y1), Math.max(Y0, Y1), z, z + .012, tone, scene, tint);
+        }
+        cells.push(segs);
+      }
+      return { set(str) { const chars = String(str).padStart(len).slice(-len);
+        cells.forEach((segs, i) => { const on = DIGITS[chars[i]] || ''; for (const k in segs) segs[k].visible = on.includes(k); }); } };
+    },
     // seven-segment digits drawn on a wall plane facing +z at depth z
     digits(str, cx, cy, z, w, h, tone = 0.95, gap = .05, tint = null) {
       [...String(str)].forEach((ch, i) => {
@@ -133,11 +153,15 @@ export function createDiorama(cfg) {
 
   // ────────────────────────────────────────────────────────────── room ──
   const R = { x0: -3, x1: 3, z0: -2.4, z1: 2.6, wallH: 1.15, frontH: .26, porch: .75, ...(cfg.room || {}) };
+  const OPEN = !!R.open;                 // open stage: no shell, build() draws the ground too
+  if (OPEN) R.porch = 0;
   R.door = { z0: R.z1 - 1.22, z1: R.z1 - .58, ...(cfg.room?.door || {}) };
   const PORCH = { x0: R.x1, x1: R.x1 + R.porch, z0: R.door.z0 - .16, z1: R.door.z1 + .16 };
   const doorMid = (R.door.z0 + R.door.z1) / 2;
   kit.room = R; kit.porch = PORCH;
   G = 'room';
+  const doorPivot = new THREE.Group();
+  if (!OPEN) {
   slab(R.x0 - .08, R.x1 + .08, -.16, 0, R.z0 - .08, R.z1 + .08, R.floorTone ?? 0.93);
   slab(PORCH.x0, PORCH.x1, -.16, -.005, PORCH.z0, PORCH.z1, 0.9);
   slab(R.x0 - .08, R.x1 + .08, 0, R.wallH, R.z0 - .08, R.z0, 0.97);
@@ -147,7 +171,6 @@ export function createDiorama(cfg) {
   slab(R.x1, R.x1 + .08, 0, R.frontH, R.door.z1, R.z1, 0.96);
   slab(R.x1, R.x1 + .08, 0, .9, R.door.z0 - .06, R.door.z0, 0.6);
   slab(R.x1, R.x1 + .08, 0, .9, R.door.z1, R.door.z1 + .06, 0.6);
-  const doorPivot = new THREE.Group();
   doorPivot.position.set(R.x1 + .04, 0, R.door.z0);
   scene.add(doorPivot);
   const dw = R.door.z1 - R.door.z0;
@@ -155,6 +178,7 @@ export function createDiorama(cfg) {
   box(0, .3, dw / 2, .035, .38, dw - .12, 0.97, doorPivot);
   box(-.03, .42, dw - .08, .03, .03, .06, 0.2, doorPivot);
   slab(PORCH.x0 + .2, PORCH.x1 - .2, 0, .012, R.door.z0 + .07, R.door.z1 - .07, 0.55);
+  }
 
   cfg.build?.(kit);
   G = 'room';
@@ -189,7 +213,7 @@ export function createDiorama(cfg) {
   const GRID = { x0: R.x0, z0: R.z0 - .05, s: .06 };
   GRID.nx = Math.ceil((PORCH.x1 - GRID.x0) / GRID.s);
   GRID.nz = Math.ceil((R.z1 + .05 - GRID.z0) / GRID.s);
-  const walkableBase = (x, z) =>
+  const walkableBase = (x, z) => OPEN ? (x > R.x0 && x < R.x1 && z > R.z0 && z < R.z1) :
     (x > R.x0 + .1 && x < R.x1 - .1 && z > R.z0 + .08 && z < R.z1 - .1) ||
     (x >= R.x1 - .15 && x <= R.x1 + .15 && z > R.door.z0 + .1 && z < R.door.z1 - .1) ||
     (x > R.x1 + .1 && x < PORCH.x1 - .05 && z > PORCH.z0 + .06 && z < PORCH.z1 - .06);
@@ -264,7 +288,7 @@ export function createDiorama(cfg) {
   }
 
   // ─────────────────────────────────────────────────────────── people ──
-  const people = [];
+  function makePersonLater(o) { return makePerson({ group: o.group || G, tone: o.tone ?? .3, head: o.head ?? .22, pos: V(...(o.at || [0, 0])), yaw: o.yaw ?? 0, apron: o.apron, holds: o.holds }); }
   function makePerson({ group, tone = .6, head = .3, pos, yaw = 0, apron = false, holds = null }) {
     const prevG = G; G = group;
     const root = new THREE.Group(), body = new THREE.Group();
@@ -449,7 +473,7 @@ export function createDiorama(cfg) {
   let spawnIn = 1.2;
   function updateVisitors(dt, t) {
     spawnIn -= dt;
-    if (spawnIn <= 0) {
+    if (spawnIn <= 0 && route.length) {
       if (people.filter(p => p.visitor).length < VIS.max) spawn();
       spawnIn = Math.sin(t * .09) > .3 ? rr(...VIS.rushRate) : rr(...VIS.rate);
     }
@@ -513,7 +537,7 @@ export function createDiorama(cfg) {
   }
   // a few people already seated when the page opens
   const firstSeat = route.findIndex(s => s.type === 'seat');
-  if (firstSeat >= 0) {
+  if (firstSeat >= 0 && !OPEN) {
     const st = route[firstSeat];
     const pool = seats.filter(s => s.pool === (st.pool || 'default'));
     for (let k = 0; k < (VIS.startSeated ?? 3) && pool.length; k++) {
@@ -529,7 +553,7 @@ export function createDiorama(cfg) {
   function pose(p, dt, t) {
     p.yaw = angleLerp(p.yaw, p.targetYaw, 1 - Math.exp(-dt / .12));
     p.root.rotation.y = p.yaw;
-    const moving = p.moving && p.path.length > 0;
+    const moving = (p.moving && p.path.length > 0) || p.walking;
     const seated = p.state === 'seated';
     const swing = moving ? .55 * Math.sin(8 * p.walked) : 0;
     const bob = moving ? .014 * Math.abs(Math.sin(8 * p.walked)) : 0;
@@ -547,6 +571,8 @@ export function createDiorama(cfg) {
       case 'talk':  aL = -.5 + .35 * Math.sin(1.7 * t + p.phase); aR = -.3 + .3 * Math.sin(2.3 * t + p.phase * 2); break;
       case 'read':  aL = aR = -1.2; lean = .1; break;
       case 'reach': aL = -.3; aR = -2.4 + .2 * Math.sin(2 * t + p.phase); break;
+      case 'raise': aR = -2.7; break;
+      case 'point': aR = -1.5; break;
       case 'load':  aL = -1.3 + .2 * Math.sin(3 * t + p.phase); aR = -1.3 + .2 * Math.sin(3 * t + p.phase + 1.5); lean = .22; break;
       case 'fold':  aL = -1.0 + .5 * Math.max(0, Math.sin(2.2 * t + p.phase)); aR = -1.0 + .5 * Math.max(0, Math.sin(2.2 * t + p.phase + .4)); lean = .1; break;
       case 'mop':   aL = -.7 + .25 * Math.sin(3 * t); aR = -.5 + .25 * Math.sin(3 * t); lean = .1; p.body.rotation.y = .35 * Math.sin(3 * t); break;
@@ -875,11 +901,12 @@ export function createDiorama(cfg) {
   }
   // frame the room + porch so it fills the free part of the canvas
   function fitRoom() {
-    const c0 = V((R.x0 + PORCH.x1) / 2, (R.z0 + R.z1) / 2); c0.y = R.wallH * .3;
+    const c0 = R.fit ? V((R.fit.x0 + R.fit.x1) / 2, (R.fit.z0 + R.fit.z1) / 2) : V((R.x0 + PORCH.x1) / 2, (R.z0 + R.z1) / 2); c0.y = R.wallH * .3;
     aimCamera(ROOM_SHOT.az, ROOM_SHOT.el, c0);
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     const p = new THREE.Vector3();
-    for (const x of [R.x0 - .1, PORCH.x1]) for (const z of [R.z0 - .1, R.z1 + .1]) for (const y of [-.16, R.wallH]) {
+    const fx = R.fit ? [R.fit.x0, R.fit.x1] : [R.x0 - .1, PORCH.x1], fz = R.fit ? [R.fit.z0, R.fit.z1] : [R.z0 - .1, R.z1 + .1];
+    for (const x of fx) for (const z of fz) for (const y of [-.16, R.wallH]) {
       p.set(x, y, z).applyMatrix4(camera.matrixWorldInverse);
       x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
     }
@@ -932,15 +959,19 @@ export function createDiorama(cfg) {
   const stats = () => {
     const v = people.filter(p => p.visitor && p.state !== 'gone');
     return { inside: v.length, queued: route.reduce((n, s) => n + (s.list?.length || 0), 0),
-             seated: v.filter(p => p.state === 'seated').length, served };
+             seated: v.filter(p => p.state === 'seated').length, served, ...(cfg.stats?.() || {}) };
   };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SPEED = +(params.get('speed') || 1);
-  let last = performance.now(), T = 0, frameNo = 0, activeStep = -1;
+  const FREEZE = params.has('t') ? +params.get('t') : null;
+  let last = performance.now(), T = 0, frameNo = 0, activeStep = -1, simRate = 1;
   function frame(now) {
     const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;
-    const sdt = (reduced ? dt * .5 : dt) * SPEED;
+    const stepNow = steps[Math.max(0, Math.min(steps.length - 1, Math.round(stepTarget)))];
+    simRate += ((stepNow.speed ?? 1) - simRate) * (1 - Math.exp(-dt / .35));
+    let sdt = (reduced ? dt * .5 : dt) * SPEED * simRate;
     T += sdt;
+    if (FREEZE != null) { T = FREEZE; sdt = .05; }   // ?t= pins the clock (stills); people still settle
     updateVisitors(sdt, T); updateStaff(sdt); updateDoor(sdt);
     for (const f of ticks) f(T, sdt, world);
     for (const p of people) pose(p, sdt, T);

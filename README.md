@@ -147,10 +147,10 @@ Made by rebuilding a reference video of an isometric town builder in JavaScript.
 - `references/config.md`: the full config contract.
 - `template/index.html`: a counter-service restaurant (Floor, Staff, Stock, City). Preview: `assets/restaurant-steps.png`.
 - `examples/laundromat.html`: "Spin Cycle". Washers spin up when loaded, people read on the bench and fold, an attendant mops, a cat walks the dryers and the neon glows coral.
-- `examples/f1-garage.html`: "Box, box", an F1 garage. The car runs a pit-stop drill on a loop, and the last step pulls back to a street circuit with kerbs and cars lapping the block.
+- `examples/pit-stop.html`: "Box, box", a Formula 1 pit stop out in the open. The car brakes in, 17 crew swap all four tyres around a live stop clock, the lollipop flips and the car launches. Includes a quarter-speed replay step.
 - `scripts/shot.py`: `uv run` it to shoot every step into a contact sheet, with crowd stats and page errors.
 
-**Scroll** moves through the steps, and clicking a step title jumps to it. **URL options:** `?step=2` (pin a step), `?speed=4`.
+**Scroll** moves through the steps, and clicking a step title jumps to it. **URL options:** `?step=2` (pin a step), `?speed=4`, `?t=5.2` (freeze the clock).
 
 Made by rebuilding the "How it works" section of meuze.ai from its live behaviour, then generalising it.
 
