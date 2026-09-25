@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spider-Man No. 1 — Interactive Cover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Oswald:wght@500;700&display=block" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23e0202a%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="engine/style.css">
+<script type="importmap">{"imports":{
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+}}</script>
+</head>
+<body>
+<main class="stage">
+  <div class="cover-wrap"><div class="cover" id="cover"></div></div>
+</main>
+<script>
+// Spider-Man crouched on a DON'T WALK signal at Columbus Av (Meshy AI sculpt, 168k tris after build-model.sh).
+// Landmarks came from engine/probe.html; the signal lens plane was fitted to the box face (it's tilted ~14°).
+window.COVER = {
+  model: 'assets/model.glb',
+  hero: {
+    name: 'Spidey',
+    emitter: [-0.04, 0.52, 0.78],          // the raised thwip hand
+    head: [-0.42, 0.31, 0.14],
+    decals: [{kind: 'walk-signal', center: [0.264, -0.39, -0.165], normal: [-0.97, 0, 0.243], size: [0.443, 0.25], depth: 0.035, keepSat: 0.5}],
+    hotspots: [{box: [[0.12, -0.7, -0.62], [0.55, -0.27, 0.14]], match: 'unsaturated', action: 'walk', label: 'walk signal'}],
+  },
+  camera: {az: -0.48, el: -0.44, dist: 3.35, roll: -0.24, fov: 37, target: [0.04, 0.2, 0.05]},
+  set: {
+    kind: 'city', sky: 'storm', ground: -6.5, seed: 7,
+    corner: {
+      pole: [0.66, -0.34], top: 5.2,
+      brackets: [[0.53, -0.36, -0.3, 0.26, 0.08, 0.14], [0.53, -0.52, -0.3, 0.26, 0.08, 0.14]],
+      signs: [{text: 'COLUMBUS AV', y: 3.3, yaw: -0.45}, {text: 'W 72 ST', y: 3.0, yaw: 1.12}, {text: 'ONE WAY', oneWay: true, y: 0.42, yaw: -0.5}],
+      lamp: {yaw: 3.44, reach: 3.4},
+    },
+  },
+  power: {kind: 'web', words: ['THWIP!'], sound: 'thwip'},
+  sense: {label: 'Spider-sense', key: 'S', duotone: ['#0d0008', '#f2142e']},
+  masthead: {
+    title: 'SPIDER-MAN',
+    kicker: 'YOUR FRIENDLY NEIGHBORHOOD',
+    credits: 'INKS BY SOBEL · COLORS BY WEBGL · SCULPT BY MESHY',
+    pattern: 'web',
+  },
+  dress: {
+    issue: '1', month: 'SEPT', price: '$3.99', caption: ['ONE WAY IN.', 'NO WAY OUT!'],
+    emblem: `<svg viewBox="-50 -50 100 100"><g fill="none" stroke="#0e0b10" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-6 -8 L-20 -26 L-26 -44 M6 -8 L20 -26 L26 -44"/><path d="M-8 -2 L-28 -14 L-44 -12 M8 -2 L28 -14 L44 -12"/>
+      <path d="M-8 6 L-28 12 L-42 28 M8 6 L28 12 L42 28"/><path d="M-6 12 L-18 30 L-22 46 M6 12 L18 30 L22 46"/></g>
+      <ellipse cx="0" cy="-12" rx="7" ry="7" fill="#0e0b10"/><ellipse cx="0" cy="8" rx="10" ry="16" fill="#0e0b10"/></svg>`,
+  },
+};
+</script>
+<script type="module" src="engine/main.js"></script>
+</body>
+</html>

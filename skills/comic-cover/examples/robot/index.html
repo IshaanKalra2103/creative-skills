@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Knockout Bot No. 7 — Interactive Cover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Oswald:wght@500;700&display=block" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23e0202a%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="engine/style.css">
+<script type="importmap">{"imports":{
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+}}</script>
+</head>
+<body>
+<main class="stage">
+  <div class="cover-wrap"><div class="cover" id="cover"></div></div>
+</main>
+<script>
+// RobotExpressive (CC0, Tomás Laulhé / Don McCurdy, from the three.js examples): rigged, 14 clips, untextured.
+// Frozen mid-punch, on an action-burst backdrop; the beam fires from the punching fist, the eyes are glow decals.
+window.COVER = {
+  model: 'assets/model.glb',
+  hero: {
+    name: 'the robot',
+    scale: 0.42,                                   // the model is 4.4 units tall; ~1.85 m here
+    pose: {clip: 'Punch', time: 0.35},
+    emitterBone: 'Palm2R',                       // the punching fist: probe extremes.front was at x -1.08
+    head: [0, 3.4, 1.0],
+    decals: [
+      {kind: 'glow', center: [-0.766, 3.369, 1.987], normal: [0.18, 0.05, 0.98], size: [0.62, 0.62], depth: 0.3, color: '#6ff6ff'},
+      {kind: 'glow', center: [0.66, 3.369, 2.17], normal: [0.18, 0.0, 0.98], size: [0.62, 0.62], depth: 0.3, color: '#6ff6ff'},
+    ],
+  },
+  camera: {az: 0.15, el: -0.2, roll: -0.18, fov: 37},
+  set: {kind: 'burst', burst: {colors: ['#35c8ff', '#1b4fd0'], rays: 26}},
+  power: {kind: 'beam', words: ['KA-POW!', 'ZZAKT!', 'BLAMM!'], sound: 'zap', color: '#fff06a'},
+  sense: {label: 'Overclock', key: 'O', duotone: ['#00121c', '#19d3ff'], sound: 'zap'},
+  masthead: {
+    title: 'KNOCKOUT BOT',
+    kicker: 'THE MIGHTIEST TIN CAN OF ALL',
+    credits: 'INKS BY SOBEL · COLORS BY WEBGL · ROBOT BY TOMÁS LAULHÉ (CC0)',
+    pattern: 'halftone',
+    face: ['#fff27a', '#ffc21a', '#e07b00'], extrude: '#7a1d10',
+  },
+  dress: {issue: '7', month: 'NOV', price: '$4.99', caption: ['ONE PUNCH.', 'ZERO BATTERIES!']},
+};
+</script>
+<script type="module" src="engine/main.js"></script>
+</body>
+</html>

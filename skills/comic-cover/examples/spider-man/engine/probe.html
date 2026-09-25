@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>model probe</title>
+<script type="importmap">{"imports":{
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+}}</script>
+<style>
+  html, body { margin: 0; background: #1a1620; }
+  #cover { position: relative; width: 1500px; height: 1000px; }
+  canvas { position: absolute; left: 0; top: 0; }
+</style>
+</head>
+<body>
+<!-- Model inspector. 3x2 sheet: front(+z) right(+x) back(-z) / left(-x) top(+y) 3-4 view. Grid labels are MODEL space.
+     URL: ?model=../assets/model.glb&pose=ClipName@0.4
+     Console API: probe.at(px, py)  → model-space point + normal under that pixel of the sheet (1500x1000)
+                  probe.hit(view, u, v) → same, with u,v in 0..1 inside one cell
+                  probe.info        → bbox, extremes, bones, clips (also printed as [probe] JSON) -->
+<div id="cover"><canvas id="gl" width="1500" height="1000"></canvas><canvas id="ov" width="1500" height="1000"></canvas></div>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+
+const q = new URLSearchParams(location.search);
+const W = 1500, H = 1000, CW = 500, CH = 500;
+const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('gl'), antialias: true});
+renderer.setSize(W, H, false);
+renderer.setScissorTest(true);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x77727d);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x404040, 2.2));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2); sun.position.set(2, 3, 4); scene.add(sun);
+
+const draco = new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/libs/draco/gltf/');
+const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setDRACOLoader(draco).loadAsync(q.get('model') || '../assets/model.glb');
+const root = gltf.scene;
+scene.add(root);
+const bones = [];
+root.traverse((o) => { if (o.isBone) bones.push(o.name); if (o.isMesh) o.frustumCulled = false; });
+if (q.get('pose') && gltf.animations.length) {
+  const [name, time] = q.get('pose').split('@');
+  const clip = THREE.AnimationClip.findByName(gltf.animations, name) || gltf.animations[+name] || gltf.animations[0];
+  const mixer = new THREE.AnimationMixer(root);
+  mixer.clipAction(clip).play();
+  mixer.setTime(+(time || 0));
+}
+root.updateMatrixWorld(true);
+
+// bbox + extreme vertices (skinning applied)
+const box = new THREE.Box3().setFromObject(root, true);
+const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+const ext = {};
+const v = new THREE.Vector3();
+const keys = [['top', 1, 1], ['bottom', 1, -1], ['right', 0, 1], ['left', 0, -1], ['front', 2, 1], ['back', 2, -1]];
+let far = {d: -1};
+root.traverse((o) => {
+  if (!o.isMesh) return;
+  const n = o.geometry.attributes.position.count;
+  const stride = Math.max(1, Math.floor(n / 60000));
+  for (let i = 0; i < n; i += stride) {
+    o.getVertexPosition(i, v); v.applyMatrix4(o.matrixWorld);
+    for (const [k, a, s] of keys) if (!ext[k] || v.getComponent(a) * s > ext[k][a] * s) ext[k] = v.toArray();
+    const up = v.y > c.y ? v.distanceTo(c) : -1; // farthest point in the upper half: often a raised or extended hand
+    if (up > far.d) far = {d: up, p: v.toArray()};
+  }
+});
+const r3 = (a) => a.map((x) => +x.toFixed(3));
+const info = {
+  bboxMin: r3(box.min.toArray()), bboxMax: r3(box.max.toArray()), size: r3(size.toArray()), center: r3(c.toArray()),
+  extremes: Object.fromEntries(Object.entries(ext).map(([k, p]) => [k, r3(p)])),
+  farthestUpperPoint: r3(far.p || c.toArray()),
+  meshes: [], bones: bones.slice(0, 80), clips: gltf.animations.map((a) => `${a.name} (${a.duration.toFixed(2)}s)`),
+};
+root.traverse((o) => { if (o.isMesh) info.meshes.push(`${o.name || '(mesh)'}: ${o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3} tris${o.isSkinnedMesh ? ', skinned' : ''}${o.material.map ? ', textured' : ''}`); });
+
+// views
+const s = Math.max(size.x, size.y, size.z) * 0.6;
+const VIEWS = [
+  {name: 'front  (camera +z)', pos: [0, 0, 1], up: [0, 1, 0], ax: [0, 1], sgn: [1, 1]},
+  {name: 'right  (camera +x)', pos: [1, 0, 0], up: [0, 1, 0], ax: [2, 1], sgn: [-1, 1]},
+  {name: 'back   (camera -z)', pos: [0, 0, -1], up: [0, 1, 0], ax: [0, 1], sgn: [-1, 1]},
+  {name: 'left   (camera -x)', pos: [-1, 0, 0], up: [0, 1, 0], ax: [2, 1], sgn: [1, 1]},
+  {name: 'top    (camera +y, -z up)', pos: [0, 1, 0], up: [0, 0, -1], ax: [0, 2], sgn: [1, -1]},
+  {name: '3/4 front-left, from below (az -0.5, el -0.35)', persp: true},
+];
+const cams = VIEWS.map((V) => {
+  let cam;
+  if (V.persp) {
+    cam = new THREE.PerspectiveCamera(37, CW / CH, 0.01, 1000);
+    const d = s / Math.tan(THREE.MathUtils.degToRad(18.5)) * 1.1, az = -0.5, el = -0.35;
+    cam.position.set(c.x + d * Math.sin(az) * Math.cos(el), c.y + d * Math.sin(el), c.z + d * Math.cos(az) * Math.cos(el));
+  } else {
+    cam = new THREE.OrthographicCamera(-s, s, s, -s, 0.001, 1000);
+    cam.position.copy(c).add(new THREE.Vector3(...V.pos).multiplyScalar(s * 6));
+    cam.up.set(...V.up);
+  }
+  cam.lookAt(c);
+  cam.updateMatrixWorld();
+  return cam;
+});
+VIEWS.forEach((V, i) => {
+  const x = (i % 3) * CW, y = i < 3 ? CH : 0;
+  renderer.setViewport(x, y, CW, CH); renderer.setScissor(x, y, CW, CH);
+  renderer.render(scene, cams[i]);
+});
+
+// grid + labels in model units
+const ov = document.getElementById('ov').getContext('2d');
+const step = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 25, 50].find((t) => (2 * s) / t <= 12);
+ov.font = '11px ui-monospace, Menlo, monospace';
+VIEWS.forEach((V, i) => {
+  const x0 = (i % 3) * CW, y0 = i < 3 ? 0 : CH;
+  ov.strokeStyle = '#000'; ov.lineWidth = 2; ov.strokeRect(x0, y0, CW, CH);
+  ov.fillStyle = '#fff'; ov.fillText(V.name, x0 + 8, y0 + 16);
+  if (V.persp) return;
+  const [ah, av] = V.ax, [sh, sv] = V.sgn, AX = 'xyz';
+  const ch = c.getComponent(ah), cv = c.getComponent(av);
+  const toPx = (val, center, sign, len) => ((sign * (val - center)) / (2 * s) + 0.5) * len;
+  for (let g = Math.ceil((ch - s) / step) * step; g <= ch + s; g += step) {
+    const px = x0 + toPx(g, ch, sh, CW);
+    ov.strokeStyle = Math.abs(g) < 1e-6 ? 'rgba(255,80,80,.9)' : 'rgba(255,255,255,.28)'; ov.lineWidth = 1;
+    ov.beginPath(); ov.moveTo(px, y0 + 22); ov.lineTo(px, y0 + CH); ov.stroke();
+    ov.fillStyle = '#ffe27a'; ov.fillText(`${AX[ah]}${+g.toFixed(3)}`, px + 2, y0 + CH - 4);
+  }
+  for (let g = Math.ceil((cv - s) / step) * step; g <= cv + s; g += step) {
+    const py = y0 + CH - toPx(g, cv, sv, CH);
+    ov.strokeStyle = Math.abs(g) < 1e-6 ? 'rgba(80,255,80,.9)' : 'rgba(255,255,255,.28)';
+    ov.beginPath(); ov.moveTo(x0, py); ov.lineTo(x0 + CW, py); ov.stroke();
+    ov.fillStyle = '#9fe3ff'; ov.fillText(`${AX[av]}${+g.toFixed(3)}`, x0 + 4, py - 3);
+  }
+});
+
+const ray = new THREE.Raycaster();
+function hit(view, u, vv) {
+  ray.setFromCamera(new THREE.Vector2(u * 2 - 1, -(vv * 2 - 1)), cams[view]);
+  const h = ray.intersectObject(root, true)[0];
+  if (!h) return null;
+  const n = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : null;
+  return {point: r3(h.point.toArray()), normal: n && r3(n.toArray()), mesh: h.object.name};
+}
+window.probe = {info, hit, at: (px, py) => hit((Math.floor(py / CH)) * 3 + Math.floor(px / CW), (px % CW) / CW, (py % CH) / CH)};
+console.log('[probe]', JSON.stringify(info));
+window.__ready = true;
+</script>
+</body>
+</html>

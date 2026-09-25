@@ -15,6 +15,7 @@
 | [pixel-showcase](skills/pixel-showcase) | A gacha-style "who's that?" reveal for pixel sprites: hold to charge a silhouette through rarity colours, then it bursts into its own pixels and reassembles in colour, with a stat card, NEW/SHINY stamps, a dex and chip-tune sound. Templates for animated Gen 1 Pokémon (live from PokeAPI) and procedurally generated creatures. |
 | [sketchbook-portfolio](skills/sketchbook-portfolio) | An illustrated personal portfolio in plain HTML/CSS/JS: a red sketchbook hero with boiling hand-drawn SVG, stamp borders and chalk doodles, Lenis smooth scroll, a 3D-hinged page, notes that pin mid-screen while polaroids parallax past, project cards that land on a tilting grid board, nav hover doodles and click ink bursts. |
 | [xray-scroll](skills/xray-scroll) | A scroll-driven x-ray film from any 3D model: three.js renders it see-through with dark rims and a floor reflection, it assembles part by part as GSAP ScrollTrigger scrubs one timeline over Lenis smooth scroll, and it cuts through pixel-mosaic, green dot-grid, red scanline, NO SIGNAL and datamosh glitches, with green tracking boxes, decoding captions and a timecode HUD. Single merged meshes (AI sculpts, scans) are split into parts automatically. |
+| [comic-cover](skills/comic-cover) | Any 3D model (Meshy/AI sculpts, OBJ, FBX, glTF, rigged characters) as an interactive comic-book cover in three.js: ink outlines, cel shading, Ben-Day halftone and hatching, a Pencils → Inks → Colors switch, a masthead the hero breaks through, city / storm-sky / action-burst backdrops, drag-to-orbit, web and beam powers, lightning, SFX lettering and a duotone sense mode. |
 | [scientific-figure-making](skills/scientific-figure-making) | Publication-ready matplotlib figures for papers, slides and reports: grouped bars, trends, heatmaps and multi-panel layouts in one house style (palette, fonts, spines, legend panels, print-safe hatching, vector export). By Chen Liu, from [figures4papers](https://github.com/ChenLiu-1996/figures4papers). |
 | [dither-reveal](skills/dither-reveal) | Any image as a 1-bit Floyd–Steinberg dither that the cursor peels back to colour, in one WebGL2 page. Veil mode burns a lingering hole with colour leaking into the dots at its edge; filings mode turns every dot into an iron filing that the cursor lifts like a magnet into a spiky ferrofluid blob, then lets slide home. Comes with a script that cuts any photo off its background and embeds it, and a raymarched geode whose hover lens shows its cross-section. |
 | [pixel-rebuild](skills/pixel-rebuild) | Any pixel-art video, GIF or screen recording rebuilt as a crisp canvas page, pixel for pixel: it finds the art's native grid (even non-integer upscales), splits the clip into one background, deduplicated sprites and a palette, and replays the timeline in a zero-dependency player. A Chrome check compares every frame with the source and exports a GIF. |
@@ -39,6 +40,7 @@ ln -s ~/src/claude-skills/skills/sketchbook-portfolio ~/.claude/skills/sketchboo
 ln -s ~/src/claude-skills/skills/scientific-figure-making ~/.claude/skills/scientific-figure-making
 ln -s ~/src/claude-skills/skills/dither-reveal ~/.claude/skills/dither-reveal
 ln -s ~/src/claude-skills/skills/xray-scroll ~/.claude/skills/xray-scroll
+ln -s ~/src/claude-skills/skills/comic-cover ~/.claude/skills/comic-cover
 ln -s ~/src/claude-skills/skills/pixel-rebuild ~/.claude/skills/pixel-rebuild
 ln -s ~/src/claude-skills/skills/postage-collage ~/.claude/skills/postage-collage
 ln -s ~/src/claude-skills/skills/motion-reel ~/.claude/skills/motion-reel
@@ -184,6 +186,26 @@ Inspired by [Jackie Zhang's portfolio](https://jackiezhang.co.za/). The code and
 **URL options:** `?p=NN` jumps to NN% of the film; `?parts` logs how the model was split and staged.
 
 Inspired by a reference clip of an x-ray car ("SHIPMENT PROJECT // TRACE LOG"); the code is original. The Ferrari 458 Italia model is by [vicent091036](https://sketchfab.com/models/57bf6cc56931426e87494f554df1dab6), from the three.js examples. It's loaded from the three.js repo, not copied here. The coffee machine is `coffeemat.glb` from the three.js examples.
+
+## comic-cover
+
+![Spider-Man example: a Meshy sculpt on a DON'T WALK signal at Columbus Av](skills/comic-cover/assets/spider-man.jpg)
+
+![The same cover in the Pencils, Inks and Colors stages](skills/comic-cover/assets/stages.jpg)
+
+![Robot example: a rigged model frozen mid-punch on an action burst](skills/comic-cover/assets/robot.jpg)
+
+- `SKILL.md`: how the look is built, the workflow (scaffold → probe the model → config → frame → exercise every interaction), composition rules for covers, and the rules of the look.
+- `engine/`: the shared renderer (one MRT pass → ink/halftone/hatching composite), sets, masthead, effects, synthesized sound, plus `probe.html`, a model inspector that puts five orthographic views on model-space grids and raycasts any pixel to an exact point.
+- `template/index.html`: a cover is this page plus a `window.COVER` config.
+- `examples/spider-man/`, `examples/robot/`: a Meshy sculpt with a web power, a walk-signal decal and a clickable prop; a rigged CC0 robot frozen mid-punch with a beam and glowing eyes.
+- `scripts/`: `new-cover.sh` (scaffold), `build-model.sh` (OBJ/FBX/glTF/GLB → one small meshopt GLB), `shot.mjs` (GPU headless screenshots with JS between frames; no npm deps), `serve.mjs`, `sync-engine.sh`.
+- `references/config.md`, `references/pipeline.md`: every config field; how the render works, how to extend it, and the traps already hit.
+
+**Controls:** move the mouse to tilt the cover; drag to orbit (springs back); click a building, the sky, the hero or a prop; `1` `2` `3` switch Pencils / Inks / Colors; the sense key; `M` mutes.
+**URL options:** `?az= &el= &roll= &dist= &fov=` camera, `?seed=N` city layout, `?stage=0|1|2`, `?still` (no drift, boil or ambient lightning).
+
+The robot is [RobotExpressive](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive) by Tomás Laulhé (CC0), modified by Don McCurdy. The Spider-Man sculpt is fan art made with Meshy AI; Spider-Man is a trademark of Marvel.
 
 ## scientific-figure-making
 
