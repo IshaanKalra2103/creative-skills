@@ -1,24 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
 <title>__TITLE__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#F7F7F7; --card:#fff; --text:#000; --body:rgba(60,60,67,.62); --muted:rgba(0,0,0,.32); --rule:rgba(0,0,0,.08);
-  --yellow:#FFE500; --on-yellow:#000; --ok:#2f7d4a;
+  --bg:#ffffff; --card:#f4f6f7; --text:#14181d; --body:#39414a; --muted:#667380; --rule:#dde3e8;
+  --yellow:#ffd400; --on-yellow:#14181d; --ok:#0f6f63;
   --display:"Newsreader","Iowan Old Style",Georgia,"Times New Roman",serif;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",sans-serif;
   --mono:"SF Mono",ui-monospace,Menlo,"Roboto Mono",monospace;
   --rail:1160px; --pad:clamp(16px,6vw,90px); --gap:1.5rem;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111; --card:#1a1a1a; --text:#F0F0F0; --body:rgba(235,225,210,.62); --muted:rgba(255,255,255,.32); --rule:rgba(255,255,255,.09); --ok:#7fcf95;}}
-:root[data-theme="dark"]{--bg:#111; --card:#1a1a1a; --text:#F0F0F0; --body:rgba(235,225,210,.62); --muted:rgba(255,255,255,.32); --rule:rgba(255,255,255,.09); --ok:#7fcf95;}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
@@ -113,6 +111,7 @@ h3{font-family:var(--display)}
 .chip.done{background:var(--ok);color:#fff}
 .empty{color:var(--body)}
 
+/* Light only, on purpose. Do not add a dark override. */
 /* explainer video */
 .explainer video{width:100%;display:block;background:#000;aspect-ratio:16/9}
 .explainer p{margin:8px 0 0;font:400 11px/1.5 var(--mono);color:var(--muted)}
