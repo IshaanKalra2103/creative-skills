@@ -10,6 +10,7 @@
 | [ink-abstraction](skills/ink-abstraction) | A 12-panel pen-and-ink abstraction sheet of any subject in vanilla JS: hatched sketch → black masses → cross-stitch grid → patterned cells → a few lines and one knot. |
 | [morph-tile-loop](skills/morph-tile-loop) | Seamless geometric loops in vanilla JS: a dot opens into layered rings, morphs into a gradient star, zooms out over an endless lattice into halftone, and dives back in. |
 | [iso-sim-town](skills/iso-sim-town) | A playable late-90s isometric sim town in vanilla JS: pre-rendered-looking buildings, baked shadows, dithered 256-colour pixels, traffic, day/night, a Props window and a Windows 98 UI. |
+| [dither-diorama](skills/dither-diorama) | A live isometric cutaway of any place (restaurant, laundromat, office) in three.js through a square-dot dither shader, with a walking crowd, staff, scroll steps that highlight one group at a time, and a pull-back into a city. |
 | [morning-debrief](skills/morning-debrief) | A daily brief page for a project: one self-contained HTML file with a public-domain painting header, the one thing to push forward, to-dos with sources, what's waiting on other people and what changed — built from Slack, meeting notes, calendar, git and local checklists, and installable as a scheduled run. |
 | [slide-craft](skills/slide-craft) | Presentations as one self-contained HTML deck: fixed 1280×720 slides, thumbnail rail, presenter mode with notes, print to PDF — plus the thinking first (audience, the one sentence, the ask) and a list of the things that make slides look generated. |
 | [pixel-showcase](skills/pixel-showcase) | A gacha-style "who's that?" reveal for pixel sprites: hold to charge a silhouette through rarity colours, then it bursts into its own pixels and reassembles in colour, with a stat card, NEW/SHINY stamps, a dex and chip-tune sound. Templates for animated Gen 1 Pokémon (live from PokeAPI) and procedurally generated creatures. |
@@ -35,6 +36,7 @@ ln -s ~/src/claude-skills/skills/hand-drawn-canvas-animation ~/.claude/skills/ha
 ln -s ~/src/claude-skills/skills/ink-abstraction ~/.claude/skills/ink-abstraction
 ln -s ~/src/claude-skills/skills/morph-tile-loop ~/.claude/skills/morph-tile-loop
 ln -s ~/src/claude-skills/skills/iso-sim-town ~/.claude/skills/iso-sim-town
+ln -s ~/src/claude-skills/skills/dither-diorama ~/.claude/skills/dither-diorama
 ln -s ~/src/claude-skills/skills/pixel-showcase ~/.claude/skills/pixel-showcase
 ln -s ~/src/claude-skills/skills/sketchbook-portfolio ~/.claude/skills/sketchbook-portfolio
 ln -s ~/src/claude-skills/skills/scientific-figure-making ~/.claude/skills/scientific-figure-making
@@ -135,6 +137,21 @@ Made by rebuilding a reference motion loop frame by frame in JavaScript.
 **URL options:** `#2` (open town 2), `#2n` (at night).
 
 Made by rebuilding a reference video of an isometric town builder in JavaScript.
+
+## dither-diorama
+
+![Spin Cycle, a 24-hour laundromat drawn with dither-diorama](skills/dither-diorama/assets/laundromat.png)
+
+- `SKILL.md`: the five parts of the look: boxes in greys with one accent, the cell render, the soft pen, wash-not-zoom highlights and the city pull-back. Also the workflow from planning the flows to checking the stills, and the traps.
+- `assets/engine.js`: `createDiorama(config)`. It covers the room shell, the build kit (grouped boxes, obstacles, seats, digits, ticks), grid A* pathfinding, and the visitor route (queue, counter with courier fetch, seat, visit). It also covers staff (post, patrol, courier), the three-pass dither render, the step UI and the generated city with traffic.
+- `references/config.md`: the full config contract.
+- `template/index.html`: a counter-service restaurant (Floor, Staff, Stock, City). Preview: `assets/restaurant-steps.png`.
+- `examples/laundromat.html`: "Spin Cycle". Washers spin up when loaded, people read on the bench and fold, an attendant mops, a cat walks the dryers and the neon glows coral.
+- `scripts/shot.py`: `uv run` it to shoot every step into a contact sheet, with crowd stats and page errors.
+
+**Scroll** moves through the steps, and clicking a step title jumps to it. **URL options:** `?step=2` (pin a step), `?speed=4`.
+
+Made by rebuilding the "How it works" section of meuze.ai from its live behaviour, then generalising it.
 
 ## License
 

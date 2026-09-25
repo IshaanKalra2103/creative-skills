@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spin Cycle</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<script type="module">
+// Example: a 24-hour laundromat at 2:47 a.m. People arrive with baskets, load a
+// washer (its drum starts spinning), wait on the bench, fold, and go home.
+// A black cat patrols the tops of the dryers. Coral is the one accent colour.
+import { createDiorama } from '../assets/engine.js';
+
+const WASHER_X = [-1.6, -1.0, -.4, .2, .8, 1.4, 2.0, 2.6];
+const DRYER_Z = [-1.5, -.9, -.3, .3, .9];
+const drums = [];          // { group, x, z, spin, speed, axis, shake }
+
+createDiorama({
+  title: 'Spin Cycle — open 24h',
+  accent: 0xf26b5b,
+  room: { x0: -3, x1: 3, z0: -2.4, z1: 2.6, wallH: 1.25, door: { z0: 1.38, z1: 2.02 } },
+
+  build(k) {
+    const { slab, box, accent, block, THREE } = k;
+
+    // a front-loader door: dark ring, glass, and a drum with clothes that turns
+    function drum(x, y, z, axis) {
+      const g = new THREE.Group(); g.position.set(x, y, z);
+      if (axis === 'z') g.rotation.set(0, 0, 0); else g.rotation.set(0, Math.PI / 2, 0);
+      box(0, -.17, 0, .34, .34, .02, .12, g);
+      box(0, -.13, .012, .26, .26, .012, .82, g);
+      const spin = new THREE.Group(); spin.position.set(0, 0, .022); g.add(spin);
+      box(0, -.1, 0, .2, .2, .006, .4, spin);
+      accent(-.04, -.07, .004, .07, .05, .006, .9, spin);
+      box(.05, -.02, .004, .06, .05, .006, .95, spin);
+      accent(.02, .03, .004, .05, .04, .006, .55, spin);
+      k.scene.add(g);
+      drums.push({ group: g, spin, x, z, speed: 0, angle: Math.random() * 6, run: 0, axis });
+      return g;
+    }
+
+    // back wall: a row of washers with timers
+    k.group('machines');
+    for (const x of WASHER_X) {
+      slab(x - .28, x + .28, 0, .6, -2.38, -1.88, .93);
+      slab(x - .28, x + .28, .6, .66, -2.38, -1.86, .8);
+      slab(x - .22, x - .06, .61, .65, -1.87, -1.855, .1);
+      slab(x + .1, x + .2, .62, .64, -1.87, -1.855, .6);
+      drum(x, .3, -1.87, 'z');
+    }
+    block(-1.9, 2.9, -2.38, -1.86);
+    // left wall: stacked dryers, doors facing the room
+    for (const z of DRYER_Z) for (const y of [0, .56]) {
+      slab(-2.98, -2.46, y, y + .54, z - .28, z + .28, .9);
+      slab(-2.47, -2.455, y + .44, y + .5, z - .2, z + .1, .12);
+      drum(-2.45, y + .26, z, 'x');
+    }
+    slab(-2.98, -2.46, 1.1, 1.13, -1.8, 1.2, .7);
+    block(-2.98, -2.46, -1.8, 1.2);
+    // coin + soap corner
+    slab(-2.98, -1.95, 0, .5, -2.38, -1.95, .88);
+    for (let i = 0; i < 5; i++) accent(-2.85 + i * .18, .5, -2.2, .09, .16, .07, i % 2 ? .6 : .9);
+    block(-2.98, -1.95, -2.38, -1.95);
+
+    // back wall: neon OPEN 24 and a clock at 2:47
+    k.group('room');
+    slab(.2, 1.6, .74, 1.14, -2.4, -2.38, .12);
+    k.digits('24', .98, .94, -2.38, .16, .3, 1, .08, k.ACCENT);
+    for (let i = 0; i < 4; i++) slab(.32 + i * .1, .39 + i * .1, .8, .84, -2.38, -2.37, .95);   // "OPEN" bars
+    slab(-1.72, -.98, .8, 1.1, -2.4, -2.385, .1);
+    k.digits('247', -1.58, .95, -2.385, .1, .18, .95, .08);
+    slab(-1.44, -1.42, .9, .92, -2.385, -2.37, .95); slab(-1.44, -1.42, .97, .99, -2.385, -2.37, .95);
+    // cork board by the door with index-card ads
+    slab(1.9, 2.8, .5, .95, -2.4, -2.38, .35);
+    for (let i = 0; i < 7; i++) slab(1.95 + (i % 4) * .21, 2.1 + (i % 4) * .21, .55 + ((i / 4) | 0) * .2, .7 + ((i / 4) | 0) * .2, -2.38, -2.37, i === 2 ? .5 : 1);
+
+    // folding island with piles of clothes
+    k.group('fold');
+    slab(-1.0, 1.2, .38, .42, .12, .58, .97);
+    slab(-.95, 1.15, 0, .38, .16, .54, .8);
+    block(-1.0, 1.2, .12, .58);
+    [[-.75, 3], [-.2, 2], [.35, 4], [.9, 2]].forEach(([x, n], j) => {
+      for (let i = 0; i < n; i++) (i % 2 ? box : accent)(x + (i % 2) * .02, .42 + i * .035, .35, .22, .035, .17, i % 2 ? (j % 2 ? .9 : .55) : .7);
+    });
+    // wheeled laundry carts
+    for (const [x, z] of [[1.75, .35], [-1.7, 1.15]]) {
+      slab(x - .15, x + .15, .1, .38, z - .12, z + .12, .6);
+      slab(x - .13, x + .13, .34, .38, z - .1, z + .1, .95);
+      for (const [dx, dz] of [[-.12, -.1], [.12, -.1], [-.12, .1], [.12, .1]]) box(x + dx, 0, z + dz, .03, .1, .03, .2);
+      block(x - .15, x + .15, z - .12, z + .12);
+    }
+
+    // vending + change machines by the door
+    k.group('machines');
+    slab(2.5, 2.95, 0, 1.05, .15, .65, .1);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) (r + c) % 3 ? box(2.6 + c * .11, .5 + r * .13, .655, .07, .07, .01, .85) : accent(2.6 + c * .11, .5 + r * .13, .655, .07, .07, .01, 1);
+    slab(2.58, 2.9, .15, .3, .65, .67, .6);
+    slab(2.6, 2.95, 0, .8, -.35, .05, .78);
+    slab(2.59, 2.6, .5, .62, -.28, -.12, .1);
+    block(2.5, 2.95, -.35, .65);
+
+    // bench along the front wall
+    k.group('room');
+    slab(-2.7, 1.3, .2, .24, 2.22, 2.52, .7);
+    for (const x of [-2.6, -1.2, .2, 1.2]) slab(x - .03, x + .03, 0, .2, 2.26, 2.48, .4);
+    slab(-2.7, 1.3, .24, .52, 2.5, 2.56, .78);
+    block(-2.7, 1.3, 2.4, 2.56);
+    for (const x of [-2.4, -1.8, -1.2, -.6, 0, .6]) k.seat({ x, z: 2.26, yaw: Math.PI, pool: 'bench', anim: 'read', plate: [x + .28, .24, 2.37] });
+    k.plant(-2.8, 1.85, .9);
+
+    // the cat: walks the dryer tops, stops, sits, flicks its tail
+    k.group('cat');
+    const cat = new THREE.Group(); k.box(0, 0, 0, .08, .07, .2, .12, cat);
+    k.box(0, .04, .11, .07, .06, .07, .12, cat);
+    k.box(-.022, .1, .12, .018, .03, .018, .1, cat); k.box(.022, .1, .12, .018, .03, .018, .1, cat);
+    k.box(0, .075, .148, .03, .012, .003, 1, cat);                 // eyes catch the light
+    const tail = new THREE.Group(); tail.position.set(0, .06, -.1); cat.add(tail);
+    k.box(0, 0, -.07, .02, .02, .15, .12, tail);
+    cat.position.set(-2.72, 1.13, -1.6);
+    let catZ = -1.6, catGoal = .9, catRest = 2;
+    k.tick((t, dt) => {
+      if (catRest > 0) { catRest -= dt; tail.rotation.y = .6 * Math.sin(t * 2.2); return; }
+      const d = catGoal - catZ, step = Math.sign(d) * Math.min(Math.abs(d), dt * .25);
+      catZ += step; cat.position.z = catZ; cat.rotation.y = d > 0 ? 0 : Math.PI;
+      cat.position.y = 1.13 + .006 * Math.abs(Math.sin(t * 9));
+      tail.rotation.x = .3 + .15 * Math.sin(t * 6);
+      if (Math.abs(d) < .01) { catGoal = k.rr(-1.7, 1.1); catRest = k.rr(3, 8); }
+    });
+    k.scene.add(cat);
+
+    // drums spin up when someone has just loaded that machine, then slow down
+    k.tick((t, dt, world) => {
+      for (const p of world.people) if (p.visitor && p.state === 'visiting' && p.visitPt) {
+        const [px, pz] = p.visitPt, d = drums.find(d => Math.hypot(d.x - px, d.z - pz) < .5 && (d.axis === 'x' ? true : Math.abs(d.x - px) < .1));
+        if (d) d.run = k.rr(18, 30);
+      }
+      for (const d of drums) {
+        d.run = Math.max(0, d.run - dt);
+        d.speed += ((d.run > 0 ? (d.run < 4 ? 2 : 9) : 0) - d.speed) * (1 - Math.exp(-dt / .8));
+        d.angle += d.speed * dt;
+        d.spin.rotation.z = d.angle;
+        d.spin.position.x = d.speed > 6 ? .003 * Math.sin(t * 60) : 0;
+      }
+    });
+  },
+
+  staff: [
+    { role: 'patrol', holds: 'mop', tone: .35, head: .2, apron: true, at: [0, 1.55], stops: [
+      { at: [0, 1.55], t: [3, 5], anim: 'mop' }, { at: [1.9, 1.2], t: [3, 5], anim: 'mop' },
+      { at: [1.9, -.9], t: [3, 5], anim: 'mop' }, { at: [-1.5, -.9], t: [3, 5], anim: 'mop' },
+      { at: [-1.9, 1.7], t: [3, 5], anim: 'mop' } ] },
+  ],
+
+  visitors: {
+    max: 11, startSeated: 2, carry: 'basket', tone: [.3, .65], rate: [4, 8], rushRate: [2.5, 4],
+    route: [
+      { type: 'visit', anim: 'load', dwell: [3, 5], ifFull: 'exit', points: [
+        ...WASHER_X.map(x => [x, -1.55, Math.PI]),
+        ...DRYER_Z.map(z => [-2.15, z, -Math.PI / 2]) ] },
+      { type: 'visit', chance: .35, anim: 'reach', dwell: [2, 3], points: [[2.72, .98, Math.PI]] },
+      { type: 'seat', pool: 'bench', anim: 'read', dwell: [10, 18], consume: false, ifFull: 'skip', startItem: 'basket' },
+      { type: 'visit', anim: 'fold', dwell: [4, 7], points: [
+        [-.75, .85, Math.PI], [-.2, .85, Math.PI], [.35, .85, Math.PI], [.9, .85, Math.PI],
+        [-.6, -.18, 0], [.3, -.18, 0], [.95, -.18, 0] ] },
+    ],
+  },
+  items: {
+    basket: { build: (k, g) => { k.box(0, 0, 0, .2, .1, .15, .92, g); k.box(0, .1, 0, .2, .012, .15, .5, g);
+      k.accent(-.03, .1, 0, .09, .03, .08, .8, g); k.box(.05, .1, .02, .07, .025, .07, .45, g); } },
+  },
+
+  steps: [
+    { title: 'Floor', body: '2:47 a.m. People drift in with baskets, load a machine, wait it out on the bench, fold and go home.', show: null },
+    { title: 'Machines', body: 'Eight washers, ten dryers, a vending machine. A drum spins up the moment somebody loads it.', show: ['machines'] },
+    { title: 'Regulars', body: 'The night crowd, the attendant with the mop, and the cat who owns the dryers.', show: ['visitors', 'staff', 'cat'] },
+    { title: 'Block', body: 'Pull back: one lit window on a sleeping block. Blue pins are the other late-night spots.', city: true },
+  ],
+  hud: { inside: 'Inside', seated: 'Waiting', served: 'Loads done' },
+  city: { stores: 3, seed: 5 },
+});
+</script>
+</body>
+</html>

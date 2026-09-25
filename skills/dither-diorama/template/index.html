@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counter Service</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<script type="module">
+// Template: a counter-service restaurant. Copy this file next to engine.js and
+// rewrite build(), staff, visitors and steps. Contract: references/config.md.
+import { createDiorama } from './engine.js';
+
+const COUNTER = { x0: -.35, x1: 2.95, z0: -1.18, z1: -.84, h: .48 };
+const REG_X = [.75, 1.75];
+
+createDiorama({
+  title: 'Counter service',
+  room: { x0: -3, x1: 3, z0: -2.4, z1: 2.6, door: { z0: 1.38, z1: 2.02 } },
+
+  build(k) {
+    const { slab, box, accent, block } = k;
+
+    // back room: partitions, shelving, desk, crates
+    k.group('room');
+    slab(-3, -1.3, 0, .82, -.93, -.87, .95);            block(-3, -1.3, -.93, -.87);
+    slab(-1.33, -1.27, 0, .82, -2.4, -1.95, .95);       block(-1.33, -1.27, -2.4, -1.95);
+    slab(-1.33, -1.27, 0, .82, -1.2, -.87, .95);        block(-1.33, -1.27, -1.2, -.87);
+    slab(-1.33, -1.27, .76, .82, -1.95, -1.2, .95);
+    k.group('stock');
+    slab(-3, -2.66, 0, 1, -2.36, -1, .9);               block(-3, -2.66, -2.36, -1);
+    for (let i = 0; i < 4; i++) {
+      slab(-2.66, -2.64, .12 + i * .24, .14 + i * .24, -2.34, -1.02, .35);
+      for (let j = 0; j < 6; j++) if (k.rnd() > .2)
+        box(-2.82, .14 + i * .24, -2.24 + j * .22, .2, k.rr(.08, .17), .15, k.rnd() < .3 ? k.rr(.15, .3) : k.rr(.5, .9));
+    }
+    slab(-2, -1.42, .34, .37, -2.36, -2, .96); slab(-1.98, -1.95, 0, .34, -2.34, -2.02, .5); slab(-1.47, -1.44, 0, .34, -2.34, -2.02, .5);
+    block(-2, -1.42, -2.36, -2);
+    slab(-1.82, -1.55, .37, .55, -2.3, -2.27, .1); slab(-1.9, -1.75, .37, .38, -2.15, -2.05, 1);
+    for (const [x, n] of [[-1.65, 3], [-2, 2]]) for (let i = 0; i < n; i++) box(x, i * .16, -1.12, .28, .15, .24, i % 2 ? .35 : .62);
+    block(-2.15, -1.5, -1.25, -.95);
+    slab(-2.55, -1.95, .55, .9, -2.4, -2.37, .3);
+    slab(-3, -2.6, 0, .95, -.78, -.25, .16); block(-3, -2.6, -.78, -.25);          // drinks cooler
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) box(-2.7, .14 + i * .26, -.66 + j * .11, .06, .15, .06, j % 2 ? .95 : .6);
+
+    // kitchen line
+    k.group('kitchen');
+    slab(-1.25, 2.95, 0, .46, -2.36, -1.9, .92);       block(-1.25, 2.95, -2.36, -1.9);
+    for (let x = -.8; x < 2.9; x += .5) slab(x, x + .01, .14, .44, -1.9, -1.894, .75);
+    slab(1.85, 2.72, .46, .485, -2.3, -1.96, .12);                  // grill
+    slab(1.15, 1.6, .46, .58, -2.3, -1.96, .4);                     // fryer
+    slab(1.8, 2.78, .92, 1.03, -2.36, -1.98, .3);                   // hood
+    slab(-.75, -.4, .46, .76, -2.3, -2.02, .18);                    // espresso
+    slab(-1.2, -.85, .4, .462, -2.28, -1.98, .35);                  // sink
+    const patties = [0, 1, 2, 3].map(i => accent(1.97 + i * .2, .485, -2.13 + (i % 2) * .07, .09, .025, .09, .5));
+    k.tick(t => patties.forEach((m, i) => m.position.y = .4975 + .006 * Math.max(0, Math.sin(t * 3 + i * 1.7))));
+    [[-.05, 7], [.47, 8], [.99, 2], [1.51, 8]].forEach(([x, n]) => {        // menu boards
+      slab(x - .23, x + .23, .58, 1, -2.4, -2.37, .08);
+      k.digits(n, x - .06, .8, -2.37, .12, .26);
+      for (let i = 0; i < 3; i++) slab(x + .04, x + .18, .66 + i * .06, .675 + i * .06, -2.37, -2.358, .85);
+    });
+
+    // front counter, registers, heat-lamp pass
+    k.group('counter');
+    slab(COUNTER.x0, COUNTER.x1, 0, COUNTER.h, COUNTER.z0, COUNTER.z1, .97);
+    slab(COUNTER.x0 - .02, COUNTER.x1, COUNTER.h, COUNTER.h + .02, COUNTER.z0 - .02, COUNTER.z1 + .03, .86);
+    block(COUNTER.x0, COUNTER.x1 + .1, COUNTER.z0, COUNTER.z1);
+    for (const x of REG_X) { slab(x - .08, x + .08, .5, .54, -1.12, -.98, .22); box(x, .54, -1.05, .15, .11, .02, .1).rotation.x = -.35; }
+    for (const x of [.28, 1.25, 2.22]) slab(x - .015, x + .015, .5, .88, -1.16, -1.13, .5);
+    slab(.22, 2.28, .86, .89, -1.2, -1.08, .88);
+    for (const x of [.5, 1, 1.5, 2]) accent(x, .835, -1.14, .12, .025, .05);
+    k.staffOnly(-3, 3, -2.4, COUNTER.z1 + .06);
+
+    // dining room
+    k.group('dining');
+    slab(-1.3, -.35, 0, .5, -1.03, -.97, .95);
+    for (const x of [2.2, 2.75]) {                                   // queue ropes
+      for (let z = -.3; z <= 1.11; z += .47) box(x, 0, z, .03, .3, .03, .3);
+      slab(x - .008, x + .008, .25, .27, -.3, 1.11, .25); block(x - .02, x + .02, -.3, 1.11);
+    }
+    k.plant(2.7, 2.35); k.plant(-2.75, 2.37);
+    for (const c of [.35, 1.78]) {                                   // booths
+      slab(-2.98, -2.3, .32, .355, c - .22, c + .22, .98); block(-3, -2.3, c - .22, c + .22);
+      for (const s of [-1, 1]) {
+        const bz = c + s * .43;
+        slab(-2.98, -2.28, .17, .22, bz - .1, bz + .1, .78);
+        slab(-2.98, -2.28, .22, .6, bz + s * .1 - .03, bz + s * .1 + .03, .72);
+        for (const sx of [-2.8, -2.47]) k.seat({ x: sx, z: bz, yaw: s > 0 ? Math.PI : 0, plate: [sx, .355, c + s * .12] });
+      }
+    }
+    for (const [tx, tz] of [[-1.05, .4], [-1.05, 1.85], [.55, .55], [.55, 1.95]]) {   // two-tops
+      slab(tx - .26, tx + .26, .32, .355, tz - .24, tz + .24, .98); slab(tx - .03, tx + .03, 0, .32, tz - .03, tz + .03, .5);
+      block(tx - .26, tx + .26, tz - .24, tz + .24);
+      for (const side of [-1, 1]) {
+        const cx = tx + side * .44;
+        slab(cx - .1, cx + .1, .19, .22, tz - .1, tz + .1, .9); slab(cx - .015, cx + .015, 0, .19, tz - .015, tz + .015, .45);
+        slab(cx + side * .09 - .015, cx + side * .09 + .015, .22, .45, tz - .1, tz + .1, .88);
+        k.seat({ x: cx, z: tz, yaw: side > 0 ? -Math.PI / 2 : Math.PI / 2, plate: [tx + side * .13, .355, tz] });
+      }
+    }
+  },
+
+  staff: [
+    { at: [REG_X[0], -1.38], yaw: 0, anim: 'serve', apron: true },
+    { at: [REG_X[1], -1.38], yaw: 0, anim: 'serve', apron: true },
+    { at: [2.25, -1.7], yaw: Math.PI, anim: 'cook', apron: true, head: .95 },
+    { at: [-.58, -1.68], yaw: Math.PI, anim: 'stir', apron: true },
+    { name: 'runner', role: 'courier', at: [1.4, -1.62], yaw: Math.PI, anim: 'idle', apron: true },
+    { role: 'patrol', group: 'clerk', holds: 'clipboard', tone: .42, at: [-2.42, -2.05], stops: [
+      { at: [-2.42, -2.05], yaw: -Math.PI / 2, t: [3, 5], anim: 'write' },
+      { at: [-2.42, -1.45], yaw: -Math.PI / 2, t: [3, 5], anim: 'write' },
+      { at: [-1.7, -1.72], yaw: Math.PI, t: [4, 6], anim: 'type' } ] },
+  ],
+
+  visitors: {
+    max: 16, startSeated: 3,
+    route: [
+      { type: 'queue', slot: i => [2.47, -.58 + i * .3], max: 6, face: Math.PI },
+      { type: 'counter', spots: REG_X.map(x => ({ x, z: -.64, yaw: Math.PI })), dwell: [1.6, 3],
+        fetch: { courier: 'runner', item: 'tray', prep: [1.2, 2.2], takeout: { item: 'bag', chance: .2 },
+                 stand: (i, s) => [s.x + .24, -1.4], drop: (i, s) => [s.x + .24, .5, -.98], standYaw: 0 } },
+      { type: 'seat', dwell: [9, 17], anim: 'eat', startItem: 'tray' },
+    ],
+  },
+
+  steps: [
+    { title: 'Floor', body: 'Guests walk in, wait in line, order, find a seat, eat and leave.', show: null },
+    { title: 'Staff', body: 'Two cashiers, a cook, a barista, a runner carrying trays to the pass, a clerk in the back.', show: ['staff', 'clerk'] },
+    { title: 'Stock', body: 'Shelves, crates and the drinks cooler, counted by hand and logged at the desk.', show: ['stock', 'clerk'] },
+    { title: 'City', body: 'Pull back: one store on one block, with more stores across town.', city: true },
+  ],
+  city: { stores: 4 },
+});
+</script>
+</body>
+</html>
