@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pit Wall</title>
+<style>
+  :root { --bg:#161616; --ink:#000; --line:#f2f2f2; --dim:#8a8a8a; --rule:#2a2a2a;
+          --red:#ff3b30; --green:#30d158; --blue:#3b82f6; }
+  :root[data-theme="light"] { --bg:#ececec; --ink:#fff; --line:#111; --dim:#666; --rule:#d0d0d0; }
+  html,body { margin:0; background:var(--bg); overflow-x:hidden;
+    font:500 13px/1 ui-monospace, "SF Mono", Menlo, monospace; color:var(--line);
+    -webkit-user-select:none; user-select:none; transition:background .3s; }
+  header { position:absolute; inset:0 0 auto 0; display:flex; justify-content:space-between;
+    align-items:center; padding:14px 16px; z-index:3; gap:12px; pointer-events:none; }
+  header > * { pointer-events:auto; }
+  header b { letter-spacing:.02em; }
+  .ctl { display:flex; gap:8px; align-items:center; }
+  button { background:var(--bg); border:1px solid var(--dim); color:var(--line); border-radius:6px;
+    height:30px; min-width:30px; padding:0 9px; cursor:pointer; font:inherit; }
+  button:hover, button[aria-pressed="true"] { border-color:var(--line); }
+  button[aria-pressed="true"] { background:var(--line); color:var(--bg); }
+
+  main { display:grid; grid-template-columns:repeat(12, 1fr); }
+  .panel { position:relative; min-width:0; min-height:0; border-bottom:1px solid var(--rule); }
+  #pit { grid-column:span 12; height:56vh; min-height:380px; }
+  #scan, #map { grid-column:span 6; height:44vh; min-height:320px; }
+  #tele { grid-column:span 12; height:40vh; min-height:300px; }
+  #aero { grid-column:span 6; height:46vh; min-height:340px; }
+  #tyres, #tower { grid-column:span 3; height:46vh; min-height:340px; }
+  #scan, #aero, #tyres { border-right:1px solid var(--rule); }
+
+  /* telemetry */
+  .teleWrap { position:absolute; inset:40px 16px 14px 16px; display:flex; gap:18px; }
+  .chart { position:relative; flex:1; min-width:0; padding-left:92px; }
+  .chart svg { width:100%; height:100%; }
+  .rowlab { position:absolute; left:0; font-size:10px; letter-spacing:.1em; color:var(--dim);
+    transform:translateY(-50%); line-height:1.4; }
+  .rowlab b { display:block; color:var(--line); font-weight:500; font-size:13px; letter-spacing:0;
+    font-variant-numeric:tabular-nums; }
+  .wheel { flex:0 0 min(30%, 300px); }
+  #teleSvg path { vector-effect:non-scaling-stroke; }
+  #teleSvg .grid { stroke:var(--rule); fill:none; stroke-width:1; }
+  #teleSvg .tick { stroke:var(--rule); fill:none; stroke-width:1; stroke-dasharray:2 4; }
+  #teleSvg .trace { fill:none; stroke:var(--line); stroke-width:1.5; }
+  #teleSvg .brk { fill:var(--red); stroke:none; opacity:.85; }
+  #teleSvg .thr { fill:none; stroke:var(--green); stroke-width:1.4; }
+  #teleSvg .drsband { fill:var(--green); opacity:.1; stroke:none; }
+  #teleSvg .pitband { fill:var(--line); opacity:.06; stroke:none; }
+  #wheelSvg text { fill:var(--line); font-family:ui-monospace, "SF Mono", Menlo, monospace; }
+  #wheelSvg .dim { fill:var(--dim); }
+
+  /* aero */
+  #aeroSvg .flow { fill:none; stroke:var(--line); stroke-width:1; stroke-dasharray:14 9; opacity:.55; }
+  #aeroSvg .flow.under { stroke:var(--green); opacity:.9; }
+  #aeroSvg .ground { stroke:var(--dim); fill:none; }
+  #aeroSvg .belt { stroke:var(--rule); fill:none; stroke-dasharray:3 6; }
+  #aeroSvg path.ol { fill:none; }
+
+  /* tyres */
+  #tyreSvg text { fill:var(--dim); font:500 10px ui-monospace, "SF Mono", Menlo, monospace; }
+  #tyreSvg text.v { fill:var(--line); }
+  #tyreSvg rect.zone { stroke:none; }
+
+  /* timing tower */
+  #towerList { position:absolute; left:16px; right:16px; top:64px; }
+  .row { position:absolute; left:0; right:0; height:34px; display:grid; align-items:center;
+    grid-template-columns:22px 4px 1fr auto 22px; gap:10px; font-size:12px;
+    border-bottom:1px solid var(--rule); transition:transform .5s cubic-bezier(.2,.8,.2,1); }
+  .row .pos { color:var(--dim); text-align:right; font-variant-numeric:tabular-nums; }
+  .row .bar { height:18px; background:var(--line); }
+  .row.ours .bar { background:var(--blue); }
+  .row.ours .code { color:var(--blue); }
+  .row .gap { color:var(--dim); font-variant-numeric:tabular-nums; }
+  .row .tyre { width:18px; height:18px; border-radius:50%; border:2px solid; display:grid;
+    place-items:center; font-size:9px; box-sizing:border-box; }
+  .row .pit { font-size:9px; letter-spacing:.08em; background:var(--line); color:var(--bg);
+    padding:2px 4px; margin-left:6px; }
+  .row .up { color:var(--green); margin-left:6px; font-size:10px; }
+  #towerHead { position:absolute; left:16px; right:16px; top:38px; display:flex;
+    justify-content:space-between; font-size:11px; color:var(--dim); letter-spacing:.08em; }
+  .tag { position:absolute; left:16px; top:14px; color:var(--dim); letter-spacing:.1em; font-size:11px; }
+  #pit .tag { top:52px; }
+  .readout { position:absolute; left:16px; top:36px; font-size:11px; line-height:1.55;
+    color:var(--dim); font-variant-numeric:tabular-nums; white-space:pre; }
+  .readout b { color:var(--line); font-weight:500; }
+  #timer { font-size:28px; font-variant-numeric:tabular-nums; letter-spacing:-.01em;
+    position:absolute; left:16px; bottom:16px; }
+  #timer small { font-size:11px; color:var(--dim); display:block; margin-bottom:6px; letter-spacing:.1em; }
+  @media (max-width: 800px) {
+    html,body { height:auto; overflow:visible; }
+    main { grid-template-columns:1fr; }
+    .panel { grid-column:auto !important; border-right:0 !important; height:52vh; }
+    #pit { height:60vh; }
+    #tele { height:auto; min-height:520px; }
+    .teleWrap { flex-direction:column; }
+    .chart { height:260px; flex:none; }
+    .wheel { flex:none; height:200px; }
+  }
+
+  svg { width:100%; height:100%; display:block; }
+  svg path { stroke:var(--line); fill:var(--ink); stroke-width:1.15; stroke-linejoin:round;
+    stroke-linecap:round; vector-effect:non-scaling-stroke; }
+  svg path.w  { fill:var(--line); stroke:none; }          /* solid white accents */
+  svg path.ln { fill:none; }
+  svg path.dash { fill:none; stroke-dasharray:6 7; stroke:var(--dim); }
+  svg path.floor { fill:none; stroke:var(--dim); }
+  svg path.tube { fill:none; stroke-width:3.6; }
+  svg path.tubei { fill:none; stroke:var(--ink); stroke-width:1.5; }
+  svg path.red   { fill:var(--red); stroke:var(--line); }
+  svg path.green { fill:var(--green); stroke:var(--line); }
+  svg path.glow  { fill:url(#glowGrad); stroke:none; filter:url(#soft); }
+  svg path.glow-over { opacity:.28; mix-blend-mode:screen; }
+  :root[data-theme="light"] svg path.glow-over { mix-blend-mode:multiply; }
+  svg path.lamp { fill:var(--red); stroke:none; }
+
+  /* circuit map */
+  #map .track { fill:none; stroke:var(--line); stroke-width:2.4; }
+  #map .pitlane { fill:none; stroke:var(--dim); stroke-width:1.2; }
+  #map .drs { fill:none; stroke:var(--green); stroke-width:1.1; }
+  #map .stem { fill:none; stroke-width:1.4; }
+  #map text { fill:var(--dim); font:500 11px ui-monospace, "SF Mono", Menlo, monospace; }
+  #map text.flag { fill:#000; font-size:10px; letter-spacing:.06em; }
+  #map circle.car { fill:var(--line); stroke:var(--bg); stroke-width:1.5; }
+  #map circle.ours { fill:var(--blue); }
+  #map circle.ring { fill:none; stroke:var(--blue); stroke-width:1.3; stroke-dasharray:3 3; }
+  #map path, #map circle, #map rect { vector-effect:non-scaling-stroke; }
+</style>
+</head>
+<body>
+<header>
+  <b>box, box</b>
+  <div class="ctl">
+    <button id="slow" aria-pressed="false" title="Slow motion">¼×</button>
+    <button id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+  </div>
+</header>
+<main>
+  <section class="panel" id="pit">
+    <div class="tag">PIT LANE · BOX 3</div>
+    <svg viewBox="-190 -215 470 300" preserveAspectRatio="xMidYMid meet"><g id="scene"></g></svg>
+    <div id="timer"><small>STATIONARY</small><span id="t">0.00</span>s</div>
+  </section>
+  <section class="panel" id="scan">
+    <div class="tag">SCRUTINEERING · FLOOR SCAN</div>
+    <svg viewBox="-140 -272 430 338" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="9"/></filter>
+        <radialGradient id="glowGrad" cx=".48" cy="0" r="1.05" fx=".48" fy="0">
+          <stop offset="0" stop-color="#ff3b30" stop-opacity=".8"/>
+          <stop offset=".35" stop-color="#c8231b" stop-opacity=".42"/>
+          <stop offset=".75" stop-color="#8a130e" stop-opacity=".1"/>
+          <stop offset="1" stop-color="#8a130e" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <g id="bayStatic"></g><g id="bayPost"></g><g id="bayCar"></g><g id="bayTop"></g>
+    </svg>
+    <div class="readout" id="scanOut"></div>
+  </section>
+  <section class="panel" id="map">
+    <div class="tag">CIRCUIT · LIVE</div>
+    <svg viewBox="-20 0 780 580" preserveAspectRatio="xMidYMid meet">
+      <g id="mapStatic"></g><g id="mapCars"></g>
+    </svg>
+    <div class="readout" id="mapOut"></div>
+  </section>
+  <section class="panel" id="tele">
+    <div class="tag">TELEMETRY · CAR 23 · LAST 10 s</div>
+    <div class="teleWrap">
+      <div class="chart">
+        <svg id="teleSvg" viewBox="0 0 1000 300" preserveAspectRatio="none"><g id="teleG"></g></svg>
+        <div class="rowlab" style="top:20%">SPEED KM/H<b id="lbSpeed">0</b></div>
+        <div class="rowlab" style="top:51%">THROTTLE<b id="lbThr">0%</b></div>
+        <div class="rowlab" style="top:69.5%">BRAKE<b id="lbBrk">0%</b></div>
+        <div class="rowlab" style="top:88%">GEAR<b id="lbGear">N</b></div>
+      </div>
+      <div class="wheel"><svg id="wheelSvg" viewBox="0 0 300 250" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+  </section>
+  <section class="panel" id="aero">
+    <div class="tag">AERO · WIND TUNNEL · MIRRORING CAR 23</div>
+    <svg id="aeroSvg" viewBox="0 20 900 330" preserveAspectRatio="xMidYMid meet">
+      <g id="aeroFlow"></g><g id="aeroCar"></g><g id="aeroDyn"></g>
+    </svg>
+    <div class="readout" id="aeroOut"></div>
+  </section>
+  <section class="panel" id="tyres">
+    <div class="tag">TYRES · BRAKES · CAR 23</div>
+    <svg id="tyreSvg" viewBox="0 0 420 330" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:34px 0 0 0;height:calc(100% - 34px)">
+      <g id="tyreCar"></g><g id="tyreDyn"></g>
+    </svg>
+  </section>
+  <section class="panel" id="tower">
+    <div class="tag">TIMING</div>
+    <div id="towerHead"><span id="towerLap">LAP 12 / 52</span><span>GAP</span></div>
+    <div id="towerList"></div>
+  </section>
+</main>
+
+<script>
+// ── isometric projection (same as the filing cabinet) ─────────────────
+// u = across the car (screen ↘), d = along the pit lane (screen ↗), z = up.
+// The viewer sits at +u, -d, +z, so the car's right flank and nose face us.
+const C = Math.cos(Math.PI / 6), S = 0.5;
+const P = ([u, d, z]) => [(u + d) * C, (u - d) * S - z];
+const f2 = n => n.toFixed(2);
+const pd = (pts, close = true) =>
+  'M' + pts.map(p => { const q = P(p); return f2(q[0]) + ',' + f2(q[1]); }).join('L') + (close ? 'Z' : '');
+const poly = (pts, cls = '') => `<path${cls ? ` class="${cls}"` : ''} d="${pd(pts)}"/>`;
+const line = (pts, cls = 'ln') => `<path class="${cls}" d="${pd(pts, false)}"/>`;
+const tube = pts => line(pts, 'tube') + line(pts, 'tubei');
+const screenPoly = (pts2, cls = '') =>
+  `<path${cls ? ` class="${cls}"` : ''} d="M${pts2.map(q => f2(q[0]) + ',' + f2(q[1])).join('L')}Z"/>`;
+
+// visible faces of an axis-aligned box
+function box(u0, u1, d0, d1, z0, z1, T) {
+  const t = T || (p => p);
+  return poly([[u1, d0, z0], [u1, d1, z0], [u1, d1, z1], [u1, d0, z1]].map(t)) +
+         poly([[u0, d0, z1], [u1, d0, z1], [u1, d1, z1], [u0, d1, z1]].map(t)) +
+         poly([[u0, d0, z0], [u1, d0, z0], [u1, d0, z1], [u0, d0, z1]].map(t));
+}
+
+// convex side profile [(d, z)…] extruded across u0..u1; draws the strips
+// that face the viewer, then the +u cap
+function extrude(profile, u0, u1, T) {
+  let a = 0;
+  for (let i = 0; i < profile.length; i++) {
+    const [y0, z0] = profile[i], [y1, z1] = profile[(i + 1) % profile.length];
+    a += y0 * z1 - y1 * z0;
+  }
+  const pr = a > 0 ? profile : [...profile].reverse();   // CCW in (d, z)
+  let s = '';
+  for (let i = 0; i < pr.length; i++) {
+    const [ya, za] = pr[i], [yb, zb] = pr[(i + 1) % pr.length];
+    const ny = zb - za, nz = -(yb - ya);                  // outward normal
+    if (-ny + nz > 1e-6)
+      s += poly([[u0, ya, za], [u0, yb, zb], [u1, yb, zb], [u1, ya, za]].map(T));
+  }
+  return s + poly(pr.map(([y, z]) => [u1, y, z]).map(T));
+}
+
+function hull(pts) {
+  pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const p of pts) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (const p of pts.reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+
+// a tyre: cylinder with its axle along u. White compound stripe on the sidewall,
+// rim, nut and spin marks so you can see it roll.
+function wheel(uc, dc, zc, r, w, spin) {
+  const N = 40, circ = (u, rr) => Array.from({ length: N }, (_, i) => {
+    const a = i / N * Math.PI * 2; return [u, dc + Math.cos(a) * rr, zc + Math.sin(a) * rr];
+  });
+  const u1 = uc + w / 2, u0 = uc - w / 2;
+  let s = screenPoly(hull([...circ(u0, r), ...circ(u1, r)].map(P)));
+  s += poly(circ(u1, r));
+  // compound stripe: ring between two radii
+  const o = circ(u1, r * 0.84), i = circ(u1, r * 0.74).reverse();
+  s += `<path class="w" fill-rule="evenodd" d="${pd(o)}${pd(i)}"/>`;
+  s += poly(circ(u1, r * 0.6));
+  s += poly(circ(u1 + 0.6, r * 0.18));
+  for (let k = 0; k < 5; k++) {
+    const a = spin + k / 5 * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+    s += line([[u1, dc + c * r * 0.26, zc + sn * r * 0.26], [u1, dc + c * r * 0.52, zc + sn * r * 0.52]]);
+  }
+  return s;
+}
+
+// ── timeline ─────────────────────────────────────────────────────────
+const IN = 1.9;                 // car arrives and stops
+const JACK_IN = [0.02, 0.2], LIFT = [0.18, 0.28];
+const DROP = [1.55, 1.68], JACK_OUT = [1.68, 1.9], GREEN = 1.72, GO = 1.78;
+const OUT = 1.6, REST = 1.4;
+const LOOP = IN + GO + OUT + REST;
+const ENTER_FROM = 620, EXIT_TO = -700;
+
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const seg = (t, [a, b]) => clamp01((t - a) / (b - a));
+const ease = x => x * x * (3 - 2 * x);
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+
+// each corner gets a slightly different crew speed
+const CORNERS = [
+  { key: 'FL', y: 40,  side: -1, r: 13, w: 12, start: 0.30 },
+  { key: 'RL', y: 162, side: -1, r: 14, w: 15, start: 0.33 },
+  { key: 'FR', y: 40,  side:  1, r: 13, w: 12, start: 0.31 },
+  { key: 'RR', y: 162, side:  1, r: 14, w: 15, start: 0.29 },
+];
+const WX = 36;                   // wheel centre offset from the car's axis
+const JACK_PARK = 100;           // how far the jacks sit off the lane centre while waiting
+
+function state(t) {
+  const s = { pos: 0, lift: 0, pitch: 0, jackF: 0, jackR: 0, green: false, stopT: 0, corners: {} };
+  const ts = t - IN;                                   // time since stopping
+  if (t < IN) {
+    const e = t / IN;
+    s.pos = ENTER_FROM * Math.pow(1 - e, 3);
+    s.pitch = -Math.sin(Math.PI * clamp01((e - 0.55) / 0.45)) * 1.6;   // nose dives under braking
+  } else if (ts < GO) {
+    s.pos = 0;
+    s.pitch = Math.sin(Math.PI * clamp01(ts / 0.3)) * 0.8 * (1 - clamp01(ts / 0.3));
+  } else {
+    const e = clamp01((ts - GO) / OUT);
+    s.pos = EXIT_TO * Math.pow(e, 2.1);
+    s.pitch = Math.sin(Math.PI * clamp01(e / 0.35)) * 1.4;              // squat under launch
+  }
+  // both jacks wait on the far side of the lane, swing in together as the car stops,
+  // and swing back out together to the same side after the drop, clear of the car's path
+  const jIn = ease(seg(ts, [-0.35, JACK_IN[1]]));
+  const jAway = ease(seg(ts, [DROP[1] - 0.02, GO + 0.04]));
+  const reset = ease(seg(ts, [GO + OUT, GO + OUT + 0.9]));   // ease back to the waiting spot
+  s.jackF = s.jackR = jIn * (1 - 0.5 * jAway) * (1 - reset);
+  s.jackAside = s.jackRAside = -JACK_PARK * Math.max(1 - jIn, jAway);
+  s.lift = t >= IN ? 6 * ease(seg(ts, LIFT)) * (1 - ease(seg(ts, DROP))) : 0;
+  s.green = ts >= GREEN && ts < GO + OUT + 0.5;   // back to red once the box is empty
+  s.stopT = t < IN ? 0 : Math.min(ts, GREEN);
+
+  for (const c of CORNERS) {
+    const a = c.start, k = t >= IN ? ts - a : -1;
+    s.corners[c.key] = {
+      oldOut: 20 * ease(clamp01(k / 0.3)),                 // gun off, pull wheel out
+      away: ease(clamp01((k - 0.3) / 0.35)),               // carried off to the side
+      arrive: ease(clamp01((k - 0.22) / 0.4)),             // fresh tyre swings in
+      newIn: 20 * (1 - ease(clamp01((k - 0.62) / 0.3))),   // push on, gun on
+      swapped: k > 0.3,
+      nutGlow: k > 0.96 && k < 1.12,
+    };
+  }
+  return s;
+}
+
+// ── the scene ────────────────────────────────────────────────────────
+const LANE_FAR = -70, LANE_NEAR = 74, FAST_U = 124, FAST_EDGE = 176;   // fast lane on the near side
+
+function floor() {
+  let s = '';
+  s += line([[LANE_FAR, -900, 0], [LANE_FAR, 900, 0]], 'floor');
+  s += line([[LANE_NEAR, -900, 0], [LANE_NEAR, 900, 0]], 'floor');
+  s += line([[FAST_EDGE, -900, 0], [FAST_EDGE, 900, 0]], 'floor');
+  s += line([[0, -900, 0], [0, 900, 0]], 'dash');
+  // pit box
+  const b = [[-56, -14, 0], [56, -14, 0], [56, 222, 0], [-56, 222, 0]];
+  s += `<path class="floor" d="${pd(b)}"/>`;
+  s += `<path class="floor" d="${pd([[-50, -8, 0], [50, -8, 0], [50, 216, 0], [-50, 216, 0]])}"/>`;
+  // wheel markers
+  for (const c of CORNERS) {
+    const u = c.side * (WX + 26);
+    s += line([[u - 5, c.y, 0], [u + 5, c.y, 0]], 'floor');
+    s += line([[u, c.y - 5, 0], [u, c.y + 5, 0]], 'floor');
+  }
+  // hatched stop line in front of the nose
+  for (let k = -46; k < 46; k += 8) s += poly([[k, -24, 0], [k + 4, -24, 0], [k + 4, -18, 0], [k, -18, 0]], 'w');
+  return s;
+}
+
+function jack(front, amt, T, du = 0) {
+  // trolley + cradle under the nose/gearbox, lever arm to the jack man
+  const dir = front ? -1 : 1, off = (1 - amt) * 60 * dir;
+  const y0 = front ? 10 : 196, yb = y0 + dir * 32;
+  const Y = y => y + off;
+  let s = '';
+  const bx = (u0, u1, ...r) => box(u0 + du, u1 + du, ...r);
+  const tz = T([0, 0, 0])[2];  // car lift is baked into T; jack base sits on the floor
+  s += bx(-7, 7, Math.min(Y(y0 + dir * 6), Y(yb)), Math.max(Y(y0 + dir * 6), Y(yb)), 0, 5);
+  s += bx(-4, 4, Math.min(Y(y0), Y(y0 + dir * 6)), Math.max(Y(y0), Y(y0 + dir * 6)), 0, du ? 6 : Math.max(6, tz + 4));
+  // castors
+  for (const u of [-6 + du, 6 + du]) s += poly([[u, Y(yb) - 2, 0], [u, Y(yb) + 2, 0], [u, Y(yb) + 2, 2], [u, Y(yb) - 2, 2]]);
+  const hEnd = [du, Y(yb + dir * 42), 32];
+  s += tube([[du, Y(yb), 5], hEnd]);
+  s += tube([[du - 9, hEnd[1], 32], [du + 9, hEnd[1], 32]]);
+  return s;
+}
+
+function light(green) {
+  let s = '';
+  const u0 = -150, d0 = -14;
+  s += box(u0, u0 + 3, d0, d0 + 3, 0, 74);
+  s += box(u0 - 4, u0 + 7, d0 - 4, d0 + 4, 74, 98);
+  const lamp = (z, cls) => {
+    const pts = Array.from({ length: 24 }, (_, i) => {
+      const a = i / 24 * Math.PI * 2; return [u0 + 1.5 + Math.cos(a) * 3.2, d0 - 4, z + Math.sin(a) * 3.2];
+    });
+    return poly(pts, cls);
+  };
+  s += lamp(91, green ? '' : 'red');
+  s += lamp(81, green ? 'green' : '');
+  return s;
+}
+
+function car(st) {
+  // car-local → world: x across, y from the nose backwards, z up
+  const U = st.u || 0;
+  const T = ([x, y, z]) => [x + U, st.pos + y, z + st.lift + st.pitch * (1 - y / 100)];
+  const B = (x0, x1, y0, y1, z0, z1) => box(x0, x1, y0, y1, z0, z1, T);
+  const E = (prof, x0, x1) => extrude(prof, x0, x1, T);
+  const spin = -st.pos / 13.5;
+  let s = '';
+
+  const wheelAt = (c, extraX, extraY, spinA) => {
+    const [u, d, z] = T([c.side * (WX + extraX), c.y + extraY, c.r]);
+    return wheel(u, d, z, c.r, c.w, spinA);
+  };
+  const cornerWheels = c => {
+    const k = st.corners[c.key];
+    let w = '';
+    if (!k.swapped) return wheelAt(c, k.oldOut, 0, spin);
+    // old tyre goes out and back and fades; new one comes in from out-front, then on
+    if (k.away < 1) w += `<g opacity="${f2(1 - k.away)}">${wheelAt(c, 20 + 12 * k.away, 26 * k.away, 0.4)}</g>`;
+    const a = k.arrive;
+    w += `<g opacity="${f2(a)}">${wheelAt(c, k.newIn + 12 * (1 - a), -26 * (1 - a), spin + 1.3)}</g>`;
+    return w;
+  };
+
+  // far side first
+  if (!st.noJacks) s += jack(false, st.jackR, T, st.jackRAside || 0);
+  const frontParked = (st.jackAside || 0) < -40;
+  if (!st.noJacks && frontParked) s += jack(true, st.jackF, T, st.jackAside);
+  for (const c of CORNERS.filter(c => c.side < 0)) s += cornerWheels(c);
+  s += suspT(-1, T);
+
+  // floor / plank
+  s += B(-30, 30, 44, 186, 2.5, 4.5);
+  // rear wing: far endplate, planes
+  s += B(-27.6, -26, 174, 200, 12, 43);
+  s += B(-26, 26, 181, 198, 33, 37.5);
+  s += B(-26, 26, 181, 190, 38.5, 41);   // DRS flap
+  s += B(-26, 26, 186, 198, 14, 17);     // beam wing
+  // far sidepod, engine cover, tub, nose
+  s += E([[72, 5], [150, 5], [150, 10], [100, 19], [82, 19], [72, 16]], -26, -11);
+  s += E([[104, 5], [186, 5], [186, 12], [128, 34], [117, 34], [104, 21]], -9, 9);
+  s += E([[46, 5], [112, 5], [112, 22], [70, 22], [46, 18]], -11, 11);
+  s += E([[26, 6], [48, 5], [48, 18], [26, 14]], -7, 7);
+  s += E([[6, 7], [26, 6], [26, 14], [6, 10]], -4.5, 4.5);
+  // cockpit opening, helmet, halo
+  s += poly([[-7, 74, 22], [7, 74, 22], [7, 100, 22], [-7, 100, 22]].map(T));
+  s += helmet(T([0, 86, 26]));
+  s += tube([[0, 64, 18], [0, 72, 31], [0, 78, 32]].map(T));
+  s += tube([[-9, 101, 22], [-8, 90, 31], [-4, 79, 32], [0, 78, 32], [4, 79, 32], [8, 90, 31], [9, 101, 22]].map(T));
+  // airbox mouth
+  s += poly([[-4, 113, 26], [4, 113, 26], [4, 117, 33], [-4, 117, 33]].map(T));
+  // mirrors
+  for (const sd of [-1, 1]) {
+    s += tube([[sd * 10, 68, 21], [sd * 15, 70, 24]].map(T));
+    s += B(sd > 0 ? 13 : -18, sd > 0 ? 18 : -13, 67, 71, 23, 26.5);
+  }
+  // near sidepod with inlet and glare
+  s += E([[72, 5], [150, 5], [150, 10], [100, 19], [82, 19], [72, 16]], 11, 26);
+  s += poly([[14, 72, 8], [24, 72, 8], [24, 72, 15], [14, 72, 14]].map(T));
+  s += poly([[26, 90, 6], [26, 95, 6], [26, 86, 18.6], [26, 81, 18.6]].map(T), 'w');
+  s += poly([[26, 99, 6], [26, 101, 6], [26, 92, 18.8], [26, 90, 18.8]].map(T), 'w');
+  // engine-cover stripe and number
+  s += poly([[9, 138, 6], [9, 142, 6], [9, 142, 28.7], [9, 138, 30.2]].map(T), 'w');
+  s += numberPlate(T, st.no || 23);
+  // nose stripe
+  s += poly([[-2, 8, 10.1], [2, 8, 10.1], [2, 30, 14.8], [-2, 30, 14.8]].map(T), 'w');
+  // near rear endplate
+  s += B(26, 27.6, 174, 200, 12, 43);
+  s += poly([[27.6, 178, 36], [27.6, 196, 36], [27.6, 196, 40], [27.6, 178, 40]].map(T), 'w');
+  // front wing
+  s += B(-41.5, -40, 0, 18, 3, 12);
+  s += B(-40, 40, 2, 16, 3, 5.5);
+  s += B(-40, 40, 10, 17, 5.5, 8.5);
+  s += B(40, 41.5, 0, 18, 3, 12);
+  // near side wheels
+  s += suspT(1, T);
+  for (const c of CORNERS.filter(c => c.side > 0)) s += cornerWheels(c);
+  if (!st.noJacks && !frontParked) s += jack(true, st.jackF, T, st.jackAside || 0);
+  return s;
+}
+
+function suspT(side, T) {
+  const x = side * WX;
+  return tube([[side * 6, 34, 15], [x, 40, 13]].map(T)) + tube([[side * 6, 48, 9], [x, 40, 13]].map(T)) +
+         tube([[side * 10, 150, 16], [x, 162, 14]].map(T)) + tube([[side * 10, 172, 8], [x, 162, 14]].map(T));
+}
+
+function helmet(c) {
+  const [x, y] = P(c), r = 5.2;
+  let s = `<path d="M${f2(x - r)},${f2(y)}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z"/>`;
+  // visor
+  s += `<path class="w" d="M${f2(x - 4.4)},${f2(y - 0.6)}Q${f2(x - 1)},${f2(y + 2.4)} ${f2(x + 1.8)},${f2(y + 1.2)}L${f2(x + 1.6)},${f2(y - 0.6)}Q${f2(x - 1)},${f2(y + 0.4)} ${f2(x - 4.2)},${f2(y - 2.2)}Z"/>`;
+  return s;
+}
+
+// "44"-free: a generic car number drawn with line strokes on the cover side
+function numberPlate(T, no) {
+  const x = 9, y0 = 152, z0 = 10, w = 6, h = 9;
+  const DIG = ['abcdef', 'bc', 'abged', 'abcdg', 'fgbc', 'afgcd', 'afgedc', 'abc', 'abcdefg', 'abcdfg'];
+  const seg7 = (ox, segs) => {
+    const p = {
+      a: [[0, h], [w, h]], b: [[w, h], [w, h / 2]], c: [[w, h / 2], [w, 0]], d: [[w, 0], [0, 0]],
+      e: [[0, 0], [0, h / 2]], f: [[0, h / 2], [0, h]], g: [[0, h / 2], [w, h / 2]],
+    };
+    return segs.split('').map(k => line(p[k].map(([yy, zz]) => T([x, y0 + ox + yy, z0 + zz])))).join('');
+  };
+  return String(no).split('').map((d, i) => seg7(i * 9, DIG[+d])).join('');
+}
+
+// ── scrutineering bay: same car on a gridded plate, gantry scanner sweeps it ──
+const BAY_CAR = { pos: 0, lift: 0, pitch: 0, noJacks: true,
+  corners: Object.fromEntries(CORNERS.map(c => [c.key, { oldOut: 0, swapped: false }])) };
+const PLATE = { u0: -100, u1: 74, d0: -40, d1: 240, r: 7 };
+const RAIL = [-94, -72];                 // groove the gantry pillar runs in
+const SCAN_PERIOD = 4.2;
+
+function roundRect(u0, u1, d0, d1, r, z) {
+  const pts = [], arc = (cu, cd, a0) => { for (let k = 0; k <= 8; k++) {
+    const a = a0 + k / 8 * Math.PI / 2; pts.push([cu + Math.cos(a) * r, cd + Math.sin(a) * r, z]); } };
+  arc(u1 - r, d0 + r, -Math.PI / 2); arc(u1 - r, d1 - r, 0);
+  arc(u0 + r, d1 - r, Math.PI / 2);  arc(u0 + r, d0 + r, Math.PI);
+  return pts;
+}
+
+(function drawBay() {
+  const { u0, u1, d0, d1, r } = PLATE;
+  const top = roundRect(u0, u1, d0, d1, r, 0), bot = roundRect(u0, u1, d0, d1, r, -6);
+  let s = screenPoly(hull([...top, ...bot].map(P))) + poly(top);
+  for (let u = u0 + 24.86; u < u1 - 1; u += 24.86) s += line([[u, d0, 0], [u, d1, 0]]);
+  for (let d = d0 + 25.45; d < d1 - 1; d += 25.45) s += line([[u0, d, 0], [u1, d, 0]]);
+  s += poly([[RAIL[0], d0 + 6, 0], [RAIL[1], d0 + 6, 0], [RAIL[1], d1 - 6, 0], [RAIL[0], d1 - 6, 0]]);
+  s += line([[RAIL[0] + 4, d0 + 10, 0], [RAIL[0] + 4, d1 - 10, 0]]);
+  document.getElementById('bayStatic').innerHTML = s;
+  document.getElementById('bayCar').innerHTML = car(BAY_CAR);
+})();
+
+function bay(t) {
+  // ping-pong sweep: forward pass scans, return pass parks
+  const k = (t % (SCAN_PERIOD * 2)) / SCAN_PERIOD, fwd = k < 1;
+  const x = ease(fwd ? k : 2 - k);
+  const D = PLATE.d0 + 40 + x * (PLATE.d1 - PLATE.d0 - 80);
+  const S0 = D - 32, S1 = D + 32;        // slab depth span
+  const SU0 = -94, SU1 = 44, SZ = 84;    // slab across the car, underside height
+
+  // pillar on the far side, then the red light fan behind the car
+  // pillar under the slab's far end, flush with its corners; its top rises above the slab at the back
+  const PW = 18, PD = 22;
+  let back = box(SU0, SU0 + PW, S0, S1, 0, SZ);
+  const fan = [[SU0 + 22, D, SZ - 4], [SU1 - 20, D, SZ - 4], [SU1 - 2, D - 30, 4], [SU0 + 10, D - 30, 4]];
+  back += poly(fan, 'glow');
+  // the same fan faintly over the car so the light reads on the bodywork
+  let top = poly(fan, 'glow glow-over');
+  // slab: top, the front edge with its sensors, the end with a vent
+  top += box(SU0, SU1, S0, S1, SZ, SZ + 13);
+  top += box(SU0, SU0 + PW, S1 - PD, S1, SZ + 13, SZ + 24);
+  top += line([[SU0, S0, SZ + 10], [SU1, S0, SZ + 10], [SU1, S1, SZ + 10]]);
+  const ring = (u, z, rr, cls = '') => poly(Array.from({ length: 18 }, (_, i) => {
+    const a = i / 18 * Math.PI * 2; return [u + Math.cos(a) * rr, S0, z + Math.sin(a) * rr];
+  }), cls);
+  for (const u of [20, 27, 34]) { top += ring(u, SZ + 5, 2.8); top += ring(u, SZ + 5, 1.3); }
+  top += ring(11, SZ + 5, 1.6, 'lamp');
+  top += poly([[SU1, S0 + 8, SZ + 3.5], [SU1, S1 - 6, SZ + 3.5], [SU1, S1 - 6, SZ + 7.5], [SU1, S0 + 8, SZ + 7.5]]);
+  top += line([[SU1, S0 + 10, SZ + 5.5], [SU1, S1 - 8, SZ + 5.5]]);
+  document.getElementById('bayPost').innerHTML = back;
+  document.getElementById('bayTop').innerHTML = top;
+
+  const pct = fwd ? Math.round(x * 100) : 100;
+  const bar = '▮'.repeat(Math.round(pct / 10)).padEnd(10, '▯');
+  const got = v => fwd && x < v;
+  document.getElementById('scanOut').innerHTML =
+    `SCAN     <b>${bar} ${String(pct).padStart(3)}%</b>\n` +
+    `FRONT WING  ${got(0.2) ? '—      ' : '<b>+0.3 mm</b>'}  ${got(0.2) ? '' : '<b>OK</b>'}\n` +
+    `PLANK       ${got(0.6) ? '—      ' : '<b>9.8 mm</b> '}  ${got(0.6) ? '' : '<b>OK</b>'}\n` +
+    `REAR WING   ${got(0.9) ? '—      ' : '<b>85 mm</b>  '}  ${got(0.9) ? '' : '<b>OK</b>'}`;
+}
+
+// ── circuit map ──────────────────────────────────────────────────────
+// control points in travel order; a number marks a labelled corner
+const CTRL = [
+  [32, 250, 1], [80, 185], [140, 145], [170, 110, 2], [182, 70], [222, 40, 3], [244, 44],
+  [310, 110], [385, 180, 4], [390, 212], [376, 250], [375, 305, 5], [410, 338], [428, 370, 6],
+  [405, 386], [372, 400, 7], [392, 426], [440, 430, 8], [472, 408], [655, 210, 9], [652, 180],
+  [620, 170, 10], [596, 146], [610, 120, 11], [668, 125], [708, 180, 12], [710, 410],
+  [698, 450, 13], [580, 462], [490, 480, 14], [450, 486, 15], [400, 476], [360, 481],
+  [325, 490, 16], [306, 470], [290, 430, 17], [200, 367], [110, 305],
+];
+
+function catmull(pts, per = 30) {
+  // centripetal Catmull–Rom, closed
+  const out = [], n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const tj = (ti, a, b) => ti + Math.pow(Math.hypot(b[0] - a[0], b[1] - a[1]), 0.5) + 1e-6;
+    const t0 = 0, t1 = tj(t0, p0, p1), t2 = tj(t1, p1, p2), t3 = tj(t2, p2, p3);
+    for (let k = 0; k < per; k++) {
+      const t = t1 + (t2 - t1) * k / per;
+      const L = (a, b, ta, tb) => [0, 1].map(j => (tb - t) / (tb - ta) * a[j] + (t - ta) / (tb - ta) * b[j]);
+      const A1 = L(p0, p1, t0, t1), A2 = L(p1, p2, t1, t2), A3 = L(p2, p3, t2, t3);
+      const B1 = L(A1, A2, t0, t2), B2 = L(A2, A3, t1, t3);
+      out.push(L(B1, B2, t1, t2));
+    }
+  }
+  return out;
+}
+
+const TR = catmull(CTRL);
+const N = TR.length;
+const cum = [0];
+for (let i = 1; i <= N; i++) cum.push(cum[i - 1] + Math.hypot(TR[i % N][0] - TR[i - 1][0], TR[i % N][1] - TR[i - 1][1]));
+const LEN = cum[N];
+// tangent / normal per sample
+const TAN = TR.map((_, i) => {
+  const a = TR[(i - 1 + N) % N], b = TR[(i + 1) % N], l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+});
+// lap-time profile: slower where the track bends
+const W8 = 6, speed = TR.map((_, i) => {
+  const a = TAN[(i - W8 + N) % N], b = TAN[(i + W8) % N];
+  const turn = Math.abs(Math.atan2(a[0] * b[1] - a[1] * b[0], a[0] * b[0] + a[1] * b[1]));
+  const ds = cum[Math.min(N, i + W8)] - cum[Math.max(0, i - W8)] || 1;
+  return 1 / (1 + 30 * turn / ds);
+});
+// smooth the profile along the track (gaussian over arc length, wraps round the lap):
+// raw curvature is noisy at spline joins, which made the speed trace saw-tooth
+{
+  const SIG = 28, raw = speed.slice();
+  for (let i = 0; i < N; i++) {
+    let acc = 0, w = 0;
+    for (const dir of [1, -1]) {
+      for (let k = dir > 0 ? 0 : 1; ; k++) {
+        const j = ((i + dir * k) % N + N) % N;
+        let dist = Math.abs(cum[i] - cum[j]); dist = Math.min(dist, LEN - dist);
+        if (dist > 3 * SIG) break;
+        const g = Math.exp(-dist * dist / (2 * SIG * SIG));
+        acc += raw[j] * g; w += g;
+      }
+    }
+    speed[i] = acc / w;
+  }
+}
+const tau = [0];
+for (let i = 1; i <= N; i++) tau.push(tau[i - 1] + (cum[i] - cum[i - 1]) / speed[i - 1]);
+const TAU = tau[N];
+for (let i = 0; i <= N; i++) tau[i] /= TAU;
+
+function atIndex(fi) {             // fractional sample index → point
+  const i = Math.floor(fi) % N, f = fi - Math.floor(fi), a = TR[i], b = TR[(i + 1) % N];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+}
+function atTau(x) {                // time fraction of a lap → point
+  x = ((x % 1) + 1) % 1;
+  let lo = 0, hi = N;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (tau[m] <= x) lo = m; else hi = m; }
+  return atIndex(lo + (x - tau[lo]) / (tau[lo + 1] - tau[lo]));
+}
+const nearest = (x, y) => {
+  let bi = 0, bd = 1e9;
+  TR.forEach((p, i) => { const d = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (d < bd) { bd = d; bi = i; } });
+  return bi;
+};
+const cx = TR.reduce((s, p) => s + p[0], 0) / N, cy = TR.reduce((s, p) => s + p[1], 0) / N;
+// offset a stretch of track sideways (+1 = away from the circuit's middle)
+function offsetRun(i0, i1, dist, side) {
+  const pts = [];
+  for (let i = i0; i !== i1; i = (i + 1) % N) {
+    const p = TR[i], t = TAN[i];
+    let n = [-t[1], t[0]];
+    if ((p[0] - cx) * n[0] + (p[1] - cy) * n[1] < 0) n = [-n[0], -n[1]];
+    pts.push([p[0] + n[0] * dist * side, p[1] + n[1] * dist * side]);
+  }
+  return pts;
+}
+const polyD = (pts, close) => 'M' + pts.map(p => f2(p[0]) + ',' + f2(p[1])).join('L') + (close ? 'Z' : '');
+
+// pit lane: leaves just after 17, rejoins before 1, runs outside the main straight
+const PIT_A = nearest(286, 424), PIT_B = nearest(58, 268);
+const PIT = (() => {
+  const run = offsetRun(PIT_A, PIT_B, 15, 1), n = run.length, out = [TR[PIT_A]];
+  // blend in and out of the offset over the first/last 18%
+  run.forEach((p, i) => {
+    const e = Math.min(1, i / (n * 0.18), (n - 1 - i) / (n * 0.18));
+    const q = TR[(PIT_A + i) % N];
+    out.push([q[0] + (p[0] - q[0]) * ease(e), q[1] + (p[1] - q[1]) * ease(e)]);
+  });
+  out.push(TR[PIT_B]);
+  const c = [0];
+  for (let i = 1; i < out.length; i++) c.push(c[i - 1] + Math.hypot(out[i][0] - out[i - 1][0], out[i][1] - out[i - 1][1]));
+  return { pts: out, cum: c, len: c[c.length - 1] };
+})();
+const pitAt = f => {
+  const L = f * PIT.len; let i = 1;
+  while (i < PIT.cum.length - 1 && PIT.cum[i] < L) i++;
+  const a = PIT.pts[i - 1], b = PIT.pts[i], k = (L - PIT.cum[i - 1]) / (PIT.cum[i] - PIT.cum[i - 1] || 1);
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+};
+const BOX_F = 0.5;
+
+(function drawMap() {
+  let s = `<path class="track" d="${polyD(TR, true)}"/>`;
+  s += `<path class="pitlane" d="${polyD(PIT.pts)}"/>`;
+  { const [x, y] = pitAt(BOX_F); s += `<rect x="${f2(x - 3)}" y="${f2(y - 3)}" width="6" height="6" fill="none" stroke="var(--line)"/>`; }
+  // start / finish
+  { const i = nearest(170, 348), p = TR[i], t = TAN[i], n = [-t[1], t[0]];
+    s += `<path class="track" style="stroke-width:1.2" d="M${f2(p[0] - n[0] * 9)},${f2(p[1] - n[1] * 9)}L${f2(p[0] + n[0] * 9)},${f2(p[1] + n[1] * 9)}"/>`; }
+  // DRS zones with arrowheads
+  const drs = (a, b) => {
+    const pts = offsetRun(a, b, 12, -1), e = pts[pts.length - 1], q = pts[pts.length - 5], st = pts[0], q0 = pts[4];
+    const head = (p, from) => {
+      const dx = p[0] - from[0], dy = p[1] - from[1], l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l;
+      return `M${f2(p[0] - ux * 6 - uy * 4)},${f2(p[1] - uy * 6 + ux * 4)}L${f2(p[0])},${f2(p[1])}L${f2(p[0] - ux * 6 + uy * 4)},${f2(p[1] - uy * 6 - ux * 4)}`;
+    };
+    return `<path class="drs" d="${polyD(pts)}${head(e, q)}${head(st, q0)}"/>`;
+  };
+  s += drs(nearest(272, 416), nearest(66, 275));
+  s += drs(nearest(478, 402), nearest(640, 228));
+  // corner numbers, on the outside of each bend
+  let ci = 0;
+  CTRL.forEach(c => {
+    if (!c[2]) return;
+    const i = nearest(c[0], c[1]), a = TAN[(i - 4 + N) % N], b = TAN[(i + 4) % N];
+    const turn = a[0] * b[1] - a[1] * b[0], t = TAN[i];
+    let n = [-t[1], t[0]];
+    if (turn > 0) n = [-n[0], -n[1]];
+    s += `<text x="${f2(TR[i][0] + n[0] * 17)}" y="${f2(TR[i][1] + n[1] * 17 + 4)}" text-anchor="middle">${c[2]}</text>`;
+  });
+  // flag callouts on stems
+  const flag = (i, dx, dy, color, label, id) => {
+    const [x, y] = TR[i];
+    return `<g ${id ? `id="${id}"` : ''}><path class="stem" stroke="${color}" d="M${f2(x)},${f2(y)}L${f2(x)},${f2(y + dy)}L${f2(x + dx)},${f2(y + dy)}"/>` +
+      `<circle cx="${f2(x)}" cy="${f2(y)}" r="3.5" fill="${color}"/>` +
+      `<rect x="${f2(x + dx - (dx < 0 ? 58 : 0))}" y="${f2(y + dy - 14)}" width="58" height="28" rx="3" fill="${color}"/>` +
+      `<text class="flag" x="${f2(x + dx + (dx < 0 ? -29 : 29))}" y="${f2(y + dy + 4)}" text-anchor="middle">${label}</text></g>`;
+  };
+  s += flag(nearest(375, 300), 22, 22, 'var(--green)', 'DRS 1', '');
+  s += flag(nearest(452, 486), 22, 40, 'var(--green)', 'DRS 2', '');
+  s += flag((PIT_A + 22) % N, 0, 58, 'var(--red)', 'PIT IN', 'pitFlag');
+  document.getElementById('mapStatic').innerHTML = s;
+})();
+
+// ── race model: every car pits once a lap in its own box ──────────────
+const E_PIT = 2.4, X_PIT = 1.8;          // pit entry → box, box → exit (seconds)
+const T_TRACK = 9;                       // car 23: exit → around the lap → pit entry
+const LAP = T_TRACK + E_PIT + GO + X_PIT;
+const T_BOX = T_TRACK + E_PIT;           // lap time at which car 23 stops
+const TAU_A = tau[PIT_A], TAU_B = tau[PIT_B];
+const LAP0 = 12;                         // lap counter at t = 0
+// fictional field; car 23 must stay first in this list (its stop drives the pit panel)
+// share of a lap run on track when pitting (exit B → entry A, going forwards). B sits just
+// before the start/finish point in the sample list and A after it, so this must wrap.
+const TRACK_SHARE = ((TAU_A - TAU_B) % 1 + 1) % 1;
+if (!(TRACK_SHARE > 0.5 && TRACK_SHARE < 1)) console.error('track share out of range', TRACK_SHARE);
+// Car 23 pits every lap (its stop is the pit-stop panel). Rivals pit every other lap:
+// a racing lap (full track, lr s) then a pit lap. pace = their average lap vs car 23's.
+// gap = seconds ahead of car 23 on race time; pitAt = where in their 2-lap cycle they are
+// at t = 0, spread so roughly one rival is in the pit lane at a time.
+const CARS = [
+  { no: 23, code: 'VEL', ours: true, tTrack: T_TRACK, stop: GO, box: 0.50, gap: 0, tyre: 'M' },
+  // rival boxes sit well up/down the lane from box 3 (0.50) so each rival drives past it
+  { no: 8,  code: 'ARC', pace: 1.012, stop: 2.30, box: 0.20, gap: 6.2,  cyc0: 0.10, tyre: 'H' },
+  { no: 9,  code: 'OKO', pace: 1.004, stop: 2.00, box: 0.23, gap: 2.1,  cyc0: 0.30, tyre: 'M' },
+  { no: 13, code: 'REN', pace: 1.008, stop: 1.95, box: 0.78, gap: 4.0,  cyc0: 0.50, tyre: 'S' },
+  { no: 19, code: 'SUL', pace: 1.030, stop: 2.55, box: 0.83, gap: 8.3,  cyc0: 0.70, tyre: 'H' },
+  { no: 29, code: 'KAI', pace: 0.975, stop: 1.90, box: 0.88, gap: -2.3, cyc0: 0.90, tyre: 'S' },
+];
+// rivals run the pit lane at the limiter: steady speed, brake into the box, pull away
+const VL = 0.2, PEAK = 2 / (1 + 0.75);   // lane fraction per s; peak/mean speed of that profile
+const cruise = x => x < 0.75 ? PEAK * x : PEAK * 0.75 + PEAK * (x - 0.75) - PEAK * (x - 0.75) ** 2 / 0.5;
+CARS.forEach(c => {
+  if (c.ours) { c.lap = c.tTrack + E_PIT + c.stop + X_PIT; return; }
+  c.E = c.box * PEAK / VL; c.X = (1 - c.box) * PEAK / VL;
+  c.cyc = 2 * LAP * c.pace;                                  // racing lap + pit lap
+  c.lr = (c.cyc - c.E - c.stop - c.X) / (1 + TRACK_SHARE);
+  c.lap = c.cyc / 2;
+});
+const TYRE_COL = { S: 'var(--red)', M: '#ffd60a', H: 'var(--line)' };
+
+function tauIndex(x) {             // lap time fraction → fractional sample index
+  x = ((x % 1) + 1) % 1;
+  let lo = 0, hi = N;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (tau[m] <= x) lo = m; else hi = m; }
+  return lo + (x - tau[lo]) / (tau[lo + 1] - tau[lo]);
+}
+
+// one pit lap starting at pit exit B: track to pit entry A, pit lane, back out at B
+function pitLap(c, lt, tTrack) {
+  if (!c.ours) return rivalPitLap(c, lt, tTrack);
+  const tb = tTrack + E_PIT;
+  if (lt < tTrack) {
+    const x = TAU_B + TRACK_SHARE * lt / tTrack, fi = tauIndex(x);
+    return { p: atIndex(fi), st: 'ON TRACK', fi };
+  }
+  let f, st, x = 0;
+  if (lt < tb) { x = (lt - tTrack) / E_PIT; f = c.box * (1 - (1 - x) * (1 - x) * 0.999); st = 'PIT IN'; }
+  else if (lt < tb + c.stop) { f = c.box; st = 'IN BOX'; }
+  else { x = (lt - tb - c.stop) / X_PIT; f = c.box + (1 - c.box) * x * x; st = 'PIT OUT'; }
+  return { p: pitAt(f), st, x, f, fi: null };
+}
+
+function rivalPitLap(c, lt, tTrack) {
+  if (lt < tTrack) {
+    const fi = tauIndex(TAU_B + TRACK_SHARE * lt / tTrack);
+    return { p: atIndex(fi), st: 'ON TRACK', fi };
+  }
+  let f, st, x = 0;
+  const a = lt - tTrack;
+  if (a < c.E) { x = a / c.E; f = c.box * cruise(x); st = 'PIT IN'; }
+  else if (a < c.E + c.stop) { f = c.box; st = 'IN BOX'; }
+  else { x = (a - c.E - c.stop) / c.X; f = c.box + (1 - c.box) * (1 - cruise(1 - x)); st = 'PIT OUT'; }
+  return { p: pitAt(f), st, x, f, fi: null };
+}
+
+function carAt(c, t) {
+  if (c.ours) {
+    const n = Math.floor(t / c.lap), lt = t - n * c.lap;
+    return { ...pitLap(c, lt, c.tTrack), lt, n, prog: t / c.lap };
+  }
+  // race time decides the order; the cycle offset only decides where on the road they are
+  const prog = (t + c.gap) / c.lap;
+  const ct = (((t + c.cyc0 * c.cyc) % c.cyc) + c.cyc) % c.cyc;
+  if (ct < c.lr) {
+    const fi = tauIndex(TAU_B + ct / c.lr);
+    return { p: atIndex(fi), st: 'ON TRACK', fi, lt: ct, n: 0, prog };
+  }
+  return { ...pitLap(c, ct - c.lr, c.lr * TRACK_SHARE), lt: ct, n: 0, prog };
+}
+
+// ── car 23 telemetry, derived from where it is on the lap ─────────────
+const SPMIN = Math.min(...speed), SPMAX = Math.max(...speed);
+const kmh = fi => {
+  const i = Math.floor(fi) % N, f = fi - Math.floor(fi);
+  const sp = speed[i] + (speed[(i + 1) % N] - speed[i]) * f;
+  return 78 + 257 * Math.pow((sp - SPMIN) / (SPMAX - SPMIN), 0.85);
+};
+const V_A = kmh(PIT_A), V_B = kmh(PIT_B), LIMIT = 80;
+const DRS_ZONES = [[nearest(272, 416), nearest(66, 275)], [nearest(478, 402), nearest(640, 228)]];
+const inRun = (i, a, b) => a <= b ? i >= a && i <= b : i >= a || i <= b;
+const GEARS = [0, 82, 120, 155, 190, 224, 258, 292, 345];
+
+function velocity(c, t) {
+  const s = carAt(c, t);
+  if (s.st === 'ON TRACK') return { v: kmh(s.fi), s };
+  if (s.st === 'IN BOX') return { v: 0, s };
+  if (s.st === 'PIT IN') {                       // brake down to the limiter, crawl, stop in the box
+    const x = s.x;
+    const v = x < 0.12 ? V_A + (LIMIT - V_A) * ease(x / 0.12) : Math.min(LIMIT, 200 * (1 - x));
+    return { v, s };
+  }
+  const x = s.x;                                 // pull away, limiter, then back up to racing speed
+  const v = x > 0.9 ? LIMIT + (V_B - LIMIT) * ease((x - 0.9) / 0.1) : Math.min(LIMIT, 200 * x);
+  return { v, s };
+}
+
+function tele(t) {
+  const c = CARS[0], a = velocity(c, t), b = velocity(c, t - 0.06), f = velocity(c, t + 0.06);
+  const v = a.v, acc = (f.v - b.v) / 0.12;                 // km/h per second
+  const st = a.s.st, inPit = st !== 'ON TRACK';
+  // real traces are binary-ish: flat out, a hard stab of brake, a partial throttle mid-corner
+  const brake = st === 'IN BOX' ? 0 : clamp01((-acc - 22) / 50);
+  let thr;
+  if (st === 'IN BOX' || brake > 0.02) thr = 0;
+  else if (inPit) thr = acc > 1 ? 0.4 : 0.18;
+  else if (acc > 4 || v > 285) thr = 1;
+  else thr = clamp01(0.42 + (acc + 22) / 80);
+  let gear = 0, rpm = 0;
+  if (v > 1) {
+    gear = 1; while (gear < 8 && v >= GEARS[gear]) gear++;
+    rpm = 0.42 + 0.58 * clamp01((v - GEARS[gear - 1]) / (GEARS[gear] - GEARS[gear - 1]));
+  }
+  const drs = !inPit && v > 170 && DRS_ZONES.some(([p, q]) => inRun(Math.round(a.s.fi) % N, p, q));
+  return { v, thr, brake, gear, rpm, drs, st, fi: a.s.fi, lt: a.s.lt, n: a.s.n };
+}
+
+// ── map: all cars, one box per car ───────────────────────────────────
+(function drawBoxes() {
+  let s = '';
+  CARS.forEach(c => {
+    if (c.ours) return;               // car 23's box is already drawn
+    const [x, y] = pitAt(c.box);
+    s += `<rect x="${f2(x - 2.5)}" y="${f2(y - 2.5)}" width="5" height="5" fill="none" stroke="var(--dim)"/>`;
+  });
+  document.getElementById('mapStatic').insertAdjacentHTML('beforeend', s);
+})();
+
+function mapFrame(t) {
+  let s = '', anyPit = false, ours = null;
+  CARS.slice(1).forEach(c => {
+    const k = carAt(c, t), [x, y] = k.p;
+    anyPit ||= k.st !== 'ON TRACK';
+    s += `<circle class="car" cx="${f2(x)}" cy="${f2(y)}" r="6"/>`;
+  });
+  ours = carAt(CARS[0], t);
+  anyPit ||= ours.st !== 'ON TRACK';
+  const [x, y] = ours.p;
+  s += `<circle class="ring" cx="${f2(x)}" cy="${f2(y)}" r="12" style="stroke-dashoffset:${f2(-t * 12)}"/>`;
+  s += `<circle class="car ours" cx="${f2(x)}" cy="${f2(y)}" r="7"/>`;
+  document.getElementById('mapCars').innerHTML = s;
+  document.getElementById('pitFlag').style.opacity = anyPit ? 1 : 0.45;
+  document.getElementById('mapOut').innerHTML =
+    `LAP     <b>${LAP0 + ours.n} / 52</b>\nCAR 23  <b style="color:var(--blue)">●</b> <b>${ours.st}</b>`;
+}
+
+// ── telemetry strip chart + steering-wheel display ───────────────────
+const WINDOW = 10, SAMPLES = 180;
+const teleG = document.getElementById('teleG'), wheelSvg = document.getElementById('wheelSvg');
+const ROWS = { speed: [10, 112], thr: [128, 178], brk: [192, 226], gear: [240, 292] };
+const yOf = (row, k) => ROWS[row][1] - k * (ROWS[row][1] - ROWS[row][0]);
+
+function teleFrame(t) {
+  const xs = [], data = [];
+  for (let i = 0; i <= SAMPLES; i++) {
+    const ts = t - WINDOW + WINDOW * i / SAMPLES;
+    xs.push(1000 * i / SAMPLES); data.push(tele(ts));
+  }
+  let s = '';
+  // bands for DRS open and pit lane
+  const band = (test, cls) => {
+    let a = -1;
+    for (let i = 0; i <= SAMPLES + 1; i++) {
+      const on = i <= SAMPLES && test(data[i]);
+      if (on && a < 0) a = i;
+      if (!on && a >= 0) { s += `<rect class="${cls}" x="${f2(xs[a])}" y="0" width="${f2(xs[i - 1] - xs[a] + 1000 / SAMPLES)}" height="300"/>`; a = -1; }
+    }
+  };
+  band(d => d.drs, 'drsband');
+  band(d => d.st !== 'ON TRACK', 'pitband');
+  // row separators and 1 s ticks that scroll with time
+  for (const r of Object.values(ROWS)) s += `<path class="grid" d="M0,${r[1] + 0.5}H1000"/>`;
+  for (let k = Math.ceil(t - WINDOW); k <= t; k++) {
+    const x = f2(1000 * (k - (t - WINDOW)) / WINDOW);
+    s += `<path class="tick" d="M${x},0V300"/>`;
+  }
+  const pathOf = (row, key, max) => 'M' + data.map((d, i) => `${f2(xs[i])},${f2(yOf(row, d[key] / max))}`).join('L');
+  s += `<path class="trace" d="${pathOf('speed', 'v', 345)}"/>`;
+  s += `<path class="thr" d="${pathOf('thr', 'thr', 1)}"/>`;
+  s += `<path class="brk" d="M0,${ROWS.brk[1]}L${data.map((d, i) => `${f2(xs[i])},${f2(yOf('brk', d.brake))}`).join('L')}L1000,${ROWS.brk[1]}Z"/>`;
+  // gear as a step trace
+  let g = `M0,${f2(yOf('gear', data[0].gear / 8))}`;
+  for (let i = 1; i <= SAMPLES; i++) g += `H${f2(xs[i])}V${f2(yOf('gear', data[i].gear / 8))}`;
+  s += `<path class="trace" d="${g}"/>`;
+  teleG.innerHTML = s;
+
+  const now = data[SAMPLES];
+  document.getElementById('lbSpeed').textContent = Math.round(now.v);
+  document.getElementById('lbThr').textContent = Math.round(now.thr * 100) + '%';
+  document.getElementById('lbBrk').textContent = Math.round(now.brake * 100) + '%';
+  document.getElementById('lbGear').textContent = now.gear || 'N';
+  wheelFrame(now, t);
+}
+
+function wheelFrame(d, t) {
+  // rev lights: 5 green, 5 red, 5 blue; flash all when at the limiter
+  const lit = d.gear ? Math.round(clamp01((d.rpm - 0.42) / 0.56) * 15) : 0;
+  const flash = lit >= 15 && Math.floor(t * 12) % 2;
+  const col = i => i < 5 ? 'var(--green)' : i < 10 ? 'var(--red)' : 'var(--blue)';
+  let s = `<rect x="6" y="6" width="288" height="238" rx="18" fill="var(--ink)" stroke="var(--line)" stroke-width="1.2"/>`;
+  for (let i = 0; i < 15; i++) {
+    const on = i < lit && !flash;
+    s += `<circle cx="${34 + i * 16.6}" cy="30" r="5.6" fill="${on ? col(i) : 'none'}" stroke="${on ? col(i) : 'var(--dim)'}" stroke-width="1"/>`;
+  }
+  s += `<rect x="24" y="48" width="252" height="150" rx="6" fill="none" stroke="var(--rule)"/>`;
+  s += `<text x="150" y="146" text-anchor="middle" font-size="92" font-weight="600">${d.gear || 'N'}</text>`;
+  s += `<text x="40" y="76" font-size="11" class="dim">KM/H</text><text x="40" y="100" font-size="24">${Math.round(d.v)}</text>`;
+  s += `<text x="260" y="76" font-size="11" class="dim" text-anchor="end">LAP</text><text x="260" y="100" font-size="24" text-anchor="end">${LAP0 + d.n}</text>`;
+  // delta to best lap, drifting through the lap
+  const delta = 0.18 * Math.sin(d.lt * 0.9) - 0.05 + (d.st === 'ON TRACK' ? 0 : 0.9 * clamp01((d.lt - T_TRACK) / 2));
+  s += `<text x="40" y="184" font-size="11" class="dim">Δ BEST</text><text x="40" y="168" font-size="16" fill="${delta < 0 ? 'var(--green)' : 'var(--red)'}" style="fill:${delta < 0 ? 'var(--green)' : 'var(--red)'}">${delta < 0 ? '−' : '+'}${Math.abs(delta).toFixed(3)}</text>`;
+  // ERS: harvest under braking, deploy on the straights
+  const soc = 55 + 30 * Math.sin((d.lt / LAP) * Math.PI * 2 + 0.6);
+  s += `<text x="260" y="184" font-size="11" class="dim" text-anchor="end">ERS ${Math.round(soc)}%</text>`;
+  s += `<rect x="186" y="160" width="74" height="8" fill="none" stroke="var(--dim)"/><rect x="186" y="160" width="${f2(74 * soc / 100)}" height="8" fill="var(--line)"/>`;
+  // DRS / PIT pills
+  const pill = (x, label, on, color) =>
+    `<rect x="${x}" y="210" width="76" height="22" rx="4" fill="${on ? color : 'none'}" stroke="${on ? color : 'var(--dim)'}"/>` +
+    `<text x="${x + 38}" y="225" text-anchor="middle" font-size="11" style="fill:${on ? '#000' : 'var(--dim)'}">${label}</text>`;
+  s += pill(24, 'DRS', d.drs, 'var(--green)');
+  s += pill(112, 'PIT LIM', d.st !== 'ON TRACK' && d.st !== 'IN BOX', '#ffd60a');
+  s += pill(200, 'BOX', d.st === 'IN BOX' || (d.st === 'ON TRACK' && d.lt > T_TRACK - 1.5), 'var(--blue)');
+  wheelSvg.innerHTML = s;
+}
+
+// ── wind tunnel: side view, streamlines bend over the car ────────────
+const G = 300;                                   // tunnel floor (rolling road) y
+const hy = h => G - h;
+const XY = pts => pts.map(([x, h]) => `${f2(x)},${f2(hy(h))}`).join('L');
+// the car's top envelope (x, height), then blurred so the flow bends smoothly
+const ENVELOPE = [[40, 0], [70, 14], [108, 36], [150, 26], [202, 44], [238, 74], [276, 44], [300, 58], [322, 94],
+  [366, 116], [398, 116], [440, 100], [510, 80], [586, 80], [592, 168], [652, 168], [664, 0]];
+const envAt = x => {
+  for (let i = 1; i < ENVELOPE.length; i++) {
+    const [x0, h0] = ENVELOPE[i - 1], [x1, h1] = ENVELOPE[i];
+    if (x <= x1) return x < x0 ? 0 : h0 + (h1 - h0) * (x - x0) / (x1 - x0 || 1);
+  }
+  return 0;
+};
+const FX = [], HS = [];
+for (let x = 0; x <= 900; x += 5) FX.push(x);
+{
+  const raw = FX.map(envAt), sig = 38;
+  FX.forEach((x, i) => {
+    let a = 0, w = 0;
+    for (let j = 0; j < FX.length; j++) { const k = Math.exp(-((FX[j] - x) ** 2) / (2 * sig * sig)); a += raw[j] * k; w += k; }
+    HS.push(Math.max(a / w, raw[i] * 0.9));
+  });
+}
+const FLOW_H = [];
+for (let h = 3; h < 280; h += h < 10 ? 4 : 15) FLOW_H.push(h);
+const flowEls = [];
+let flowDist = 0, flapOpen = 0;
+
+function flowPath(H0, t, wake) {
+  const under = H0 < 10;
+  let d = '';
+  FX.forEach((x, i) => {
+    let H;
+    if (under) H = H0 * (x > 150 && x < 600 ? 0.75 : 1);                 // squeezed under the floor
+    else H = Math.sqrt(H0 * H0 + HS[i] * HS[i]);                          // pushed over the car
+    if (!under && x > 640) {                                               // wake off the rear wing
+      // gentle, coherent wobble so neighbouring lines never cross (spacing is 15)
+      const amp = wake * Math.exp(-(((H0 - 150) / 70) ** 2)) * clamp01((x - 640) / 140);
+      H += amp * Math.sin(x / 30 - t * 6 + H0 * 0.05);
+    }
+    d += (i ? 'L' : 'M') + x + ',' + f2(hy(H));
+  });
+  return d;
+}
+
+(function buildAero() {
+  let flow = `<path class="ground" d="M0,${G}H900"/><path class="belt" d="M0,${G + 8}H900"/>`;
+  FLOW_H.forEach((h, i) => { flow += `<path class="flow${h < 10 ? ' under' : ''}" data-h="${h}"/>`; });
+  document.getElementById('aeroFlow').innerHTML = flow;
+  document.querySelectorAll('#aeroFlow .flow').forEach(el => flowEls.push({ el, h: +el.dataset.h }));
+  flowEls.forEach(f => f.el.setAttribute('d', flowPath(f.h, 0, 6)));
+
+  let s = '';
+  // rear wing endplate (the wing profile is drawn over it)
+  s += `<path d="M${XY([[578, 56], [652, 56], [652, 168], [590, 168]])}Z"/>`;
+  s += `<path d="M${XY([[600, 50], [644, 52], [644, 57], [600, 55]])}Z"/>`;
+  // body, floor and diffuser
+  s += `<path d="M${XY([[104, 16], [150, 24], [238, 50], [300, 56], [322, 76], [366, 114], [398, 116], [440, 100], [560, 66], [598, 58], [602, 22], [590, 14], [112, 12]])}Z"/>`;
+  s += `<path d="M${XY([[150, 8], [600, 8], [600, 14], [150, 14]])}Z"/>`;
+  s += `<path d="M${XY([[560, 8], [636, 26], [636, 34], [560, 14]])}Z"/>`;
+  s += `<path class="ol" d="M${XY([[330, 20], [336, 52], [420, 58], [540, 36], [562, 22]])}"/>`;
+  // helmet, halo, airbox
+  s += `<circle cx="338" cy="${hy(88)}" r="13" fill="var(--ink)" stroke="var(--line)" stroke-width="1.15" vector-effect="non-scaling-stroke"/>`;
+  s += `<path class="w" d="M${XY([[327, 90], [350, 90], [350, 84], [329, 84]])}Z"/>`;
+  s += `<path class="ol" style="stroke-width:3.5" d="M${XY([[300, 60], [322, 96], [360, 100], [370, 82]])}"/>`;
+  s += `<path class="ol" style="stroke:var(--ink);stroke-width:1.4" d="M${XY([[300, 60], [322, 96], [360, 100], [370, 82]])}"/>`;
+  s += `<path d="M${XY([[368, 100], [380, 100], [380, 112], [370, 112]])}Z"/>`;
+  // side stripe + number
+  s += `<path class="w" d="M${XY([[452, 60], [500, 50], [500, 46], [452, 56]])}Z"/>`;
+  // front wing: endplate, main plane, flap
+  s += `<path d="M${XY([[74, 4], [110, 4], [110, 36], [74, 36]])}Z"/>`;
+  s += `<path class="ol" d="M${XY([[64, 10], [174, 10], [174, 15], [66, 14]])}Z"/>`;
+  s += `<path class="ol" d="M${XY([[96, 17], [172, 18], [178, 28], [112, 24]])}Z"/>`;
+  s += `<path d="M${XY([[150, 20], [172, 12], [176, 18], [160, 24]])}Z"/>`;
+  document.getElementById('aeroCar').innerHTML = s;
+})();
+
+function sideWheel(cx, r, spin) {
+  const cy = hy(r);
+  let s = `<circle cx="${cx}" cy="${f2(cy)}" r="${r}" fill="var(--ink)" stroke="var(--line)" stroke-width="1.15" vector-effect="non-scaling-stroke"/>`;
+  s += `<circle cx="${cx}" cy="${f2(cy)}" r="${f2(r * 0.79)}" fill="none" stroke="var(--line)" stroke-width="${f2(r * 0.1)}"/>`;
+  s += `<circle cx="${cx}" cy="${f2(cy)}" r="${f2(r * 0.58)}" fill="var(--ink)" stroke="var(--line)" stroke-width="1.15" vector-effect="non-scaling-stroke"/>`;
+  for (let k = 0; k < 5; k++) {
+    const a = spin + k / 5 * Math.PI * 2;
+    s += `<path class="ol" d="M${f2(cx + Math.cos(a) * r * 0.2)},${f2(cy + Math.sin(a) * r * 0.2)}L${f2(cx + Math.cos(a) * r * 0.5)},${f2(cy + Math.sin(a) * r * 0.5)}"/>`;
+  }
+  return s + `<circle cx="${cx}" cy="${f2(cy)}" r="${f2(r * 0.14)}" fill="var(--line)"/>`;
+}
+
+function aeroFrame(t, dt) {
+  const d = tele(t);
+  flowDist += d.v * dt * 0.9;
+  flapOpen += ((d.drs ? 1 : 0) - flapOpen) * clamp01(dt * 10);
+  const wake = 6 * (1 - 0.5 * flapOpen) * clamp01(d.v / 120);
+  flowEls.forEach(f => {
+    f.el.style.strokeDashoffset = f2(-flowDist * (f.h < 10 ? 1.5 : 1) % 2300);
+    if (f.h > 60 && f.h < 250) f.el.setAttribute('d', flowPath(f.h, t, wake));
+  });
+  // DRS flap pivots about its leading edge
+  const ang = -0.42 * flapOpen, px = 598, pz = 150;
+  const rot = ([x, h]) => {
+    const dx = x - px, dh = h - pz;
+    return [px + dx * Math.cos(ang) - dh * Math.sin(ang), pz + dx * Math.sin(ang) + dh * Math.cos(ang)];
+  };
+  let s = `<path class="ol" d="M${XY([[586, 132], [648, 136], [648, 146], [588, 142]])}Z"/>`;
+  s += `<path class="ol" d="M${XY([[598, 150], [648, 150], [648, 158], [600, 160]].map(rot))}Z"/>`;
+  const spin = -flowDist / 38;
+  s += sideWheel(238, 36, spin) + sideWheel(548, 38, spin * 36 / 38);
+  document.getElementById('aeroDyn').innerHTML = s;
+
+  const v = d.v, df = 0.0186 * v * v * (1 - 0.14 * flapOpen), drag = 0.0056 * v * v * (1 - 0.22 * flapOpen);
+  document.getElementById('aeroOut').innerHTML =
+    `AIRSPEED   <b>${String(Math.round(v)).padStart(3)} km/h</b>\n` +
+    `DOWNFORCE  <b>${String(Math.round(df)).padStart(4)} kg</b>\n` +
+    `DRAG       <b>${String(Math.round(drag)).padStart(4)} kg</b>\n` +
+    `L/D        <b>${v > 5 ? (df / drag).toFixed(2) : '—'}</b>\n` +
+    `DRS        <b style="color:${flapOpen > 0.5 ? 'var(--green)' : 'var(--line)'}">${flapOpen > 0.5 ? 'OPEN' : 'CLOSED'}</b>`;
+}
+
+// ── tyres: top-down car, three-zone surface temps, brakes ────────────
+const TY = [
+  { key: 'FL', x: 146, y: 58, w: 30, h: 62, side: -1, front: true },
+  { key: 'FR', x: 244, y: 58, w: 30, h: 62, side: 1, front: true },
+  { key: 'RL', x: 142, y: 214, w: 34, h: 72, side: -1, front: false },
+  { key: 'RR', x: 244, y: 214, w: 34, h: 72, side: 1, front: false },
+];
+(function buildTyreCar() {
+  const P2 = pts => 'M' + pts.map(p => p.join(',')).join('L') + 'Z';
+  let s = '';
+  s += `<path d="${P2([[150, 22], [270, 22], [270, 34], [150, 34]])}"/>`;                           // front wing
+  s += `<path d="${P2([[204, 30], [216, 30], [220, 90], [224, 120], [200, 120], [196, 90]])}"/>`;  // nose
+  s += `<path d="${P2([[196, 118], [224, 118], [252, 150], [252, 230], [232, 280], [188, 280], [168, 230], [168, 150]])}"/>`;
+  s += `<path d="${P2([[200, 140], [220, 140], [222, 176], [198, 176]])}"/>`;                      // cockpit
+  s += `<circle cx="210" cy="160" r="8" fill="var(--line)"/>`;
+  s += `<path d="${P2([[178, 292], [242, 292], [242, 308], [178, 308]])}"/>`;                      // rear wing
+  s += `<path class="w" d="M208,40L212,40L214,110L206,110Z"/>`;
+  for (const t of TY) {                                                                         // suspension
+    const cx = t.x + t.w / 2, cy = t.y + t.h / 2, bx = t.side < 0 ? 196 : 224;
+    s += `<path class="ln" d="M${bx},${cy - 10}L${cx},${cy}M${bx},${cy + 10}L${cx},${cy}"/>`;
+  }
+  document.getElementById('tyreCar').innerHTML = s;
+})();
+
+function heatColour(T) {
+  // cold → grey, working window (~90–105) → white, overheating → red
+  const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+  const c = T < 95 ? mix([58, 58, 58], [242, 242, 242], clamp01((T - 60) / 35)) : mix([242, 242, 242], [255, 59, 48], clamp01((T - 105) / 15));
+  return `rgb(${c.join(',')})`;
+}
+
+function tyreFrame(t) {
+  const d = tele(t);
+  // fresh tyres go on mid-stop, off the blankets at ~70 °C
+  const fit = T_BOX + 0.9, age = (((d.lt - fit) % LAP) + LAP) % LAP;
+  // which way is the car turning right now (+ = left-hand bend)
+  let turn = 0;
+  if (d.fi != null) {
+    const i = Math.round(d.fi) % N, a = TAN[(i - 5 + N) % N], b = TAN[(i + 5) % N];
+    turn = Math.max(-1, Math.min(1, (a[0] * b[1] - a[1] * b[0]) * 6));
+  }
+  // brake heat: recent braking, decaying
+  let heat = 0;
+  for (let k = 0; k < 16; k++) heat += tele(t - k * 0.1).brake * Math.exp(-k * 0.1 / 0.7);
+  heat = clamp01(heat / 4);
+  let s = '';
+  for (const ty of TY) {
+    const base = 70 + 28 * (1 - Math.exp(-age / 2.2)) + (ty.front ? 3 * d.brake : 2 * d.thr);
+    const load = -turn * ty.side * 8;                    // outside tyres in a bend work harder
+    const zones = [3, 1, -2].map((z, k) => base + load + (ty.side < 0 ? [z, 0, 0][0] : 0) + z + (k === 1 ? 0 : 0.5 * Math.sin(t * 3 + k)));
+    const order = ty.side < 0 ? [zones[2], zones[1], zones[0]] : zones;   // inner edge faces the car
+    const zw = ty.w / 3;
+    s += `<rect x="${ty.x}" y="${ty.y}" width="${ty.w}" height="${ty.h}" rx="5" fill="var(--ink)" stroke="var(--line)" stroke-width="1.15" vector-effect="non-scaling-stroke"/>`;
+    order.forEach((T, k) => { s += `<rect class="zone" x="${f2(ty.x + 2 + k * (zw - 1.3))}" y="${ty.y + 4}" width="${f2(zw - 1.6)}" height="${ty.h - 8}" rx="2" fill="${heatColour(T)}" opacity=".9"/>`; });
+    // brake disc glow on the inner side
+    const brk = 260 + (ty.front ? 780 : 520) * heat;
+    const bx = ty.side < 0 ? ty.x + ty.w + 9 : ty.x - 9, by = ty.y + ty.h / 2;
+    s += `<circle cx="${bx}" cy="${by}" r="6" fill="var(--red)" opacity="${f2(clamp01((brk - 300) / 600))}"/><circle cx="${bx}" cy="${by}" r="6" fill="none" stroke="var(--dim)"/>`;
+    const avg = (zones[0] + zones[1] + zones[2]) / 3, psi = 21.2 + (avg - 70) * 0.055 + (ty.front ? 0.5 : 0);
+    const wear = Math.min(99, age / LAP * 14 + (ty.front ? 1.5 : 0) + (ty.side > 0 ? 1 : 0));
+    const tx = ty.side < 0 ? ty.x - 10 : ty.x + ty.w + 10, anchor = ty.side < 0 ? 'end' : 'start';
+    const lines = [
+      [`${order.map(T => Math.round(T)).join(' ')}°`, 'v'], [`${psi.toFixed(1)} psi`, ''],
+      [`wear ${Math.round(wear)}%`, ''], [`brk ${Math.round(brk)}°`, brk > 700 ? 'v' : ''],
+    ];
+    lines.forEach(([txt, cls], k) => {
+      s += `<text x="${tx}" y="${ty.y + 12 + k * 15}" text-anchor="${anchor}" class="${cls}"${cls && k === 3 ? ' style="fill:var(--red)"' : ''}>${txt}</text>`;
+    });
+  }
+  s += `<text x="210" y="326" text-anchor="middle">${CARS[0].tyre === 'M' ? 'MEDIUM' : CARS[0].tyre} · AGE ${age.toFixed(1)} s</text>`;
+  document.getElementById('tyreDyn').innerHTML = s;
+}
+
+// ── timing tower ─────────────────────────────────────────────────────
+const ROW_H = 34;
+const towerList = document.getElementById('towerList');
+const rowEls = CARS.map(c => {
+  const el = document.createElement('div');
+  el.className = 'row' + (c.ours ? ' ours' : '');
+  el.innerHTML = `<span class="pos"></span><span class="bar"></span><span class="code">${c.no} <b style="font-weight:600">${c.code}</b><span class="tag2"></span></span><span class="gap"></span><span class="tyre" style="border-color:${TYRE_COL[c.tyre]};color:${TYRE_COL[c.tyre]}">${c.tyre}</span>`;
+  towerList.appendChild(el);
+  return { c, el, pos: -1, gained: -9 };
+});
+
+function towerFrame(t) {
+  const st = rowEls.map(r => ({ r, k: carAt(r.c, t) }));
+  st.sort((a, b) => b.k.prog - a.k.prog);
+  const lead = st[0].k.prog;
+  st.forEach(({ r, k }, i) => {
+    if (r.pos >= 0 && i < r.pos) r.gained = t;
+    r.pos = i;
+    r.el.style.transform = `translateY(${i * ROW_H}px)`;
+    r.el.querySelector('.pos').textContent = i + 1;
+    const gap = (lead - k.prog) * LAP;
+    r.el.querySelector('.gap').textContent = i === 0 ? 'LEADER' : gap >= LAP ? `+${Math.floor(gap / LAP)} LAP` : `+${gap.toFixed(3)}`;
+    const tag = k.st !== 'ON TRACK' ? `<span class="pit">${k.st === 'IN BOX' ? 'BOX' : 'PIT'}</span>` : (t - r.gained < 1.2 ? '<span class="up">▲</span>' : '');
+    const tg = r.el.querySelector('.tag2');
+    if (tg.innerHTML !== tag) tg.innerHTML = tag;
+  });
+  document.getElementById('towerLap').textContent = `LAP ${LAP0 + carAt(CARS[0], t).n} / 52`;
+}
+
+// ── loop (panels off screen are skipped) ─────────────────────────────
+const scene = document.getElementById('scene');
+const tOut = document.getElementById('t'), tLabel = document.querySelector('#timer small');
+let gT = 0.5, last = performance.now(), slow = false, paused = false, lastStop = 0;
+const visible = {};
+const io = new IntersectionObserver(es => es.forEach(e => { visible[e.target.id] = e.isIntersecting; }));
+document.querySelectorAll('.panel').forEach(p => { visible[p.id] = true; io.observe(p); });
+
+// rivals heading to or from their own boxes drive past box 3 in the fast lane
+const PIT_K = 2000, UNSWAPPED = Object.fromEntries(CORNERS.map(c => [c.key, { oldOut: 0, swapped: false }]));
+function fastLane(t) {
+  let s = '';
+  const passing = [];
+  CARS.slice(1).forEach(c => {
+    const k = carAt(c, t);
+    if (k.st !== 'PIT IN' && k.st !== 'PIT OUT') return;
+    const pos = -(k.f - CARS[0].box) * PIT_K;
+    // fade in/out well inside where rival boxes sit (|pos| >= 460) so nobody pops in at a box
+    const op = clamp01((440 - Math.abs(pos + 100)) / 160);
+    if (op > 0) passing.push({ c, pos, op });
+  });
+  // nearer the viewer (smaller d) draws last
+  passing.sort((a, b) => b.pos - a.pos).forEach(({ c, pos, op }) => {
+    s += `<g opacity="${f2(op)}">${car({ pos, lift: 0, pitch: 0, noJacks: true, u: FAST_U, no: c.no, corners: UNSWAPPED })}</g>`;
+  });
+  return s;
+}
+
+function pitFrame(t) {
+  const lt = ((t % LAP) + LAP) % LAP;
+  // pit-stop scene time: 0 when car 23 appears in the lane, IN when it stops
+  const raw = ((lt - (T_BOX - IN)) % LAP + LAP) % LAP;
+  const simT = Math.min(raw, LOOP);
+  const st = state(simT);
+  scene.innerHTML = floor() + light(st.green) + car(st) + fastLane(t);
+  if (raw >= LOOP || (raw < IN && st.stopT === 0)) {
+    const until = (raw >= LOOP ? LAP - raw : 0) + IN - (raw < IN ? raw : 0);
+    tLabel.textContent = `LAST STOP · CAR 23 BOXES IN ${until.toFixed(1)}s`;
+    tOut.textContent = lastStop.toFixed(2);
+  } else {
+    tLabel.textContent = 'STATIONARY';
+    tOut.textContent = st.stopT.toFixed(2);
+    lastStop = st.stopT;
+  }
+}
+
+function frame(now) {
+  const real = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = paused ? 0 : real * (slow ? 0.25 : 1);
+  gT += dt;
+  if (visible.pit) pitFrame(gT);
+  if (visible.scan) bay(gT);
+  if (visible.map) mapFrame(gT);
+  if (visible.tele) teleFrame(gT);
+  if (visible.aero) aeroFrame(gT, dt);
+  if (visible.tyres) tyreFrame(gT);
+  if (visible.tower) towerFrame(gT);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+document.getElementById('slow').onclick = e => {
+  slow = !slow; e.currentTarget.setAttribute('aria-pressed', slow);
+};
+document.getElementById('theme').onclick = () => {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+};
+// test hooks
+window.freeze = t => { gT = t; paused = t != null; };
+window.PIT_TIMES = { LAP, T_BOX, IN };
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) { slow = true; document.getElementById('slow').setAttribute('aria-pressed', true); }
+</script>
+</body>
+</html>

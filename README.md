@@ -23,6 +23,7 @@
 | [postage-collage](skills/postage-collage) | Original postage-stamp series as a collage page in plain HTML/CSS: ten stamp families (old-master editorial, pixel-fragment portrait, botanical strips, giant condensed word, narrow window, Swiss-Japanese pair, street-label ticket, green duotone panels, red duotone poster, red-circle collage), real CSS perforations, grain, postmarks and tape, a click-to-inspect zoom, and public-domain image fetch and print treatment from Wikimedia Commons. |
 | [motion-reel](skills/motion-reel) | Short vertical motion graphics (Reels/Shorts, 1080×1920, ~20 s, with sound) rendered entirely in code with Python + skia + ffmpeg. Two templates: a flat editorial-poster explainer with a procedural beat-grid soundtrack, and a 3D-camera piece (dive, depth of field, an orbit that exposes an animate-to-camera cheat, 24 fps on twos, motion blur, cursor auto-zoom) cut to a stock track's real drops. Comes with lessons and a style catalogue from studying 30 motion-design reels, and scripts to study reference reels and to pick music and find its drops. |
 | [signal-print](skills/signal-print) | A grainy signal-orange "ops-print" identity in two sheets of 4:5 plates: rotated tape strips with tickers, a crosshair emblem, a numbered run log, barred type crossed by a ring-matrix word, a live terminal, a halftone mark with a cursor loupe, a night-shift dial and an ID badge — plus an all-SVG asset kit (icons on keylines, mark construction and lockups, a blueprint, pattern tiles, seals and rubber stamps, an animated weave diagram, dingbats, live instruments) where every asset downloads as a clean .svg. |
+| [isometric-svg](skills/isometric-svg) | Animated isometric line art in plain SVG + JS: black faces, hairline white strokes, glare bands, one accent. A tiny engine for boxes, extruded profiles, wheels, tubes, rounded plates and clipping through openings, all driven by a freezable clock. Examples: a draggable filing cabinet and a seven-panel F1 pit wall (pit stop with jacks and tyre change, scanner bay, live circuit map, telemetry, wind tunnel, tyres, timing tower) on one race clock, plus a contact-sheet script. |
 
 ## Install
 
@@ -47,6 +48,7 @@ ln -s ~/src/claude-skills/skills/pixel-rebuild ~/.claude/skills/pixel-rebuild
 ln -s ~/src/claude-skills/skills/postage-collage ~/.claude/skills/postage-collage
 ln -s ~/src/claude-skills/skills/motion-reel ~/.claude/skills/motion-reel
 ln -s ~/src/claude-skills/skills/signal-print ~/.claude/skills/signal-print
+ln -s ~/src/claude-skills/skills/isometric-svg ~/.claude/skills/isometric-svg
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -320,3 +322,18 @@ Made by studying a set of motion-design tutorial reels frame by frame, then rebu
 **Controls:** hover plate 06 on sheet 01 for the halftone loupe; hover and click any asset on sheet 02 to download it.
 
 Inspired by grainy orange agent-deployment posters from a dev-tool launch campaign; the brand (LOOM), mark, copy and code are original.
+
+## isometric-svg
+
+![The F1 pit wall example](skills/isometric-svg/assets/pit-wall.png)
+
+![A pit stop, frame by frame](skills/isometric-svg/assets/pit-stop-sequence.png)
+
+- `SKILL.md`: the look, the workflow (reference → axes → block out → painter's order → pure `state(t)` → verify) and the lessons that each cost a round trip (near-miss alignment, the twin bug, props left in a lane, loop seams, lap fractions that must wrap).
+- `template/iso.js` + `template/index.html`: the engine (projection, `box`, `extrude`, `cylinderU`, `tube`, `slab`, `clipD`…) and a starter scene with a freeze hook and light/dark tokens.
+- `examples/filing-cabinet.html`: drag the drawers out by their handles; hanging folders sway with inertia.
+- `examples/pit-wall.html`: pit stop (jacks swing in from one side, four-corner tyre change, pit light, rivals in the fast lane), scrutineering gantry with a red glow, circuit map with DRS and pit lane, telemetry strip chart and steering-wheel display, wind-tunnel streamlines with DRS, tyre temps and brakes, timing tower — all on one clock. Cars, numbers and codes are fictional.
+- `references/primitives.md`, `references/verification.md`: the API and painter's order rules, and the scripted checks (collisions, crossings, monotonic motion, loop seams) that caught real bugs.
+- `scripts/shoot.py`: `uv run` it to freeze a page at a list of times and tile a contact sheet; fails on console errors.
+
+Inspired by a screen recording of an isometric SVG filing cabinet and a pit-wall illustration; the code and scenes are original.

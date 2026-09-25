@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iso Starter</title>
+<style>
+  /* EDIT: the look. Ink = face fill, line = strokes and solid accents. Keep to 1–2 accents. */
+  :root { --bg:#161616; --ink:#000; --line:#f2f2f2; --dim:#8a8a8a; --accent:#ff3b30; }
+  :root[data-theme="light"] { --bg:#ececec; --ink:#fff; --line:#111; --dim:#666; }
+  html,body { margin:0; height:100%; background:var(--bg); overflow:hidden; color:var(--line);
+    font:500 13px/1 ui-monospace, "SF Mono", Menlo, monospace; -webkit-user-select:none; user-select:none; }
+  header { position:fixed; inset:0 0 auto 0; display:flex; justify-content:space-between; align-items:center; padding:14px 16px; }
+  button { background:none; border:1px solid var(--dim); color:var(--line); border-radius:6px; height:30px; min-width:30px; cursor:pointer; font:inherit; }
+  svg { width:100%; height:100%; display:block; }
+  svg path { stroke:var(--line); fill:var(--ink); stroke-width:1.15; stroke-linejoin:round; stroke-linecap:round;
+    vector-effect:non-scaling-stroke; }
+  svg path.w { fill:var(--line); stroke:none; }      /* solid accents: glare bands, stripes */
+  svg path.ln { fill:none; }
+  svg path.floor { fill:none; stroke:var(--dim); }
+  svg path.tube { fill:none; stroke-width:3.6; }
+  svg path.tubei { fill:none; stroke:var(--ink); stroke-width:1.5; }
+  svg path.accent { fill:var(--accent); stroke:var(--line); }
+</style>
+</head>
+<body>
+<header><b>iso starter</b><button id="theme" aria-label="Toggle theme">◐</button></header>
+<!-- EDIT: viewBox = the screen box of everything that can appear (P() of the extreme corners) -->
+<svg viewBox="-180 -135 395 260" preserveAspectRatio="xMidYMid meet">
+  <defs><clipPath id="clipLid"><path id="clipLidPath"/></clipPath></defs>
+  <g id="scene"></g>
+</svg>
+<script src="iso.js"></script>
+<script>
+const { P, poly, line, tube, box, slab, cylinderU, clamp01, seg, ease, dOf } = ISO;
+
+// EDIT: dimensions (world units)
+const CRATE = { u0: -30, u1: 30, d0: 0, d1: 80, h: 44 };
+const LOOP = 4.8;
+
+// Pure timeline: everything on screen is a function of t, so freeze(t) and contact sheets work.
+function state(t) {
+  const open = ease(seg(t, [0.4, 1.3])) * (1 - ease(seg(t, [3.4, 4.2])));  // lid slides toward the viewer
+  // barrel rolls out along u and back, so t = LOOP matches t = 0 (no jump at the loop seam)
+  const roll = ease(seg(t, [0.9, 2.4])) - ease(seg(t, [2.8, 4.3]));
+  const barrelU = -60 + 150 * roll;
+  return { lid: -54 * open, barrelU, spin: barrelU / 14, lit: t > 1.4 && t < 3.4 };
+}
+
+function frame(st) {
+  let s = '';
+  // 1. floor plate (furthest back, everything stands on it)
+  s += slab(-80, 110, -110, 120, 8, -6, 0);
+  for (let u = -60; u < 110; u += 20) s += line([[u, -110, 0], [u, 120, 0]], 'floor');
+  // 2. crate body: back-to-front doesn't matter within one box
+  s += box(CRATE.u0, CRATE.u1, CRATE.d0, CRATE.d1, 0, CRATE.h);
+  // interior shows through the open top: a dark inset the lid slides off
+  s += poly([[CRATE.u0 + 4, CRATE.d0 + 4, CRATE.h], [CRATE.u1 - 4, CRATE.d0 + 4, CRATE.h],
+             [CRATE.u1 - 4, CRATE.d1 - 4, CRATE.h], [CRATE.u0 + 4, CRATE.d1 - 4, CRATE.h]]);
+  if (st.lit) s += poly([[CRATE.u0 + 10, 30, CRATE.h], [CRATE.u0 + 22, 30, CRATE.h], [CRATE.u0 + 22, 50, CRATE.h], [CRATE.u0 + 10, 50, CRATE.h]], 'accent');
+  // glare on the +u side: a solid band clipped to the face (EDIT: move / remove)
+  s += poly([[CRATE.u1, 56, CRATE.h], [CRATE.u1, 62, CRATE.h], [CRATE.u1, 80, 22], [CRATE.u1, 74, 22]], 'w');
+  // 3. lid on top: it's above the crate, so after it
+  const L = st.lid;
+  s += box(CRATE.u0 - 2, CRATE.u1 + 2, CRATE.d0 - 2 + L, CRATE.d1 + 2 + L, CRATE.h, CRATE.h + 5);
+  s += tube([[-10, 10 + L, CRATE.h + 5], [-10, 10 + L, CRATE.h + 11], [10, 10 + L, CRATE.h + 11], [10, 10 + L, CRATE.h + 5]]);
+  // 4. barrel in front of the crate (smaller d = nearer the viewer) → last. Its lane (d −84…−56)
+  //    stays clear of the open lid (d ≥ −56) so drawing it last is always right.
+  s += cylinderU(st.barrelU, -70, 14, 14, 22, { stripe: [0.74, 0.84], spin: st.spin });
+  return s;
+}
+
+const scene = document.getElementById('scene');
+let t = 0, last = performance.now(), paused = false;
+function tick(now) {
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;   // clamp both sides
+  if (!paused) t = (t + dt) % LOOP;
+  scene.innerHTML = frame(state(t));
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+// test hook used by scripts/shoot.py: freeze(t) holds time at t; freeze(null) resumes
+window.freeze = v => { if (v != null) t = v; paused = v != null; scene.innerHTML = frame(state(t)); };
+window.LOOP = LOOP;
+document.getElementById('theme').onclick = () => {
+  const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+};
+</script>
+</body>
+</html>

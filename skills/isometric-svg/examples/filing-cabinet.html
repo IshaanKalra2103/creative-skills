@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filing Cabinet</title>
+<style>
+  :root { --bg:#161616; --ink:#000; --line:#f2f2f2; --dim:#8a8a8a; }
+  :root[data-theme="light"] { --bg:#ececec; --ink:#fff; --line:#111; --dim:#666; }
+  html,body { margin:0; height:100%; background:var(--bg); overflow:hidden;
+    font:500 13px/1 ui-monospace, "SF Mono", Menlo, monospace; color:var(--line);
+    -webkit-user-select:none; user-select:none; transition:background .3s; }
+  header { position:fixed; inset:0 0 auto 0; display:flex; justify-content:space-between;
+    align-items:center; padding:14px 16px; z-index:2; }
+  header b { letter-spacing:.02em; }
+  header button { background:none; border:1px solid var(--dim); color:var(--line);
+    border-radius:6px; width:30px; height:30px; cursor:pointer; font:inherit; }
+  header button:hover { border-color:var(--line); }
+  .hint { position:fixed; bottom:18px; width:100%; text-align:center; color:var(--dim);
+    transition:opacity .6s; pointer-events:none; }
+  svg { width:100%; height:100%; display:block; touch-action:none; }
+  svg path { stroke:var(--line); fill:var(--ink); stroke-width:1.15;
+    stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke;
+    transition:fill .3s, stroke .3s; }
+  svg path.glare { fill:var(--line); stroke:none; }
+  svg path.ln { fill:none; }
+  svg path.dot { fill:var(--line); }
+  [data-drawer] { cursor:grab; }
+  body.dragging, body.dragging * { cursor:grabbing !important; }
+</style>
+</head>
+<body>
+<header>
+  <b>filing cabinet</b>
+  <button id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+</header>
+<svg id="stage" viewBox="-72 -168 208 240" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <clipPath id="clipTop"><path id="clipTopPath"/></clipPath>
+    <clipPath id="clipSide"><path id="clipSidePath"/></clipPath>
+    <clipPath id="hole0"><path id="hole0Path"/></clipPath>
+    <clipPath id="hole1"><path id="hole1Path"/></clipPath>
+  </defs>
+  <g id="body"></g>
+  <g id="d0in" clip-path="url(#hole0)"></g>
+  <g id="d0out"></g>
+  <g id="d1in" clip-path="url(#hole1)"></g>
+  <g id="d1out"></g>
+</svg>
+<div class="hint" id="hint">drag a drawer by its handle</div>
+
+<script>
+// ── isometric projection ──────────────────────────────────────────────
+// world axes: u = along the drawer front (screen ↘), d = depth into the
+// cabinet (screen ↗), z = up. Pulling a drawer out = negative d (screen ↙).
+const C = Math.cos(Math.PI / 6), S = 0.5;
+const P = ([u, d, z]) => [(u + d) * C, (u - d) * S - z];
+const path = (pts, cls = '', attrs = '') =>
+  `<path${cls ? ` class="${cls}"` : ''} ${attrs} d="M${pts.map(p => P(p).map(n => n.toFixed(2)).join(',')).join('L')}Z"/>`;
+const line = (pts, cls = 'ln', attrs = '') =>
+  `<path class="${cls}" ${attrs} d="M${pts.map(p => P(p).map(n => n.toFixed(2)).join(',')).join('L')}"/>`;
+
+// Sutherland–Hodgman against the plane d = 0 (keep front: d ≤ 0, back: d ≥ 0)
+function clipD(poly, keepFront) {
+  const inside = p => keepFront ? p[1] <= 0 : p[1] >= 0;
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const ia = inside(a), ib = inside(b);
+    if (ia) out.push(a);
+    if (ia !== ib) {
+      const t = a[1] / (a[1] - b[1]);
+      out.push([a[0] + (b[0] - a[0]) * t, 0, a[2] + (b[2] - a[2]) * t]);
+    }
+  }
+  return out;
+}
+
+// visible faces of an axis-aligned box (viewer sits at +u, -d, +z)
+function box(u0, u1, d0, d1, z0, z1, attrs = '') {
+  return path([[u1, d0, z0], [u1, d1, z0], [u1, d1, z1], [u1, d0, z1]], '', attrs) +
+         path([[u0, d0, z1], [u1, d0, z1], [u1, d1, z1], [u0, d1, z1]], '', attrs) +
+         path([[u0, d0, z0], [u1, d0, z0], [u1, d0, z1], [u0, d0, z1]], '', attrs);
+}
+
+// ── dimensions ────────────────────────────────────────────────────────
+const W = 60, D = 84, H = 116, SLAB = 4;
+const MAX_OUT = 62;
+const DRAWERS = [
+  { z0: 6,  z1: 54 },   // bottom
+  { z0: 58, z1: 108 },  // top
+].map((dr, i) => ({ ...dr, i, p: 0, v: 0, sway: 0, swayV: 0,
+                    target: null, dragging: false, auto: null }));
+const INSET = 2;          // gap between cabinet edge and drawer panel
+const PANEL_T = 1.6;      // panel thickness (sits proud of the body when closed)
+const DEPTH = D - 6;      // drawer box length
+
+// ── static body ───────────────────────────────────────────────────────
+function roundedRectUD(u0, u1, d0, d1, r, z, fold = 0) {
+  // rounded rectangle on the top face, optional folded corner at (u0, d1)
+  const pts = [], arc = (cu, cd, a0) => { for (let k = 0; k <= 6; k++) {
+    const a = a0 + k / 6 * Math.PI / 2; pts.push([cu + Math.cos(a) * r, cd + Math.sin(a) * r, z]); } };
+  arc(u1 - r, d0 + r, -Math.PI / 2);
+  arc(u1 - r, d1 - r, 0);
+  if (fold) { pts.push([u0 + fold, d1, z], [u0, d1 - fold, z]); }
+  else arc(u0 + r, d1 - r, Math.PI / 2);
+  arc(u0 + r, d0 + r, Math.PI);
+  return pts;
+}
+
+function drawBody() {
+  const top = [[0, 0, H], [W, 0, H], [W, D, H], [0, D, H]];
+  const side = [[W, 0, 0], [W, D, 0], [W, D, H], [W, 0, H]];
+  document.getElementById('clipTopPath').setAttribute('d', path(top).match(/d="([^"]+)"/)[1]);
+  document.getElementById('clipSidePath').setAttribute('d', path(side).match(/d="([^"]+)"/)[1]);
+
+  let s = '';
+  // main block
+  s += path(side) + path(top) + path([[0, 0, 0], [W, 0, 0], [W, 0, H], [0, 0, H]]);
+  // lid seam
+  s += line([[0, 0, H - SLAB], [W, 0, H - SLAB], [W, D, H - SLAB]]);
+
+  // glare on the lid: screen-vertical bands (u + d = const)
+  const band = (a, b) => path([[0, a, H], [0, b, H], [b, 0, H], [a, 0, H]], 'glare', 'clip-path="url(#clipTop)"');
+  s += band(19, 23) + band(29, 41);
+  // glare on the side: diagonal bands falling from the lid edge
+  const sband = (a, b) => path([[W, a, H], [W, b, H], [W, b + 40, H - 46], [W, a + 40, H - 46]], 'glare', 'clip-path="url(#clipSide)"');
+  s += sband(D - 30, D - 27) + sband(D - 23, D - 13);
+
+  // document icon on the lid
+  const du0 = 16, du1 = 48, dd0 = 44, dd1 = 72;
+  s += path(roundedRectUD(du0, du1, dd0, dd1, 3, H, 7), 'ln');
+  s += line([[du0, dd1 - 7, H], [du0 + 7, dd1 - 7, H], [du0 + 7, dd1, H]]);
+  for (let k = 0; k < 3; k++) {
+    const d = dd1 - 11 - k * 6;
+    s += line([[du0 + 7 + (k === 0 ? 5 : 0), d, H], [du1 - 6 - (k === 2 ? 6 : 0), d, H]]);
+  }
+  s += path([[du0 + 7, dd1 - 12, H], [du0 + 9, dd1 - 12, H], [du0 + 9, dd1 - 10, H], [du0 + 7, dd1 - 10, H]], 'dot');
+
+  // vents on the side
+  for (const z of [9, 24]) {
+    const d0 = D * 0.42, d1 = D * 0.9, h = 12;
+    s += path([[W, d0, z], [W, d1, z], [W, d1, z + h], [W, d0, z + h]]);
+    // recess: inner lip along the top and the near end
+    s += line([[W, d1, z + h - 2.5], [W, d0 + 2.5, z + h - 2.5], [W, d0 + 2.5, z]]);
+  }
+
+  // drawer openings (dark cavities, only visible when a drawer is out)
+  DRAWERS.forEach(dr => {
+    const hole = [[INSET, 0, dr.z0], [W - INSET, 0, dr.z0], [W - INSET, 0, dr.z1], [INSET, 0, dr.z1]];
+    document.getElementById(`hole${dr.i}Path`).setAttribute('d', path(hole).match(/d="([^"]+)"/)[1]);
+    s += path(hole);
+  });
+  document.getElementById('body').innerHTML = s;
+}
+
+// ── a drawer ──────────────────────────────────────────────────────────
+const FOLDERS = 8;
+function folderPoly(dr, k, off) {
+  const u0 = INSET + 5, u1 = W - INSET - 5;
+  const zb = dr.z0 + 5, zt = dr.z1 - 7;
+  const dd = off + 8 + k * ((DEPTH - 14) / (FOLDERS - 1));
+  // the tab walks across the folder front-to-back, like real hanging files
+  const tabC = u0 + (u1 - u0) * (0.28 + 0.44 * ((k * 3) % FOLDERS) / (FOLDERS - 1));
+  const tabW = 11, tabH = 4.5;
+  const lean = Math.sin(dr.sway * (0.7 + 0.3 * (k % 3) / 2)); // folders sway with inertia
+  const pt = (u, z) => [u, dd + (z - zb) * lean, z];
+  const pts = [pt(u0, zb), pt(u1, zb)];
+  for (let j = 0; j <= 28; j++) {
+    const u = u1 - (u1 - u0) * j / 28;
+    const x = Math.max(-1, Math.min(1, (u - tabC) / tabW));
+    pts.push(pt(u, zt + tabH * (0.5 + 0.5 * Math.cos(Math.PI * x))));
+  }
+  return { pts, d: dd };
+}
+
+function drawDrawer(dr) {
+  const off = -dr.p;                 // world d of the drawer's front (behind panel)
+  const u0 = INSET + 2, u1 = W - INSET - 2;
+  const zb = dr.z0 + 2, zw = dr.z0 + (dr.z1 - dr.z0) * 0.55; // wall top
+  const dBack = off + DEPTH;
+  const tag = `data-drawer="${dr.i}"`;
+
+  const parts = [];  // painter's order: back to front, each a polygon (+ cls)
+  if (dr.p > 0.3) {
+    parts.push({ poly: [[u0, dBack, zb], [u1, dBack, zb], [u1, dBack, zw], [u0, dBack, zw]] });  // back wall
+    parts.push({ poly: [[u0, off, zb], [u0, dBack, zb], [u0, dBack, zw], [u0, off, zw]] });      // left wall (inner face)
+    parts.push({ poly: [[u0, off, zb], [u1, off, zb], [u1, dBack, zb], [u0, dBack, zb]] });      // floor
+    for (let k = FOLDERS - 1; k >= 0; k--) parts.push({ poly: folderPoly(dr, k, off).pts });
+    parts.push({ poly: [[u1, off, zb], [u1, dBack, zb], [u1, dBack, zw], [u1, off, zw]] });      // right wall
+    // telescoping rail on the right wall
+    const rz = zb + (zw - zb) * 0.45;
+    parts.push({ poly: [[u1, off + 2, rz - 2.2], [u1, dBack, rz - 2.2], [u1, dBack, rz + 2.2], [u1, off + 2, rz + 2.2]] });
+    parts.push({ poly: [[u1, off + 2, rz], [u1, dBack, rz]], open: true });
+  }
+
+  let inner = '', outer = '';
+  for (const { poly, open } of parts) {
+    const back = clipD(poly, false), front = clipD(poly, true);
+    const draw = open ? line : path;
+    if (back.length > 1) inner += draw(back);
+    if (front.length > 1) outer += draw(front);
+  }
+
+  // panel (always in front of the body plane)
+  const pf = off - PANEL_T, pb = off;
+  outer += box(INSET, W - INSET, pf, pb, dr.z0, dr.z1, tag);
+  // handle: two posts + a bar, standing off the panel
+  const hz = dr.z0 + (dr.z1 - dr.z0) * 0.5, hu0 = W / 2 - 9, hu1 = W / 2 + 7, pw = 2.6, ph = 3;
+  outer += box(hu0, hu0 + pw, pf - 4, pf, hz - ph / 2, hz + ph / 2, tag);
+  outer += box(hu1 - pw, hu1, pf - 4, pf, hz - ph / 2, hz + ph / 2, tag);
+  outer += box(hu0, hu1, pf - 6.4, pf - 4, hz - ph / 2, hz + ph / 2, tag);
+
+  document.getElementById(`d${dr.i}in`).innerHTML = inner;
+  document.getElementById(`d${dr.i}out`).innerHTML = outer;
+}
+
+// ── interaction ───────────────────────────────────────────────────────
+const svg = document.getElementById('stage');
+const hint = document.getElementById('hint');
+const toSvg = e => { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse()); };
+const OUT_DIR = [-C, S];   // screen direction of "pull out"
+let drag = null;
+
+svg.addEventListener('pointerdown', e => {
+  const el = e.target.closest('[data-drawer]');
+  if (!el) return;
+  const dr = DRAWERS[+el.dataset.drawer];
+  const s = toSvg(e);
+  drag = { dr, sx: s.x, sy: s.y, p0: dr.p, moved: 0, id: e.pointerId };
+  dr.dragging = true; dr.auto = null; dr.target = dr.p;
+  svg.setPointerCapture(e.pointerId);
+  document.body.classList.add('dragging');
+  hint.style.opacity = 0;
+  wake();
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const s = toSvg(e), dx = s.x - drag.sx, dy = s.y - drag.sy;
+  drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+  let t = drag.p0 + dx * OUT_DIR[0] + dy * OUT_DIR[1];
+  // rubber-band past the stops
+  if (t > MAX_OUT) t = MAX_OUT + (t - MAX_OUT) / (1 + (t - MAX_OUT) / 8);
+  if (t < 0) t = t / (1 - t / 6);
+  drag.dr.target = t;
+  wake();
+});
+const release = e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const { dr, moved } = drag;
+  dr.dragging = false; dr.target = null;
+  // a click (no real drag) toggles the drawer
+  if (moved < 1.5) dr.auto = dr.p > MAX_OUT * 0.3 ? 0 : MAX_OUT * 0.72;
+  drag = null;
+  document.body.classList.remove('dragging');
+  wake();
+};
+svg.addEventListener('pointerup', release);
+svg.addEventListener('pointercancel', release);
+
+document.getElementById('theme').onclick = () => {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+};
+
+// ── physics loop (sleeps when nothing moves) ──────────────────────────
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let running = false, last = 0;
+function wake() { if (!running) { running = true; last = performance.now(); requestAnimationFrame(tick); } }
+
+function step(dr, dt) {
+  const prevV = dr.v;
+  if (dr.dragging) {
+    // stiff critically-damped follow so the drawer feels attached to the hand
+    const k = 900, c = 2 * Math.sqrt(k);
+    dr.v += ((dr.target - dr.p) * k - dr.v * c) * dt;
+  } else if (dr.auto != null) {
+    const k = 120, c = 2 * Math.sqrt(k) * 0.8;
+    dr.v += ((dr.auto - dr.p) * k - dr.v * c) * dt;
+    if (Math.abs(dr.auto - dr.p) < 0.05 && Math.abs(dr.v) < 0.5) { dr.p = dr.auto; dr.v = 0; dr.auto = null; }
+  } else {
+    // coast on the rails, then pull back inside the stops
+    dr.v *= Math.exp(-3.2 * dt);
+    if (dr.p > MAX_OUT) dr.v += (MAX_OUT - dr.p) * 300 * dt - dr.v * 20 * dt;
+    if (dr.p < 0) dr.v += (0 - dr.p) * 300 * dt - dr.v * 20 * dt;
+  }
+  dr.p += dr.v * dt;
+  if (!dr.dragging && dr.p < -1.2) { dr.p = -1.2; dr.v = Math.abs(dr.v) * 0.2; }   // thunk
+  // folders lean against acceleration
+  const acc = (dr.v - prevV) / dt;
+  if (!reduced) {
+    const k = 160, c = 7;
+    dr.swayV += (-dr.sway * k - dr.swayV * c + acc * 0.0022) * dt;
+    dr.sway = Math.max(-0.35, Math.min(0.35, dr.sway + dr.swayV * dt));
+  }
+}
+
+function tick(now) {
+  const dt = Math.min(0.033, (now - last) / 1000) || 0.016;
+  last = now;
+  let active = false;
+  for (const dr of DRAWERS) {
+    const before = dr.p;
+    // substep for stable springs
+    for (let i = 0; i < 4; i++) step(dr, dt / 4);
+    if (!dr.dragging && dr.auto == null && Math.abs(dr.v) < 0.4 && dr.p >= -0.01 && dr.p <= MAX_OUT + 0.01) {
+      dr.v = 0;
+      if (dr.p < 0.4) dr.p = 0;
+    }
+    const moving = dr.dragging || dr.auto != null || dr.v !== 0 ||
+                   Math.abs(dr.sway) > 0.0005 || Math.abs(dr.swayV) > 0.001;
+    if (moving || before !== dr.p) drawDrawer(dr);
+    active ||= moving;
+  }
+  if (active) requestAnimationFrame(tick); else running = false;
+}
+
+drawBody();
+DRAWERS.forEach(drawDrawer);
+</script>
+</body>
+</html>
