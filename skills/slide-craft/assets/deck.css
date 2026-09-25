@@ -3,8 +3,9 @@
    type is authored in slide pixels and never needs clamp()/vw/vh. */
 
 :root{
-  --paper:#ffffff; --ink:#111111; --muted:#6f6f6f; --rule:#e4e4e4; --accent:#111111;
-  --shell:#f2f1ef; --shell-ink:#5c5a56;
+  --paper:#ffffff; --ink:#14181d; --muted:#667380; --rule:#dde3e8; --accent:#0f6f63;
+  --shell:#f4f6f7; --shell-ink:#4a545e;
+  /* Light only, on purpose. Do not add a dark override. */
   --display:"Newsreader","Iowan Old Style",Georgia,"Times New Roman",serif;
   --text:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Helvetica,Arial,sans-serif;
   --mono:"SF Mono",ui-monospace,Menlo,"Roboto Mono",monospace;
@@ -26,7 +27,7 @@ body{background:var(--shell);color:var(--ink);font-family:var(--text);overflow:h
 .thumb-inner{position:absolute;top:0;left:0;width:1280px;height:720px;transform-origin:0 0;pointer-events:none}
 .thumb-inner .slide-canvas{transform:none}   /* the wrapper does the scaling */
 .rail-foot{border-top:1px solid var(--rule);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;
   font:500 13px/1 var(--text);padding:10px;cursor:pointer;transition:opacity .15s}
 .btn:hover{opacity:.85}
 .btn .k{font:400 11px/1 var(--mono);opacity:.6}
@@ -80,8 +81,8 @@ h3{font:500 22px/1.3 var(--text);margin:0}
 .cols{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:48px;align-items:start}
 .col h3{margin-bottom:10px}
 .col p{font:400 21px/1.45 var(--text);color:var(--muted);margin:0}
-.panel{background:#f6f5f3;padding:32px}
-.panel--ink{background:var(--ink);color:var(--paper)}
+.panel{background:#f2f5f6;padding:32px}
+.panel--ink{background:var(--accent);color:#fff}
 .panel--ink p,.panel--ink .stat-label{color:rgba(255,255,255,.72)}
 .panel .tag{font:500 13px/1 var(--text);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
 .panel--ink .tag{color:rgba(255,255,255,.6)}
@@ -103,7 +104,7 @@ h3{font:500 22px/1.3 var(--text);margin:0}
 .caption{font:400 15px/1.4 var(--mono);color:var(--muted);margin:14px 0 0}
 
 /* presenter */
-body.presenting{background:#000}
+body.presenting{background:#1b2127}
 body.presenting .rail{display:none}
 body.presenting .shell{grid-template-columns:1fr}
 body.presenting .slide-wrap{padding:0}
