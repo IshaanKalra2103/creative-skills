@@ -1,0 +1,22 @@
+/* Base styles for motion replicas. The stage is authored at full output size
+   (e.g. 3840×2160 for a 2×2 grid of 1080p cells) and scaled to fit the window. */
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#fff}
+body{font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#111}
+#stage{position:absolute;left:0;top:0;transform-origin:0 0}
+/* one independent panel of the grid; contain:strict keeps its layout and paint isolated */
+.cell{position:absolute;overflow:hidden;contain:strict}
+/* absolutely placed at the cell origin; move with transform (see at() in replica.js) */
+.a{position:absolute;left:0;top:0}
+/* a full-cell layer; toggle whole scenes with V() for hard cuts */
+.scene{position:absolute;left:0;top:0;width:100%;height:100%}
+.ic{display:inline-block;vertical-align:middle;flex:none}
+svg{display:block}
+.rays{border-radius:50%}
+
+/* odometer wheels */
+.odo{display:inline-flex;align-items:flex-start;white-space:nowrap;line-height:1.25em;font-variant-numeric:tabular-nums}
+.odo>span{display:inline-block;height:1.25em;line-height:1.25em;overflow:hidden;flex:none}
+.wheel{position:relative;-webkit-mask-image:linear-gradient(transparent,#000 13%,#000 87%,transparent);mask-image:linear-gradient(transparent,#000 13%,#000 87%,transparent)}
+.strip{display:block}
+.strip b{display:block;height:1.25em;line-height:1.25em;text-align:center;font-weight:inherit}

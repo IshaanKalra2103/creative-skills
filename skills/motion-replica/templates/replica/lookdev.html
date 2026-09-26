@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Asset Lookdev</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&family=Roboto+Slab:wght@900&display=block">
+<style>html,body{margin:0;background:#fff;overflow:hidden}#cell{position:relative;width:1920px;height:1080px;transform-origin:0 0}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+<script src="assets/rubik-typeface.js"></script>
+<script src="assets/assets3d.js"></script>
+<!-- optional: <script src="assets/car-glb.js"></script>  (scripts/prep-glb.sh) -->
+</head>
+<body>
+<!-- Every asset on one sheet, lit like the real scene. Iterate here (render.py --stills 0)
+     before wiring an asset into the timeline: it's seconds per loop instead of minutes.
+     ?spin=40 turns every asset 40° about Y to check the silhouette from another side. -->
+<div id="cell"></div>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+await Promise.all(['900 100px "Roboto Slab"', '800 40px Inter', '900 40px Inter', '700 40px Inter'].map(f => document.fonts.load(f)));
+const A = window.Assets3D(THREE, { RoomEnvironment, GLTFLoader, MeshoptDecoder, FontLoader, TextGeometry, RoundedBoxGeometry });
+const q = new URLSearchParams(location.search), spin = parseFloat(q.get('spin') || '0') * A.D2R;
+const cell = document.getElementById('cell');
+const fit = () => cell.style.transform = `scale(${innerWidth / 1920})`; fit();
+const st = new A.Stage(cell); st.setPixelRatio(innerWidth / 1920 * devicePixelRatio);
+const add = (o, x, y, s = 1) => { const g = new THREE.Group(); g.add(o); st.place(g, x, y); g.scale.multiplyScalar(s); g.rotation.y = spin; st.root.add(g); return o; };
+
+const pack = A.makePack(); add(pack.group, 190, 300, .8);
+const torn = A.makePack(); add(torn.group, 470, 300, .8); torn.group.rotation.y = -.5; torn.top.position.y += 90; torn.top.position.x += 40; torn.top.rotation.z = -.35;
+if (window.CAR_GLB) { await A.loadCar(); add(A.makeCar(560), 900, 250); }
+add(A.makeWatch(), 1330, 270).rotation.set(-.5, .6, .5);
+add(A.makeBall(90), 1650, 250);
+add(A.makeBill(170, .3), 1540, 470).rotation.set(.4, .3, .2);
+add(A.makeStack(160, 18), 1790, 470).rotation.set(-.5, .4, -.3);
+['bnb', 'poly', 'op', 'eth', 'sol', 'sq', 'bow', 'none'].forEach((g, i) => add(A.orangeCoin(g, 150), 110 + i * 170, 640).rotation.set(.3 * (i % 3) - .2, .35 * ((i + 1) % 3) - .3, 0));
+['cat', 'leaf', 'pglass', 'stonk'].forEach((k, i) => add(A.tokenCoin(k, 200), 180 + i * 260, 900).rotation.set(.25, -.35 + .2 * i, .05));
+const mp = A.makeMegapotText('$1,100,000', 150); add(mp.group, 1500, 880); mp.group.scale.x *= .76; mp.group.rotation.y = .37;
+
+st.render();
+window.renderAt = () => st.render();
+window.__ready = true;
+</script>
+</body>
+</html>

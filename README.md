@@ -24,6 +24,7 @@
 | [motion-reel](skills/motion-reel) | Short vertical motion graphics (Reels/Shorts, 1080×1920, ~20 s, with sound) rendered entirely in code with Python + skia + ffmpeg. Two templates: a flat editorial-poster explainer with a procedural beat-grid soundtrack, and a 3D-camera piece (dive, depth of field, an orbit that exposes an animate-to-camera cheat, 24 fps on twos, motion blur, cursor auto-zoom) cut to a stock track's real drops. Comes with lessons and a style catalogue from studying 30 motion-design reels, and scripts to study reference reels and to pick music and find its drops. |
 | [signal-print](skills/signal-print) | A grainy signal-orange "ops-print" identity in two sheets of 4:5 plates: rotated tape strips with tickers, a crosshair emblem, a numbered run log, barred type crossed by a ring-matrix word, a live terminal, a halftone mark with a cursor loupe, a night-shift dial and an ID badge — plus an all-SVG asset kit (icons on keylines, mark construction and lockups, a blueprint, pattern tiles, seals and rubber stamps, an animated weave diagram, dingbats, live instruments) where every asset downloads as a clean .svg. |
 | [isometric-svg](skills/isometric-svg) | Animated isometric line art in plain SVG + JS: black faces, hairline white strokes, glare bands, one accent. A tiny engine for boxes, extruded profiles, wheels, tubes, rounded plates and clipping through openings, all driven by a freezable clock. Examples: a draggable filing cabinet and a seven-panel F1 pit wall (pit stop with jacks and tyre change, scanner bay, live circuit map, telemetry, wind tunnel, tyres, timing tower) on one race clock, plus a contact-sheet script. |
+| [motion-replica](skills/motion-replica) | Any motion-graphics video (app ad, promo, grid reel, UI walkthrough) rebuilt shot for shot in code: a deterministic HTML page with DOM for UI and type and three.js layers for 3D props, rendered frame by frame to an MP4 that matches the original's size, fps, length and audio. Scripts measure the reference (per-cell loop periods, cuts, contact sheets, 20 fps bursts for easing), compare replica and reference side by side and on motion sheets, and render on the GPU. Includes a procedural 3D kit (foil pouch, $100 bills, basketball, watch, embossed/glass/cel-shaded coins, bevelled 3D digits, a GLB repaint loader) and a full 2×2 fintech-ad example. |
 
 ## Install
 
@@ -49,6 +50,7 @@ ln -s ~/src/claude-skills/skills/postage-collage ~/.claude/skills/postage-collag
 ln -s ~/src/claude-skills/skills/motion-reel ~/.claude/skills/motion-reel
 ln -s ~/src/claude-skills/skills/signal-print ~/.claude/skills/signal-print
 ln -s ~/src/claude-skills/skills/isometric-svg ~/.claude/skills/isometric-svg
+ln -s ~/src/claude-skills/skills/motion-replica ~/.claude/skills/motion-replica
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -337,3 +339,15 @@ Inspired by grainy orange agent-deployment posters from a dev-tool launch campai
 - `scripts/shoot.py`: `uv run` it to freeze a page at a list of times and tile a contact sheet; fails on console errors.
 
 Inspired by a screen recording of an isometric SVG filing cabinet and a pit-wall illustration; the code and scenes are original.
+
+## motion-replica
+
+![The 2×2 fintech ad, rebuilt in code](skills/motion-replica/assets/cero-grid-frames.jpg)
+
+- `SKILL.md`: the workflow (measure → beat tables → scaffold → build flat and compare stills → 3D lookdev → motion sheets → final render and an honest diff report) and the principles behind it.
+- `scripts/`: `study.py` (spec, per-cell loop periods and cuts, contact sheets, `--burst` strips for reading curves), `render.py` (page → MP4 or stills on the real GPU, audio muxed, `--probe`), `compare.py` (reference | replica stills and per-cell motion sheets), `prep-glb.sh` (meshopt + webp, material names kept, base64-embedded), `font2typeface.py` (any TTF → three.js 3D type).
+- `templates/replica/`: `lib/replica.js` (pure-`t` timeline core, easing, number-flow odometer, sunburst, UI icons, boot), `assets/assets3d.js` (the 3D kit: crimped pouch, bills and stacks, basketball, diver's watch, lathed coins incl. glass-glyph and cel-shaded, bevelled digits, GLB loader), a demo page and a lookdev sheet.
+- `examples/cero-grid/`: four independently looping cells (a pack-opening prize burst, a deposit flow with coin burst, meme-token search with coins flying into the list, a credit score gauge unlocking a credit line). Run `./fetch-assets.sh` once for the car.
+- `references/`: `study.md` (reading timing, curves, counters, colour and type off frames), `timeline.md` (layers, coordinates, beat recipes), `3d-assets.md` (kit API, material recipes, licence-clear model sourcing), `gotchas.md`.
+
+Made by rebuilding a 10 s grid ad frame by frame. The example's brand names come from that reference; the code and 3D assets are original, and the car is "Car Concept" by Eric Chadwick / Darmstadt Graphics Group (CC-BY 4.0), fetched at setup, not stored in the repo.

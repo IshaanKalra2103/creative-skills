@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion Replica</title>
+<!-- display=block: never paint a fallback font into a frame -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=block">
+<link rel="stylesheet" href="lib/replica.css">
+<style>
+/* per-cell styles — measure sizes off the reference frames, in cell pixels */
+.headline{position:absolute;left:0;top:120px;width:1920px;text-align:center;font:600 112px Inter;letter-spacing:-.02em;color:#101010;white-space:nowrap}
+.headline .w{display:inline-block;margin:0 .12em}
+.num{position:absolute;left:0;top:790px;width:1920px;display:flex;justify-content:center;font:600 132px Inter;letter-spacing:-.02em;color:#1d2613}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+<!-- local libraries are classic scripts: ES-module imports of local files are blocked on file:// -->
+<script src="lib/replica.js"></script>
+<script src="assets/rubik-typeface.js"></script>
+<script src="assets/assets3d.js"></script>
+</head>
+<body>
+<!-- One .cell per independent panel of the reference. For a 2×2 grid of 1080p cells use
+     W=3840 H=2160 and four cells at 0/1920 × 0/1080. -->
+<div id="stage">
+  <div class="cell" id="c1" style="left:0;top:0;width:1920px;height:1080px;background:#fbfbfa"></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+const A3 = Assets3D(THREE, { RoomEnvironment, GLTFLoader, MeshoptDecoder, FontLoader, TextGeometry, RoundedBoxGeometry });
+
+/* ---------------------------------------------------------------------------
+   Demo cell (replace it): headline → 3D coin flies in over a sunburst while a
+   counter rolls → hard cut to extruded digits flipping in. Loops every 4.6 s.
+
+   Layer order is DOM insertion order: DOM scenes, then the WebGL canvas,
+   then DOM that must sit on top of the 3D (the counter). Each beat is a
+   seg() window with its own easing; nothing depends on the previous frame.
+   --------------------------------------------------------------------------- */
+function buildDemo() {
+  const root = document.getElementById('c1');
+  const sA = add(root, '<div class="scene"></div>');
+  const rays = makeRays(sA, { color: '#d3f760', size: 2600, mask: 'radial-gradient(circle closest-side,transparent 5%,rgba(0,0,0,.6) 14%,#000 30%,transparent 78%)' });
+  const line = add(sA, '<div class="headline"></div>');
+  const words = ['Build', 'any', 'motion'].map(w => add(line, `<span class="w">${w}</span>`));
+  const sB = add(root, '<div class="scene" style="background:#fff"></div>');
+  const raysB = makeRays(sB, { color: '#c5f43c', size: 3600, soft: 1.2, mask: 'radial-gradient(circle closest-side,transparent 7%,rgba(0,0,0,.8) 32%,#000 50%)' });
+
+  const st = new A3.Stage(root); Replica.STAGES.push(st);        // WebGL layer
+  const coin = A3.orangeCoin('eth', 300); st.root.add(coin);
+  const digitsScene = st.addScene();                              // a second scene on the same canvas
+  const digits = A3.makeMegapotText('$1,100,000', 300); digitsScene.add(digits.group);
+
+  const top = add(root, '<div class="scene"></div>');           // DOM above the 3D
+  const num = add(top, '<div class="num"></div>');
+  const odo = new Odo(num, { places: 5, prefix: '$', commas: true });
+  const value = t => lerp(0, 10450, E.inOutSine(seg(t, 1.3, 2.5)));
+
+  function update(t) {
+    const A = t < 3.2; V(sA, A); V(top, A); V(sB, !A);           // hard cut at 3.2 s
+    if (A) {
+      words.forEach((w, i) => {                                   // words rise in, staggered
+        const s0 = .1 + i * .14;
+        T(w, `translateY(${60 * (1 - E.outCubic(seg(t, s0, s0 + .5)))}px)`);
+        O(w, E.outCubic(seg(t, s0, s0 + .2)));
+      });
+      const r = E.outCubic(seg(t, .9, 1.5));
+      T(rays, at(960, 560, .1 + .9 * r, `rotate(${8 * t}deg)`)); O(rays, r);
+      const fly = E.outCubic(seg(t, .9, 1.5)), merge = E.inCubic(seg(t, 2.6, 3.1));
+      const y = lerp(lerp(1400, 540, fly) + 10 * Math.sin(t * 3) * fly, 850, merge);
+      st.place(coin, 960, y);
+      coin.scale.setScalar(lerp(1, .12, merge)); coin.visible = merge < 1;
+      A3.cssRot(coin, 15, lerp(540, 20, fly) + 25 * Math.sin(t * 1.5), -6);   // CSS-style degrees
+      odo.flow(value, t); O(num, seg(t, 1.2, 1.4));
+      st.render();
+    } else {
+      const u = t - 3.2;
+      T(raysB, at(960, 560, 1 + .06 * u, `rotate(${-3 + 8 * u}deg)`));
+      const g = lerp(.55, 1, E.outCubic(seg(u, 0, .5)));
+      st.place(digits.group, 960, 560);
+      digits.group.scale.set(g * .74, g, g); digits.group.rotation.y = 18 * A3.D2R;
+      digits.chars.forEach((c, i) => {                            // per-glyph flip-in
+        const p = seg(u, i * .03, i * .03 + .25), q = E.outCubic(p);
+        c.visible = p > 0; c.scale.setScalar(.55 + .45 * E.outBack(p, 2)); c.rotation.y = 60 * (1 - q) * A3.D2R;
+      });
+      st.render(digitsScene);
+    }
+  }
+  return { period: 4.6, update };
+}
+
+Replica.boot({
+  W: 1920, H: 1080, duration: 9.2,
+  fonts: ['400 40px Inter', '600 40px Inter', '800 44px Inter', '900 78px Inter'],
+  // before: () => A3.loadCar(),     // when the page embeds a GLB (scripts/prep-glb.sh)
+  build: () => [buildDemo()],
+});
+</script>
+</body>
+</html>

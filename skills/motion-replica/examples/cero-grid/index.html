@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cero Grid Replica</title>
+<!-- Worked example for the motion-replica skill: a 2×2 grid ad rebuilt in code.
+     Cells loop independently (3.80 / 5.37 / 5.03 / 3.93 s). Run ./fetch-assets.sh once for the car. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@1,62..125,900&family=Figtree:wght@500;600;700&family=IBM+Plex+Mono:wght@600;700&family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500&family=Roboto+Slab:wght@800;900&family=Rubik:wght@800;900&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=block">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#fff}
+body{font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#111}
+#stage{position:absolute;left:0;top:0;width:3840px;height:2160px;transform-origin:0 0}
+.cell{position:absolute;width:1920px;height:1080px;overflow:hidden;contain:strict}
+#tl{left:0;top:0;background:#fefefe}
+#tr{left:1920px;top:0;background:#fdfaf7}
+#bl{left:0;top:1080px;background:#fdfdfd}
+#br{left:1920px;top:1080px;background:#fbfbfa}
+.a{position:absolute;left:0;top:0}
+.scene{position:absolute;left:0;top:0;width:1920px;height:1080px}
+.p3{position:absolute;left:0;top:0;transform-style:preserve-3d}
+svg{display:block}
+.ic{display:inline-block;vertical-align:middle;flex:none}
+
+/* ---------- odometer ---------- */
+.odo{display:inline-flex;align-items:flex-start;white-space:nowrap;line-height:1.25em;font-variant-numeric:tabular-nums}
+.odo>span{display:inline-block;height:1.25em;line-height:1.25em;overflow:hidden;flex:none}
+.wheel{position:relative;-webkit-mask-image:linear-gradient(transparent,#000 13%,#000 87%,transparent);mask-image:linear-gradient(transparent,#000 13%,#000 87%,transparent)}
+.strip{display:block}
+.strip b{display:block;height:1.25em;line-height:1.25em;text-align:center;font-weight:inherit}
+
+/* ---------- coins ---------- */
+.coinwrap{position:absolute;left:0;top:0;perspective:1500px}
+.coin{position:absolute;inset:0;transform-style:preserve-3d}
+.coin>i{position:absolute;inset:0;border-radius:50%}
+.coin>.cf{backface-visibility:hidden;display:grid;place-items:center;overflow:hidden}
+.coin>.cf svg{width:60%;height:60%}
+
+/* ---------- rays ---------- */
+.rays{border-radius:50%}
+
+/* ---------- bills ---------- */
+.bill{position:relative;border-radius:5px;background:linear-gradient(100deg,#eef1ea,#d7ded3 40%,#e6ebe2 62%,#cfd8cb);box-shadow:inset 0 0 0 3px #c3ccbf,inset 0 0 0 6px #edf0ea,0 6px 14px rgba(0,0,0,.10)}
+.bill i{position:absolute;display:block}
+.bill .ov{left:40%;top:16%;width:22%;height:68%;border-radius:50%;background:radial-gradient(#8c978a,#b9c2b5 72%)}
+.bill .sl{left:12%;top:30%;width:14%;height:40%;border-radius:50%;background:#a4ae9f;opacity:.55}
+.bill .rb{left:70%;top:0;width:9%;height:100%;background:linear-gradient(#e7c9c3,#d9b3ad);opacity:.55}
+.bill.stack{box-shadow:inset 0 0 0 3px #c3ccbf,0 3px 0 #d8ded4,0 6px 0 #c9d0c5,0 9px 0 #dde2d9,0 12px 0 #c4ccc0,0 18px 20px rgba(0,0,0,.14)}
+.bill.stack:after{content:"";position:absolute;left:46%;top:-2px;bottom:-14px;width:13%;background:linear-gradient(#e2d2ad,#c9b78d);border-radius:2px}
+
+/* ---------- TL phone ---------- */
+.tlp{position:absolute;inset:0;border-radius:118px;background:linear-gradient(90deg,#474c69,#7a7f99 6%,#5d6282 50%,#7a7f99 94%,#474c69);transform-origin:50% 22%}
+.tlp-scr{position:absolute;inset:13px;border-radius:106px;background:linear-gradient(#d2d2d2,#c7c7c7 45%,#bdbdbd);overflow:hidden}
+.tlp-time{position:absolute;left:80px;top:24px;font:600 36px Inter;color:#111}
+.tlp-island{position:absolute;left:239px;top:17px;width:201px;height:58px;border-radius:30px;background:#050505}
+.tlp-icons{position:absolute;right:52px;top:30px;display:flex;gap:9px;align-items:center;color:#111}
+.tlp-pill{position:absolute;left:50%;top:120px;transform:translateX(-50%);padding:11px 27px;border-radius:30px;background:rgba(255,255,255,.55);font:500 28px Inter;color:#2d2d2d;white-space:nowrap}
+.tlp-x{position:absolute;left:593px;top:116px;width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.5);display:grid;place-items:center}
+.tlp-amt{position:absolute;left:0;right:0;top:236px;text-align:center;font:700 112px Inter;color:#3b3b3b;filter:blur(17px);opacity:.7}
+.tlp-glow{position:absolute;left:4px;top:455px;width:150px;height:420px;background:#b4ea1c;filter:blur(16px);opacity:.85;border-radius:30px}
+.tap{position:absolute;width:46px;height:46px;border-radius:50%;background:#26361c;display:grid;place-items:center;box-shadow:0 0 0 3px rgba(255,255,255,.35)}
+
+/* ---------- bag ---------- */
+.bag-side{border-radius:50%/12%;background:linear-gradient(90deg,#86c61e,#bdef4c 50%,#86c61e)}
+
+/* ---------- ticket ---------- */
+.ticket{position:relative;width:860px;height:340px;filter:drop-shadow(0 18px 30px rgba(0,0,0,.14))}
+.tk-amt{position:absolute;left:92px;top:96px;font:500 116px Inter;letter-spacing:-.02em;color:#1a1a1a;white-space:nowrap}
+
+/* ---------- MEGAPOT ---------- */
+.mp-logo{position:absolute;left:0;top:0;display:flex;align-items:center;font:italic 900 68px Archivo;font-stretch:88%;letter-spacing:-1px;color:#0b0b0b;white-space:nowrap}
+.mp-logo svg{width:56px;height:56px;margin:0 1px 0 2px;transform:skewX(-10deg)}
+.mp-num{position:absolute;left:0;top:0;white-space:nowrap;font:900 360px Rubik;letter-spacing:-.01em;line-height:1}
+.mp-ch{display:inline-block;position:relative}
+.mp-ch .bk{color:#62a513;text-shadow:1px 2px 0 #6aaf19,2px 4px 0 #66aa17,3px 6px 0 #62a414,4px 8px 0 #5d9e12,5px 10px 0 #58980f,6px 12px 0 #53910d,7px 14px 0 #4e8a0b,8px 16px 0 #4a840a,9px 18px 0 #457d08,10px 22px 34px rgba(90,150,10,.35)}
+.mp-ch .fr{position:absolute;left:0;top:0;background:linear-gradient(180deg,#e1fca0 4%,#bdf05a 38%,#9ee134 70%,#8ad427);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:3px rgba(236,255,196,.55)}
+
+/* ---------- TR ---------- */
+.tr-bg{background:radial-gradient(120% 62% at 50% 118%,#f8c99d 0%,rgba(249,207,166,.55) 34%,rgba(253,250,247,0) 70%),radial-gradient(55% 50% at 0% 0%,rgba(249,212,178,.6),rgba(253,250,247,0) 70%),radial-gradient(45% 40% at 100% 0%,rgba(250,226,204,.4),rgba(253,250,247,0) 70%),#fdfaf7}
+.tr-line{position:absolute;left:0;top:0;width:1920px;text-align:center;font:400 86px Outfit;letter-spacing:-.005em;color:#101010;white-space:nowrap}
+.tr-w{display:inline-block;margin:0 .125em}
+.trp{position:absolute;left:0;top:0;width:1035px;height:1900px;border-radius:150px;background:#fdfdfd;box-shadow:0 0 0 2px rgba(241,228,217,.95),0 40px 90px rgba(210,120,60,.10)}
+.trp .sb{position:absolute;left:150px;right:88px;top:92px;display:flex;justify-content:space-between;align-items:center;font:600 45px Inter;color:#0e0e0e}
+.trp .sbi{display:flex;gap:12px;align-items:center}
+.chips{position:absolute;left:93px;top:342px;display:flex;gap:28px}
+.chip{height:62px;padding:0 22px;border:2.5px solid #9a9a9a;border-radius:31px;display:flex;align-items:center;gap:10px;font:500 37px Inter;color:#474747;white-space:nowrap}
+.chip.on{background:#f8d4cb;border-color:#e6a293;color:#6a2c1f}
+.nwl{position:absolute;left:90px;top:482px;font:400 38px Inter;color:#6c6c6c}
+.nwe{position:absolute;left:900px;top:480px;color:#6c6c6c}
+.nwv{position:absolute;left:0;top:548px;width:1035px;text-align:center;font:700 84px "IBM Plex Mono";color:#363636}
+.btns{position:absolute;left:85px;top:690px;display:flex;gap:18px}
+.btn{position:relative;height:93px;border-radius:47px;background:#efefef;display:flex;align-items:center;gap:14px;padding:0 38px;font:500 40px Inter;color:#333;white-space:nowrap;overflow:hidden}
+.btn.dep{background:linear-gradient(90deg,#f0705a,#f59a6b);color:#fff4ef}
+.btn .press{position:absolute;inset:0;background:radial-gradient(circle at 40% 50%,rgba(255,255,255,.95),rgba(255,236,226,.6));opacity:0}
+.flame{position:absolute;top:360px;width:190px;height:1500px;border-radius:50%;filter:blur(24px);-webkit-mask-image:linear-gradient(transparent,#000 30%);mask-image:linear-gradient(transparent,#000 30%)}
+.bigdep{position:absolute;left:0;top:0;width:1095px;height:385px;border-radius:193px;background:linear-gradient(90deg,#ee5a3b,#f1703f 45%,#f58c46);display:flex;align-items:center;justify-content:center;gap:56px;overflow:hidden;color:#fff;font:500 168px Inter;letter-spacing:-.01em;box-shadow:0 30px 70px rgba(239,91,59,.16)}
+.bigdep>span{position:relative;z-index:2}
+.sheen{position:absolute;border-radius:50%;background:#fff;filter:blur(44px)}
+
+/* ---------- BL ---------- */
+.bl-txt{position:absolute;left:0;top:0;width:1920px;text-align:center;font:600 196px Figtree;letter-spacing:-.012em;color:#0c0c0c;white-space:nowrap;transform-origin:960px 50%}
+.bl-inst{position:absolute;left:0;top:0;white-space:nowrap;font:700 262px Figtree;letter-spacing:-.01em;background:linear-gradient(90deg,#b8b0ff 0%,#9486ff 28%,#5a3dff 55%,#2508ff 78%,#1a00f0);-webkit-background-clip:text;background-clip:text;color:transparent;padding:0 10px}
+.blp{position:absolute;left:0;top:0;width:750px;height:1740px;border-radius:72px;background:#fff;box-shadow:0 0 0 2px #eeeeee,0 30px 80px rgba(0,0,0,.06);overflow:hidden}
+.blp .sb{position:absolute;left:105px;right:62px;top:42px;display:flex;justify-content:space-between;align-items:center;font:600 30px Inter;color:#111}
+.blp .sbi{display:flex;gap:8px;align-items:center}
+.blp .h{position:absolute;font:600 30px Inter;color:#161616}
+.blp .clr{position:absolute;right:45px;top:130px;font:400 27px Inter;color:#9c9c9c}
+.rchips{position:absolute;left:45px;top:188px;display:flex;gap:14px}
+.rchip{width:208px;height:82px;border-radius:18px;background:#f4f4f4;display:flex;align-items:center;gap:14px;padding:0 16px}
+.rchip b{display:block;font:600 22px Inter;color:#222}
+.rchip span{display:block;font:400 20px Inter;color:#9a9a9a}
+.row{position:absolute;left:45px;right:45px;height:110px;display:flex;align-items:center}
+.row .ti{width:72px;height:72px;border-radius:50%;flex:none;margin-right:24px;overflow:hidden}
+.row .nm{flex:1;min-width:0}
+.row .nm b{display:block;font:600 30px Inter;color:#161616;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm span{display:block;font:400 22px Inter;color:#8e8e8e;margin-top:6px;white-space:nowrap}
+.row .pr{text-align:right}
+.row .pr b{display:block;font:500 30px Inter;color:#161616}
+.row .pr span{display:block;font:500 21px Inter;margin-top:8px}
+.srch{position:absolute;left:45px;right:45px;top:976px;height:70px;display:flex;align-items:center;gap:18px}
+.srch .box{width:40px;height:40px;border:3px solid #222;border-radius:8px;display:grid;place-items:center;font:600 20px Inter}
+.srch .ph{flex:1;font:400 30px Inter;color:#a9a9a9;display:flex;align-items:center}
+.srch .caret{display:inline-block;width:3px;height:36px;background:#3d5afe;margin-right:2px}
+.srch .paste{padding:12px 24px;border-radius:30px;background:#f0f0f0;font:500 26px Inter;color:#222}
+.kb{position:absolute;left:0;right:0;top:1080px;height:680px;background:#eceef1;border-radius:44px 44px 0 0}
+.kr{position:absolute;left:0;right:0;display:flex;justify-content:center;gap:0}
+.kr i{font-style:normal;width:69px;text-align:center;font:400 44px Inter;color:#202020}
+.kk{height:74px;border-radius:14px;display:grid;place-items:center;font:400 30px Inter;color:#222;background:#fbfbfc}
+
+/* ---------- BR ---------- */
+.g-bg{background:radial-gradient(60% 40% at 50% 104%,rgba(214,246,96,.85),rgba(230,250,160,.35) 45%,rgba(244,244,242,0) 75%),#f4f4f2}
+.fchip{position:absolute;left:0;top:0;width:420px;text-align:center}
+.fchip .ring{position:relative;width:146px;height:146px;margin:0 auto}
+.fchip .dot{position:absolute;left:26px;top:26px;width:94px;height:94px;border-radius:50%;display:grid;place-items:center;color:#1d1d1d}
+.fchip .pls{position:absolute;padding:6px 14px;border-radius:20px;background:#ebebea;font:500 27px Inter;color:#2c2c2c}
+.fchip h4{margin:6px 0 0;font:500 45px "Source Serif 4";color:#1b1f16;letter-spacing:-.005em}
+.fchip p{margin:10px 0 0;font:400 26px Inter;line-height:1.24;color:#5f5f5f}
+.brp{position:absolute;left:0;top:0;width:700px;height:1450px;border-radius:112px;background:#0e0e0e;transform-origin:0 0;box-shadow:inset 0 0 0 3px #3a3a3a}
+.brs{position:absolute;inset:18px;border-radius:94px;background:#f5f5f3;overflow:hidden}
+.brs .x{position:absolute}
+.card{position:absolute;border-radius:34px;background:#fafaf9;box-shadow:inset 0 0 0 2px #e9e9e7}
+.card .lb{position:absolute;left:26px;top:22px;font:400 27px Inter;color:#8c8c8c}
+.card .vl{position:absolute;left:26px;top:74px;font:500 44px Inter;color:#1e2612;letter-spacing:-.01em}
+.chev{position:absolute;width:44px;height:44px;border-radius:50%;background:#f0f0ee;display:grid;place-items:center}
+.cl{position:absolute;left:22px;top:727px;width:620px;height:190px;border-radius:36px;overflow:hidden}
+.cl-lock{background:linear-gradient(90deg,#c9c9c9,#e9e9e9 12%,#f2f2f1 50%,#e9e9e9 88%,#c9c9c9);box-shadow:inset 0 2px 0 rgba(255,255,255,.9)}
+.cl-open{background:linear-gradient(160deg,#d9fb5a,#c9f43a 55%,#bdee22)}
+.cl .lb{position:absolute;left:28px;top:24px;font:400 30px Inter;color:#4a4f45}
+.cl-open .lb{color:#6a8a1c}
+.cl .amt{position:absolute;left:28px;top:84px;font:500 50px Inter;color:#1e2612;white-space:nowrap}
+.cl .amt small{font-size:31px;color:#6f8f25;font-weight:400}
+.cl .bar{position:absolute;left:28px;right:28px;top:156px;height:16px;border-radius:8px;background:rgba(255,255,255,.35)}
+.cl .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:#1f2a12}
+.pop{position:absolute;left:0;top:0;width:620px;height:190px;border-radius:36px;overflow:hidden}
+.pop .glass{position:absolute;inset:0;background:linear-gradient(90deg,#bdbdbd,#e2e2e2 10%,#f3f3f2 30%,#f6f6f5 50%,#f3f3f2 70%,#e2e2e2 90%,#bdbdbd)}
+.pop .blob{position:absolute;left:50%;top:55%;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:radial-gradient(circle,#cbf53c 0,#cff64a 38%,rgba(214,248,92,.75) 55%,rgba(214,248,92,0) 70%);filter:blur(10px)}
+.pop .lb{position:absolute;left:28px;top:24px;font:400 30px Inter;color:#3f4538}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="cell" id="tl"></div>
+  <div class="cell" id="tr"></div>
+  <div class="cell" id="bl"></div>
+  <div class="cell" id="br"></div>
+</div>
+<svg width="0" height="0" style="position:absolute">
+  <defs id="fx"></defs>
+</svg>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+<script src="assets/car-glb.js"></script>
+<script src="assets/rubik-typeface.js"></script>
+<script src="assets/assets3d.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+const A3=window.Assets3D(THREE,{RoomEnvironment,GLTFLoader,MeshoptDecoder,FontLoader,TextGeometry,RoundedBoxGeometry});
+const STAGES=[];
+/* =====================================================================
+   Deterministic timeline: every frame is a pure function of time t.
+   renderAt(t) draws the grid at t seconds; live mode drives it with rAF.
+   ===================================================================== */
+const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const E={
+  lin:x=>x,
+  inQuad:x=>x*x, outQuad:x=>1-(1-x)*(1-x),
+  inCubic:x=>x*x*x, outCubic:x=>1-Math.pow(1-x,3),
+  inOutCubic:x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,
+  outQuint:x=>1-Math.pow(1-x,5),
+  outExpo:x=>x>=1?1:1-Math.pow(2,-10*x),
+  inOutSine:x=>-(Math.cos(Math.PI*x)-1)/2,
+  outBack:(x,s=1.7)=>{const c=s+1;return 1+c*Math.pow(x-1,3)+s*Math.pow(x-1,2)},
+};
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function h(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild}
+function add(p,html){const e=h(html);p.appendChild(e);return e}
+const T=(e,s)=>{e.style.transform=s};
+const O=(e,v)=>{e.style.opacity=v};
+const V=(e,b)=>{e.style.visibility=b?'visible':'hidden'};
+const blur=n=>n>0.05?`blur(${n.toFixed(2)}px)`:'none';
+const at=(x,y,s=1,extra='')=>`translate(${x}px,${y}px) translate(-50%,-50%) scale(${s}) ${extra}`;
+const fmt=(v,d=0)=>v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+/* vertical-only motion blur filters for rolling digits */
+(()=>{const fx=document.getElementById('fx');let s='';for(let i=1;i<=12;i++)s+=`<filter id="vb${i}" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="0 ${i*2}"/></filter>`;fx.innerHTML=s})();
+
+/* ---------- icons ---------- */
+const PATHS={
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  download:'<path d="M12 3v11.5M6.5 9.5 12 15l5.5-5.5M4.5 20.5h15"/>',
+  upload:'<path d="M12 16.5V5M6.5 10.5 12 5l5.5 5.5M4.5 20.5h15"/>',
+  transfer:'<path d="M4 8.5h15l-3.5-3.5M20 15.5H5l3.5 3.5"/>',
+  eye:'<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3.2"/>',
+  tag:'<path d="M3.5 12.5 12 4h7.5v7.5L11 20z"/><circle cx="15.8" cy="8" r="1.4"/><path d="M8 13l3 3"/>',
+  card:'<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M14 10c.8.8.8 3.2 0 4M17 9c1.4 1.4 1.4 4.6 0 6"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="10.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/>',
+  chev:'<path d="M9.5 6l6 6-6 6"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+  dollar:'<path d="M12 2.5v19M16.6 7.2c0-1.9-2.1-3.1-4.6-3.1s-4.6 1.3-4.6 3.3c0 4.7 9.4 2.7 9.4 7.5 0 2.1-2.1 3.5-4.8 3.5s-4.9-1.4-4.9-3.4"/>',
+  wallet:'<path d="M19 7.5V6a2 2 0 0 0-2-2H5.5A2.5 2.5 0 0 0 3 6.5v11A2.5 2.5 0 0 0 5.5 20H17a2 2 0 0 0 2-2v-1.5"/><path d="M21 9h-5.5a3 3 0 0 0 0 6H21z"/>',
+  swap:'<path d="M4 9h15.5l-4-4M20 15H4.5l4 4"/>',
+  bank:'<path d="M3 9.5 12 4l9 5.5M5 10v7.5M9.7 10v7.5M14.3 10v7.5M19 10v7.5M3 20.5h18"/>',
+  badge:'<path d="M12 2.8l2.3 1.7 2.9.1 1 2.7 2.3 1.8-.9 2.8.9 2.8-2.3 1.8-1 2.7-2.9.1L12 21.2l-2.3-1.7-2.9-.1-1-2.7-2.3-1.8.9-2.8-.9-2.8 2.3-1.8 1-2.7 2.9-.1z"/><path d="M8.6 12.1l2.3 2.3 4.6-4.7"/>',
+  hand:'<path d="M9 11.5V5.2a1.6 1.6 0 0 1 3.2 0v5.3M12.2 10V8.4a1.6 1.6 0 0 1 3.2 0V11M15.4 10.2a1.6 1.6 0 0 1 3.2 0v3.3a7 7 0 0 1-7 7h-.8a6 6 0 0 1-5-2.8l-2.2-3.7a1.6 1.6 0 0 1 2.6-1.8L9 14.6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+  smile:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
+  shift:'<path d="M12 4 4 12h4.5v7h7v-7H20z"/>',
+  back:'<path d="M9 5h11a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H9l-6.5-7z"/><path d="M11.5 9.5l5 5M16.5 9.5l-5 5"/>',
+  home:'<path d="M4 11 12 4l8 7v8.5a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/>',
+  grid:'<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
+  spark:'<path d="M12 3c.6 4.8 3.9 8.2 9 9-5.1.8-8.4 4.2-9 9-.6-4.8-3.9-8.2-9-9 5.1-.8 8.4-4.2 9-9z"/>',
+};
+const ic=(n,size,color='currentColor',sw=2,fill='none')=>`<svg class="ic" viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${PATHS[n]}</svg>`;
+const SIG=(s=1)=>`<svg viewBox="0 0 34 22" width="${34*s}" height="${22*s}" fill="currentColor"><rect x="0" y="14" width="6" height="8" rx="1.6"/><rect x="9" y="9.5" width="6" height="12.5" rx="1.6"/><rect x="18" y="5" width="6" height="17" rx="1.6"/><rect x="27" y="0" width="6" height="22" rx="1.6"/></svg>`;
+const WIFI=(s=1)=>`<svg viewBox="0 0 30 22" width="${30*s}" height="${22*s}" fill="none" stroke="currentColor" stroke-width="3.8" stroke-linecap="round"><path d="M3 8.6a17 17 0 0 1 24 0"/><path d="M8.2 13.6a10 10 0 0 1 13.6 0"/><circle cx="15" cy="19" r="2.5" fill="currentColor" stroke="none"/></svg>`;
+const BATT=(s=1)=>`<svg viewBox="0 0 50 24" width="${50*s}" height="${24*s}"><rect x="1.2" y="1.2" width="43" height="21.6" rx="7" fill="currentColor"/><path d="M47 8.5v7a3.5 3.5 0 0 0 0-7z" fill="currentColor" fill-opacity=".45"/></svg>`;
+const SBI=s=>`${SIG(s)}${WIFI(s)}${BATT(s)}`;
+
+/* ---------- glyphs for coins / token icons (viewBox 100) ---------- */
+const G={
+  bnb:'<path d="M50 14 64 28 57 35 50 28 43 35 36 28Z M24 40 31 47 24 54 17 47Z M76 40 83 47 76 54 69 47Z M50 40 57 47 50 54 43 47Z M36 60 43 53 50 60 57 53 64 60 50 74Z M30 34 37 41 30 48 23 41Z M70 34 77 41 70 48 63 41Z"/>',
+  poly:'<path d="M16 50 33 33 50 50 67 67 84 50 67 33 50 50 33 67Z" fill="none" stroke="currentColor" stroke-width="11" stroke-linejoin="round"/>',
+  op:'<text x="50" y="66" text-anchor="middle" font-family="Inter" font-weight="800" font-size="44" fill="currentColor">OP</text>',
+  eth:'<path d="M50 10 76 52 50 67 24 52Z M50 73 76 58 50 92 24 58Z"/>',
+  sol:'<path d="M28 26H80L71 36H19Z M19 45H71L80 55H28Z M28 64H80L71 74H19Z"/>',
+  sq:'<rect x="24" y="24" width="52" height="52" rx="14" fill="none" stroke="currentColor" stroke-width="13"/>',
+  bow:'<path d="M16 30c13 0 23 12 34 20 11-8 21-20 34-20 9 0 9 40 0 40-13 0-23-12-34-20-11 8-21 20-34 20-9 0-9-40 0-40Z"/>',
+  none:'',
+  leaf:'<path d="M26 72C22 45 38 24 72 20c2 30-14 50-46 52Z" fill="#4c9a27"/><path d="M28 70C42 55 52 44 66 28" stroke="#e8f5dc" stroke-width="4" fill="none"/><circle cx="64" cy="66" r="13" fill="none" stroke="#f29a1e" stroke-width="8" stroke-dasharray="6 4"/><circle cx="64" cy="66" r="5" fill="#f29a1e"/>',
+  pglass:'<path d="M34 84 44 26c1-7 7-12 14-12h10c9 0 15 8 13 17l-2 12c-2 9-9 15-18 15h-8l-4 26Z" fill="#c5d2c7" stroke="#8ea292" stroke-width="2.5"/><path d="M48 30h14c5 0 8 4 7 9l-1 6c-1 5-5 8-10 8h-13Z" fill="#eef3ef" opacity=".85"/>',
+  stonk:'<path d="M66 20C52 14 34 20 36 34c2 12 26 14 28 28 2 14-16 22-32 16" fill="none" stroke="#b7d6df" stroke-width="15" stroke-linecap="round"/><path d="M40 50 60 44" stroke="#0a1313" stroke-width="7"/>',
+  cat:'<g fill="#bca88f"><ellipse cx="50" cy="64" rx="17" ry="21"/><circle cx="50" cy="38" r="13"/><path d="M39 31 41 19 48 28Z M61 31 59 19 52 28Z"/></g><g fill="#6b5a48"><circle cx="45" cy="37" r="2"/><circle cx="55" cy="37" r="2"/></g><path d="M66 78c10-2 12-12 6-16" stroke="#bca88f" stroke-width="6" fill="none" stroke-linecap="round"/>',
+  uni:'<circle cx="50" cy="50" r="30" fill="#f3d6ee"/><path d="M36 56c4-14 16-20 30-16-6 3-8 8-6 13" stroke="#e5489e" stroke-width="6" fill="none" stroke-linecap="round"/>',
+};
+const glyph=(k,color)=>`<svg viewBox="0 0 100 100" fill="${color}" style="color:${color}">${G[k]}</svg>`;
+
+/* ---------- shared components ---------- */
+class Odo{
+  constructor(parent,{places=4,minPlaces=1,prefix='',commas=false,style=''}){
+    this.places=places;this.minPlaces=minPlaces;
+    this.el=add(parent,`<div class="odo" style="${style}"></div>`);
+    if(prefix)add(this.el,`<span>${prefix}</span>`);
+    this.w=[];this.c=[];
+    for(let p=places-1;p>=0;p--){
+      const w=add(this.el,`<span class="wheel"><span class="strip">${[0,1,2,3,4,5,6,7,8,9,0].map(d=>`<b>${d}</b>`).join('')}</span></span>`);
+      this.w[p]={el:w,strip:w.firstChild};
+      if(commas&&p%3===0&&p>0)this.c[p]=add(this.el,`<span>,</span>`);
+    }
+    const fs=parseFloat(getComputedStyle(this.el).fontSize);
+    const pr=add(this.el,`<span style="position:absolute;visibility:hidden;font-size:${fs*10}px">0000000000</span>`);
+    this.dw=pr.offsetWidth/100;pr.remove();
+    const cp=add(this.el,`<span style="position:absolute;visibility:hidden;font-size:${fs*10}px">,,,,,,,,,,</span>`);
+    this.cw=cp.offsetWidth/100;cp.remove();
+    this.fs=fs;
+  }
+  /* Number-flow style: the value is sampled every `dt` seconds and each digit
+     rolls upward from its old glyph to its new one over `dur`, then settles. */
+  flow(f,t,dt=.125,dur=.1){
+    const k=Math.floor(t/dt),x=clamp((t-k*dt)/dur),p=E.outCubic(x);
+    const a=Math.round(f((k-1)*dt)),b=Math.round(f(k*dt));
+    const rate=x<1?3*(1-x)*(1-x)/dur:0;
+    for(let q=0;q<this.places;q++){
+      const P=10**q,da=Math.floor(a/P)%10,db=Math.floor(b/P)%10;
+      const delta=b>=a?((db-da)%10+10)%10:-(((da-db)%10+10)%10);
+      const pos=(((da+delta*p)%10)+10)%10;
+      const bpx=this.fs*.00022*Math.abs(delta)*rate,lvl=Math.min(12,Math.round(bpx/2));
+      const {el,strip}=this.w[q];
+      strip.style.transform=`translateY(${(-pos*1.25).toFixed(4)}em)`;
+      strip.style.filter=lvl?`url(#vb${lvl})`:'none';
+      const va=q<this.minPlaces||a>=P?1:0,vb=q<this.minPlaces||b>=P?1:0,vis=lerp(va,vb,p);
+      el.style.width=(this.dw*vis)+'px';el.style.opacity=vis;
+      if(this.c[q]){this.c[q].style.width=(this.cw*vis)+'px';this.c[q].style.opacity=vis}
+    }
+  }
+}
+
+function makeRays(parent,{n=16,duty=.5,color='#cdf55a',size=2400,mask,soft=1.4}){
+  const per=360/n,w=per*duty;
+  return add(parent,`<div class="a rays" style="width:${size}px;height:${size}px;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,${color} ${soft}deg,${color} ${w-soft}deg,rgba(255,255,255,0) ${w}deg,rgba(255,255,255,0) ${per}deg);-webkit-mask-image:${mask};mask-image:${mask}"></div>`);
+}
+/* =====================================================================
+   TOP LEFT — phone → cero pack spins → prize burst → MEGAPOT $1,100,000
+   ===================================================================== */
+function buildTL(){
+  const root=document.getElementById('tl');
+  const sA=add(root,'<div class="scene"></div>');
+
+  const phoneWrap=add(sA,`<div class="a" style="left:608px;top:383px;width:705px;height:1480px;perspective:2600px;perspective-origin:50% 10%"></div>`);
+  const phone=add(phoneWrap,`<div class="tlp"><div class="tlp-scr">
+    <div class="tlp-glow"></div>
+    <div class="tlp-time">23:59</div><div class="tlp-island"></div><div class="tlp-icons">${SBI(1.02)}</div>
+    <div class="tlp-pill">1 pack left</div>
+    <div class="tlp-x">${ic('x',28,'#6a6a6a',2.4)}</div>
+    <div class="tlp-amt">$54.20</div>
+  </div></div>`);
+
+  const cam=add(sA,`<div class="scene" style="transform-origin:960px 590px"></div>`);
+  const rays=makeRays(cam,{n:16,duty:.5,color:'#d3f760',size:2600,mask:'radial-gradient(circle closest-side,transparent 4%,rgba(0,0,0,.55) 11%,#000 20%,#000 40%,transparent 76%)'});
+  const glow=add(cam,`<div class="a" style="width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,#fff 0,rgba(255,255,255,.9) 25%,rgba(255,255,255,0) 60%)"></div>`);
+
+  const sB=add(root,'<div class="scene" style="background:#fff"></div>');
+  const raysB=makeRays(sB,{n:16,duty:.5,color:'#c5f43c',size:3600,soft:1.2,mask:'radial-gradient(circle closest-side,transparent 7%,rgba(0,0,0,.25) 16%,rgba(0,0,0,.8) 32%,#000 50%)'});
+
+  // ---- 3D layer: pack, prizes and the MEGAPOT digits ----
+  // two WebGL layers so the prizes can go soft (depth of field) while the pack stays sharp
+  const st=new A3.Stage(root),sp=new A3.Stage(root);STAGES.push(st,sp);
+  const R=st.root,RP=sp.root,D2R=A3.D2R;
+  const wrap=o=>{const g=new THREE.Group();g.add(o);return g};
+  const items=[];
+  const item=(obj,x,y,s,r,vx,vy,vr,z,tumble=null)=>{const o=wrap(obj);R.add(o);items.push({o,inner:obj,x,y,s,r,vx,vy,vr,z,tumble});return o};
+  const billSpec=[[1250,170,150,1,15,20,-25,6],[1740,120,160,0,-22,30,-20,-9],[1720,540,150,0,12,35,5,8],[1790,905,170,0,32,30,25,10],[1520,985,150,0,24,15,30,-6],[220,720,150,0,18,-30,15,12],[590,110,120,0,-14,-15,-30,-8],[860,190,120,1,6,-5,-25,4],[330,330,110,0,40,-25,-10,10],[1470,690,110,0,-30,20,10,-10]];
+  billSpec.forEach(([x,y,w,stack,r,vx,vy,vr],i)=>item(stack?A3.makeStack(w*1.2,18):A3.makeBill(w*1.3,.22+.08*(i%3)),x,y,1,r,vx,vy,vr,-170-i*6,[((i*37)%70)-35,((i*53)%70)-35,12+(i%4)*6,-(10+(i%3)*8)]));
+  item(A3.makeCar(560),560,330,1,-9,-26,-10,-2,-70);
+  const watch=A3.makeWatch();watch.rotation.set(-.35,-.8,.55);
+  item(watch,1185,735,.95,28,10,12,3,-55);
+  const pack=A3.makePack();RP.add(pack.group);
+  const topY0=pack.top.position.y;
+  const ball=A3.makeBall(90);item(ball,1490,365,1,0,24,-8,25,30);
+
+  const mpScene=sp.addScene();
+  const mp=A3.makeMegapotText('$1,100,000',350);mpScene.add(mp.group);
+
+  // ---- DOM above the 3D layer ----
+  const sAtop=add(root,'<div class="scene"></div>');
+  const tap=add(sAtop,`<div class="tap" style="left:-23px;top:-23px">${ic('hand',26,'#fff',2)}</div>`);
+  const tkWrap=add(sAtop,`<div class="a" style="width:860px;height:340px;perspective:1800px"></div>`);
+  const tk=add(tkWrap,`<div class="ticket">${TICKET_SVG}<div class="tk-amt">$1,100,000</div></div>`);
+  const tkAmt=tk.querySelector('.tk-amt');
+  const sBtop=add(root,'<div class="scene"></div>');
+  const logo=add(sBtop,`<div class="mp-logo">MEGAP<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="28" fill="#0b0b0b"/><path d="M30 11 35.6 23.9 49.4 24.6 38.6 33.4 42.3 47 30 39.3 17.7 47 21.4 33.4 10.6 24.6 24.4 23.9Z" fill="#fff"/></svg>T</div>`);
+
+  function update(t){
+    const A=t<3.067;V(sA,A);V(sAtop,A);V(sB,!A);V(sBtop,!A);
+    if(A){
+      // phone lifts a touch, then tips back and drops away
+      const up=-46*E.outCubic(seg(t,0,.22)),drop=1150*E.inCubic(seg(t,.2,.95));
+      T(phone,`translateY(${up+drop}px) rotateX(${62*E.inOutCubic(seg(t,.18,.8))}deg)`);
+      V(phoneWrap,t<1);
+      // pack rises out of the phone and spins
+      let by=lerp(1183,1133,E.outCubic(seg(t,0,.3)));
+      by=lerp(by,592,E.outCubic(seg(t,.6,.97)))-14*Math.sin(Math.max(0,t-.97)*2.2);
+      const bs=lerp(1.43,1,E.outCubic(seg(t,.6,.97)));
+      // slow wind-up to edge-on right at the burst, then a fast whip round to face front
+      const ry=t<1.39?90*E.inCubic(seg(t,.85,1.39)):lerp(90,360,E.outQuad(seg(t,1.39,2.02)));
+      const rz=-6*Math.sin(seg(t,.9,2.1)*Math.PI);
+      A3.place(pack.group,960,by,0);pack.group.scale.setScalar(bs);
+      pack.group.rotation.set(-lerp(12,0,E.outCubic(seg(t,.3,1)))*D2R,ry*D2R,-rz*D2R,'XYZ');
+      T(tap,`translate(${960-156*bs}px,${by-165*bs}px)`);O(tap,1-seg(t,.12,.3));
+      const tp=E.outCubic(seg(t,1.5,2.05)),tl=Math.max(0,t-2.05);
+      pack.top.position.set(70*tp+18*tl,topY0+120*tp+28*tl,30*tp);
+      pack.top.rotation.set(-28*tp*D2R,0,-(22*tp+6*tl)*D2R,'ZXY');
+      pack.money.visible=t>=1.48;
+      // burst
+      const tb=1.39,bp=E.outExpo(seg(t,tb,tb+.6)),rp=E.outCubic(seg(t,tb,tb+.55)),el=Math.max(0,t-tb),on=t>=tb;
+      V(rays,on);V(glow,on);
+      T(rays,at(960,590,.05+.95*rp,`rotate(${7*el}deg)`));
+      T(glow,at(960,590,.3+.9*bp));O(glow,.9*seg(t,tb,tb+.1));
+      for(const it of items){
+        it.o.visible=on;if(!on)continue;
+        A3.place(it.o,lerp(960,it.x,bp)+it.vx*el,lerp(590,it.y,bp)+it.vy*el,it.z);
+        it.o.scale.setScalar(lerp(.15,1,bp)*it.s);
+        it.o.rotation.z=-(it.r+it.vr*el)*D2R;
+        if(it.tumble){const [rx,ry2,vrx,vry]=it.tumble;it.inner.rotation.set(-(rx+vrx*el)*D2R,(ry2+vry*el)*D2R,0)}
+      }
+      ball.children[0].rotation.y=.7+el*1.6;
+      // camera push + depth of field once the ticket comes forward
+      const cs=1+.24*E.outCubic(seg(t,1.3,2))+.12*seg(t,2,3.07);
+      T(cam,`scale(${cs})`);for(const r of [R,RP]){r.scale.setScalar(cs);r.position.set(0,-50*(1-cs),0)}
+      const far=blur(4*E.inOutCubic(seg(t,1.45,1.8))+3*E.inOutCubic(seg(t,2.25,2.75))),near=blur(7*E.inOutCubic(seg(t,2.25,2.75)));
+      cam.style.filter=far;st.canvas.style.filter=far;sp.canvas.style.filter=near;V(st.canvas,true);
+      st.render(st.scene);sp.render(sp.scene);
+      // ticket
+      V(tkWrap,on);V(tap,true);
+      if(on){
+        const bx=960+(lerp(960,650,bp)-12*el-960)*cs,byy=590+(lerp(590,700,bp)+8*el-590)*cs;
+        const p2=E.inOutCubic(seg(t,2.1,2.72));
+        const x=lerp(bx,960,p2),y=lerp(byy,548,p2);
+        const s=lerp(lerp(.08,.3,bp)*cs,1,p2)*(1+.12*seg(t,2.72,3.07));
+        T(tkWrap,at(x,y,s));
+        T(tk,`rotateY(${lerp(38,0,p2)}deg) rotateZ(${lerp(-14,0,p2)}deg)`);
+        const rv=93*E.outQuad(seg(t,2.2,3.0));
+        const m=`linear-gradient(90deg,#000 ${rv-4}%,transparent ${rv+3}%)`;
+        tkAmt.style.webkitMaskImage=m;tkAmt.style.maskImage=m;
+      }
+    }else{
+      const u=t-3.067;
+      sp.canvas.style.filter='none';V(st.canvas,false);V(tkWrap,false);V(tap,false);
+      T(raysB,at(960,560,1+.06*u,`rotate(${-3+8*u}deg)`));
+      T(logo,at(960,277,1+.03*u));
+      logo.style.clipPath=`inset(-30% ${100-100*E.outCubic(seg(u,0,.3))}% -30% 0)`;
+      const gs=lerp(.52,1,E.outCubic(seg(u,0,.55)))+.03*seg(u,.55,.73);
+      A3.place(mp.group,962,590,0);mp.group.scale.set(gs*.74,gs,gs);mp.group.rotation.set(0,21*D2R,0);
+      mp.chars.forEach((c,i)=>{
+        const s0=i*.006,p=seg(u,s0,s0+.17),q=E.outCubic(p);
+        c.visible=p>0;c.scale.setScalar(.55+.45*E.outBack(p,2));
+        c.rotation.y=60*(1-q)*D2R;c.position.y=-30*(1-q);
+      });
+      sp.render(mpScene);
+    }
+  }
+  return{period:3.8,update};
+}
+
+const TICKET_SVG=`<svg viewBox="0 0 860 340" width="860" height="340" style="position:absolute;inset:0"><defs>
+ <linearGradient id="holo" x1="0" y1="0" x2="1" y2=".6"><stop offset="0" stop-color="#f3d6f0"/><stop offset=".3" stop-color="#e5e1fa"/><stop offset=".55" stop-color="#ddf1e8"/><stop offset=".8" stop-color="#ececef"/><stop offset="1" stop-color="#e1e1e4"/></linearGradient>
+ <pattern id="holoP" width="46" height="46" patternUnits="userSpaceOnUse"><circle cx="23" cy="23" r="15" fill="none" stroke="#fff" stroke-width="3" opacity=".75"/><circle cx="23" cy="23" r="7" fill="none" stroke="#c6c6d4" stroke-width="2" opacity=".5"/></pattern></defs>
+ <path d="M36 0H666A24 24 0 0 0 714 0H824A36 36 0 0 1 860 36V304A36 36 0 0 1 824 340H714A24 24 0 0 0 666 340H36A36 36 0 0 1 0 304V36A36 36 0 0 1 36 0Z" fill="#f7f7f8" stroke="#e3e3e6" stroke-width="3"/>
+ <rect x="38" y="30" width="600" height="280" rx="24" fill="url(#holo)"/><rect x="38" y="30" width="600" height="280" rx="24" fill="url(#holoP)"/>
+ <path d="M140 310 300 30H392L232 310Z" fill="#fff" opacity=".85"/><path d="M290 310 450 30H490L330 310Z" fill="#fff" opacity=".5"/>
+ <path d="M690 34V306" stroke="#d4d4d8" stroke-width="3" stroke-dasharray="9 9"/>
+ <text transform="translate(792 170) rotate(-90)" text-anchor="middle" font-family="Archivo" font-style="italic" font-weight="900" font-size="68" fill="#d0d0d4">MEGAPOT</text></svg>`;
+
+/* =====================================================================
+   TOP RIGHT — "Spend crypto as you go" → net worth → Deposit → coin burst
+   ===================================================================== */
+function buildTR(){
+  const root=document.getElementById('tr');
+  add(root,'<div class="scene tr-bg"></div>');
+  const cv=add(root,'<canvas class="scene" width="1920" height="1080"></canvas>');
+  {const g=cv.getContext('2d'),r=rng(7);for(let i=0;i<1300;i++){const y=1080-Math.pow(r(),2.2)*760,x=r()*1920;const a=.25+r()*.55;g.fillStyle=r()<.6?`rgba(255,255,255,${a})`:`rgba(255,226,196,${a})`;g.beginPath();g.arc(x,y,.8+r()*1.8,0,7);g.fill()}}
+
+  const S1=add(root,'<div class="scene"></div>');
+  const line=add(S1,'<div class="tr-line"></div>');
+  const words=['Spend','crypto','as','you','go'].map(w=>add(line,`<span class="tr-w">${w}</span>`));
+  const wStart=[-.42,-.26,-.1,.07,.2];
+
+  const phoneC=add(root,'<div class="a" style="transform-origin:0 0"></div>');
+  const flL=add(phoneC,`<div class="flame" style="left:-120px;background:linear-gradient(90deg,rgba(255,80,20,0),#ff5a1c 40%,#ffb000 78%,#ffe467)"></div>`);
+  const flR=add(phoneC,`<div class="flame" style="left:965px;background:linear-gradient(270deg,rgba(255,80,20,0),#ff5a1c 40%,#ffb000 78%,#ffe467)"></div>`);
+  const ph=add(phoneC,`<div class="trp">
+    <div class="sb"><span>9:41</span><span class="sbi">${SBI(1.28)}</span></div>
+    <div class="chips"><span class="chip on">All</span><span class="chip">${ic('tag',34,'#555',1.9)}Trading</span><span class="chip">${ic('card',34,'#555',1.9)}Card</span><span class="chip">${ic('lock',34,'#555',1.9)}Staking</span></div>
+    <div class="nwl">Net Worth</div><div class="nwe">${ic('eye',48,'#6c6c6c',1.8)}</div>
+    <div class="nwv"></div>
+    <div class="btns"><span class="btn dep"><i class="press"></i>${ic('download',38,'#fff4ef',2.2)}Deposit</span><span class="btn">${ic('upload',38,'#333',2.2)}Withdraw</span><span class="btn">${ic('transfer',38,'#333',2.2)}Transfer</span></div>
+  </div>`);
+  const odo=new Odo(ph.querySelector('.nwv'),{places:5,minPlaces:3,prefix:'$',commas:true});
+  const dep=ph.querySelector('.dep'),press=ph.querySelector('.press');
+
+  const S3=add(root,'<div class="scene"></div>');
+  const big=add(S3,`<div class="bigdep"><i class="sheen" style="left:0;top:-60px;width:560px;height:130px;opacity:.75"></i><i class="sheen" style="left:0;top:330px;width:420px;height:110px;opacity:.55"></i><span>${ic('download',128,'#fff',2)}</span><span>Deposit</span></div>`);
+  const [sh1,sh2]=big.querySelectorAll('.sheen');
+
+  const st=new A3.Stage(root);STAGES.push(st);
+  const spec=[['bnb',675,435,330,18,25,-10],['poly',1160,430,255,58,-18,20],['op',430,625,290,72,10,-8],['none',960,560,150,10,84,32],['eth',545,830,340,60,15,-20],['sol',870,775,200,26,-22,10],['sq',1150,830,280,12,-12,5],['bow',1465,715,300,5,-18,0]];
+  const coins=spec.map(([g,x,y,d,rx,ry,rz],i)=>{const k=A3.orangeCoin(g,d);st.root.add(k);return{k,x,y,rx,ry,rz,i}});
+
+  const nw2=t=>lerp(950,1597,E.outCubic(seg(t,1.1,1.6)));
+  const nw4=u=>lerp(1597,10450,E.inOutSine(seg(u,.45,1.15)));
+  function update(t){
+    const s1=t<1.1,s2=t>=1.1&&t<2.2,s3=t>=2.2&&t<3.5,s4=t>=3.5;
+    V(S1,s1);V(phoneC,s2||s4);V(S3,s3);V(st.canvas,s4);
+    if(s1){
+      T(line,`translateY(${lerp(528,450,E.outCubic(seg(t,0,1.1)))}px)`);
+      words.forEach((w,i)=>{const p=seg(t,wStart[i],wStart[i]+.5);T(w,`translateY(${64*(1-E.outCubic(p))}px)`);O(w,E.outCubic(seg(t,wStart[i],wStart[i]+.22)))});
+    }
+    if(s2){
+      const top=t<1.5?lerp(318,150,E.outCubic(seg(t,1.1,1.5))):lerp(150,105,E.inOutSine(seg(t,1.5,2.2)));
+      const sc=lerp(1.057,1,E.outCubic(seg(t,1.1,1.6)));
+      T(phoneC,`translate(${960-517.5*sc}px,${top}px) scale(${sc})`);
+      odo.flow(nw2,t,.125,.09);
+      const fl=E.outCubic(seg(t,1.1,1.8));O(flL,fl);O(flR,fl);
+      T(flL,`scaleY(${.7+.3*fl})`);T(flR,`scaleY(${.7+.3*fl})`);
+      const pp=seg(t,1.9,2.12);T(dep,`scale(${1-.06*Math.sin(pp*Math.PI)})`);O(press,Math.sin(pp*Math.PI)*.85);
+    }
+    if(s3){
+      const u=t-2.2;
+      const s=lerp(1.1,1,E.outCubic(seg(u,0,.35)))*lerp(1,.93,seg(u,.35,1.3));
+      T(big,at(960+14*u,538,s));big.style.filter=blur(14*(1-E.outCubic(seg(u,0,.3))));
+      T(sh1,`translateX(${lerp(-200,700,E.inOutSine(seg(u,0,1.3)))}px)`);
+      T(sh2,`translateX(${lerp(-120,420,E.inOutSine(seg(u,.1,1.3)))}px)`);
+    }
+    if(s4){
+      const u=t-3.5;
+      const sc=lerp(.75,.65,E.outCubic(seg(u,0,1.87))),top=lerp(108,118,E.outCubic(seg(u,0,1.87)));
+      T(phoneC,`translate(${960-517.5*sc}px,${top}px) scale(${sc})`);
+      odo.flow(x=>nw4(x-3.5),t,.125,.1);O(flL,0);O(flR,0);T(dep,'none');O(press,0);
+      const tx=960,ty=top+600*sc;
+      for(const c of coins){
+        const d0=c.i*.01,p=E.outCubic(seg(u,d0,.15+d0));
+        const sx=960+(c.x-960)*.25,sy=1250;
+        let x=lerp(sx,c.x,p)+(c.x-960)*.04*u,y=lerp(sy,c.y,p)-10*u;
+        const q=E.inCubic(seg(u,.48+c.i*.015,.88+c.i*.015));
+        x=lerp(x,tx,q);y=lerp(y,ty,q);
+        const s=lerp(.55,1,p)*lerp(1,.1,q);
+        A3.place(c.k,x,y,0);c.k.scale.setScalar(s*(1-seg(q,.8,1)));c.k.visible=q<.999;
+        A3.cssRot(c.k,c.rx+25*(1-p)+14*u,c.ry-35*(1-p)+30*u,c.rz-20*(1-p));
+      }
+      st.render();
+    }
+  }
+  return{period:5.367,update};
+}
+
+/* =====================================================================
+   BOTTOM LEFT — "Meme trading is now instant" → coins → token search
+   ===================================================================== */
+function buildBL(){
+  const root=document.getElementById('bl');
+  const txt=add(root,'<div class="bl-txt"></div>');
+  const inst=add(root,'<div class="bl-inst">instant</div>');
+
+  const ph=add(root,`<div class="blp">
+    <div class="sb"><span>13:13</span><span class="sbi">${SBI(.88)}</span></div>
+    <div class="h" style="left:45px;top:128px">Recents</div><div class="clr">Clear</div>
+    <div class="rchips">
+      <div class="rchip">${tokIcon('pglass','#f2f2f2','#d0d0d0',44)}<div><b>PONS</b><span>Token</span></div></div>
+      <div class="rchip">${tokIcon('stonk','#0b1414','#8fb9c8',44)}<div><b>STONK</b><span>Token</span></div></div>
+      <div class="rchip">${tokIcon('uni','#fbeaf6','#e9c2df',44)}<div><b>UNI</b><span>Token</span></div></div>
+    </div>
+    <div class="h" style="left:45px;top:318px">Trending Tokens</div>
+  </div>`);
+  const rowsSpec=[['cat','#fafafa','#cfcfcf','CASHCAT','Cashcat · $166.3M Vol',.16168,'+0.00629%','#1f9d55'],['leaf','#fff','#79c043','Cea Industries Tokeniz...','BNC4 · $6.25M MCap',5.427685,'-2.47%','#d93a3a'],['stonk','#0b1414','#8fb9c8','STONK (stonkfun.xyz)','STONK · $185.81M MCap',.211473,'+2.40%','#1f9d55'],['pglass','#f2f2f2','#d0d0d0','Pons','PONS · $426.03M MCap',.607333,'+9.17%','#1f9d55']];
+  const rows=rowsSpec.map(([g,f,rim,nm,sub,pr,ch,cc],i)=>{
+    const r=add(ph,`<div class="row" style="top:${385+i*135}px"><div class="ti">${tokIcon(g,f,rim,72)}</div><div class="nm"><b>${nm}</b><span>${sub}</span></div><div class="pr"><b>$${pr.toFixed(6)}</b><span style="color:${cc}">${ch}</span></div></div>`);
+    return{r,icon:r.querySelector('.ti'),price:r.querySelector('.pr b'),base:pr};
+  });
+  add(ph,`<div class="srch"><span class="box">0</span>${ic('search',40,'#222',2.4)}<span class="ph"><i class="caret"></i>Tokens, Apps</span><span class="paste">Paste</span>${ic('x',36,'#222',2.6)}</div>`);
+  const caret=ph.querySelector('.caret');
+  const kb=add(ph,'<div class="kb"></div>');
+  const krow=(keys,y,pad=0)=>{const r=add(kb,`<div class="kr" style="top:${y}px;padding:0 ${pad}px"></div>`);keys.split('').forEach(k=>add(r,`<i>${k}</i>`));return r};
+  krow('qwertyuiop',50);krow('asdfghjkl',161);
+  const zr=krow('zxcvbnm',272);zr.insertAdjacentHTML('afterbegin',`<i style="margin-right:18px;display:grid;place-items:center">${ic('shift',42,'#222',1.8)}</i>`);zr.insertAdjacentHTML('beforeend',`<i style="margin-left:18px;display:grid;place-items:center">${ic('back',44,'#222',1.8)}</i>`);
+  add(kb,`<div class="a" style="left:30px;top:382px;display:flex;gap:14px"><span class="kk" style="width:170px">ABC</span><span class="kk" style="width:118px"></span><span class="kk" style="width:78px;background:none;font-size:40px">@</span><span class="kk" style="width:78px;background:none;font-size:40px">.</span><span class="kk" style="width:170px;background:#0a84ff">${ic('search',40,'#fff',2.6)}</span></div>`);
+  add(kb,`<div class="a" style="left:75px;top:505px">${ic('smile',50,'#333',1.8)}</div><div class="a" style="left:625px;top:505px">${ic('mic',50,'#333',1.8)}</div>`);
+
+  // 3D coins that become the list's token icons
+  const st=new A3.Stage(root);STAGES.push(st);
+  const cCat=A3.tokenCoin('cat',150),cLeaf=A3.tokenCoin('leaf',250),cP=A3.tokenCoin('pglass',570),cS=A3.tokenCoin('stonk',450);
+  [cCat,cLeaf,cP,cS].forEach(k=>st.root.add(k));
+  const coins=[
+    {k:cCat,fx:960,fy:322,rx:-12,ry:24,rz:4,sx:960,sy:-160,tr:360,t0:1.62,t1:1.9,row:0},
+    {k:cLeaf,fx:405,fy:705,rx:28,ry:-34,rz:-18,sx:-120,sy:640,tr:-110,t0:1.64,t1:2.3,s0:2.1,row:1},
+    {k:cS,fx:1650,fy:870,rx:14,ry:-32,rz:8,sx:2060,sy:600,tr:120,t0:1.66,t1:2.3,s0:1.6,row:2},
+    {k:cP,fx:495,fy:960,rx:34,ry:24,rz:14,sx:-150,sy:1500,tr:-90,t0:1.8,t1:2.25,row:3},
+  ];
+  const mergeT=[2.9,2.96,3.02,3.3];
+
+  function phoneTop(t){
+    let y=lerp(720,76,E.outCubic(seg(t,2.75,3.3)));
+    return lerp(y,-560,E.inOutCubic(seg(t,3.8,4.45)));
+  }
+  function update(t){
+    // --- words
+    const tx=t<1.67;V(txt,tx);
+    if(tx){
+      let s,str,ls=-.012;
+      if(t<.33){str='Meme';s=(.22+.78*E.outBack(seg(t,.04,.17),1.6))*(1+.03*seg(t,.17,.33))}
+      else if(t<.93){str='Meme trading';s=lerp(1,1.05,E.outCubic(seg(t,.33,.8)));ls=lerp(-.012,-.1,E.inCubic(seg(t,.8,.93)))}
+      else if(t<1.25){str='is';s=lerp(1.05,.8,E.outCubic(seg(t,.93,1.2)))}
+      else{str='is now';s=lerp(.62,.66,seg(t,1.25,1.67))}
+      if(txt.textContent!==str)txt.textContent=str;
+      txt.style.letterSpacing=ls+'em';
+      T(txt,`translateY(${520-120}px) scale(${s})`);
+    }
+    // --- "instant"
+    const iv=t>=1.67&&t<3.05;V(inst,iv);
+    if(iv){
+      const s=lerp(1.12,1,E.outCubic(seg(t,1.67,1.9)))*(1+.04*seg(t,1.9,3));
+      T(inst,at(960,535,s));O(inst,lerp(1,.35,seg(t,2.5,2.8))*(1-seg(t,2.8,3.02)));
+      // a lavender band sweeps right→left through the word, widening as it goes
+      const c=((t-1.8)*120+80)%140-20,w=lerp(12,45,seg(t,1.7,2.7));
+      inst.style.backgroundImage=`linear-gradient(90deg,#1a00f0 0%,#2a0cff ${c-w}%,#bab2ff ${c}%,#2a0cff ${c+w}%,#1a00f0 100%)`;
+    }
+    // --- phone
+    const pv=t>=2.75;V(ph,pv);
+    const top=phoneTop(t);
+    if(pv){
+      T(ph,`translate(585px,${top}px)`);O(ph,seg(t,2.75,2.95));
+      rows.forEach((r,i)=>{
+        const k=Math.floor(t*5),n=Math.sin(k*12.9898+i*78.233)*43758.5453;const j=(n-Math.floor(n))-.5;
+        r.price.textContent='$'+(r.base*(1+j*.004)).toFixed(6);
+        O(r.icon,seg(t,mergeT[i]+.3,mergeT[i]+.4));
+      });
+      T(kb,`translateY(${700*(1-E.outCubic(seg(t,3.7,4.1)))}px)`);
+      O(caret,t<4.2||Math.floor((t-4.2)*2.6)%2===0?1:0);
+    }
+    // --- coins
+    const cv=t>=1.6&&t<3.6;V(st.canvas,cv);
+    coins.forEach((c,i)=>{
+      const p=E.outCubic(seg(t,c.t0,c.t1));
+      const bob=Math.sin((t-2)*2.4+i*1.7)*8;
+      let x=lerp(c.sx,c.fx,p),y=lerp(c.sy,c.fy,p)+bob*p;
+      let s=lerp(c.s0||2,1,p),rx=c.rx+c.tr*.35*(1-p),ry=c.ry+c.tr*1.2*(1-p),rz=c.rz;
+      const m=E.inOutCubic(seg(t,mergeT[i],mergeT[i]+.4));
+      const ix=585+45+36,iy=top+385+i*135+55;
+      x=lerp(x,ix,m);y=lerp(y,iy,m);s=lerp(s,72/c.k.userData.d,m);rx=lerp(rx,0,m);ry=lerp(ry,0,m);rz=lerp(rz,0,m);
+      A3.place(c.k,x,y,0);c.k.scale.setScalar(s*(1-seg(m,.9,1)));c.k.visible=t>=c.t0&&m<.999;A3.cssRot(c.k,rx,ry,rz);
+    });
+    if(cv)st.render();
+  }
+  return{period:5.033,update};
+}
+function tokIcon(g,face,rim,d){
+  return `<div style="width:${d}px;height:${d}px;border-radius:50%;background:${face};box-shadow:inset 0 0 0 ${Math.max(2,d*.08)}px ${rim};display:grid;place-items:center">${`<svg viewBox="0 0 100 100" style="width:62%;height:62%">${G[g]}</svg>`}</div>`;
+}
+
+/* =====================================================================
+   BOTTOM RIGHT — score gauge 710→1000 → phone → credit line unlocks
+   ===================================================================== */
+function gaugeSVG({w,h,cx,cy,rIn,rOut,n,tw,id}){
+  let ticks='';
+  for(let i=0;i<n;i++){const a=Math.PI+Math.PI*i/(n-1);const c=Math.cos(a),s=Math.sin(a);
+    ticks+=`<line x1="${(cx+c*(rIn+14)).toFixed(1)}" y1="${(cy+s*(rIn+14)).toFixed(1)}" x2="${(cx+c*(rOut-12)).toFixed(1)}" y2="${(cy+s*(rOut-12)).toFixed(1)}"/>`}
+  const r=(rIn+rOut)/2;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><defs><linearGradient id="${id}g" x1="0" x2="1"><stop offset="0" stop-color="#e6fba4"/><stop offset=".6" stop-color="#d8f870"/><stop offset="1" stop-color="#cdf54c"/></linearGradient></defs>
+    <path class="band" d="M${cx-r} ${cy}A${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="url(#${id}g)" stroke-width="${rOut-rIn}" pathLength="1" stroke-dasharray="1 1"/>
+    <g class="ticks" stroke-width="${tw}" stroke-linecap="round">${ticks}</g></svg>`;
+}
+function buildBR(){
+  const root=document.getElementById('br');
+  // --- gauge scene
+  const sG=add(root,'<div class="scene g-bg"></div>');
+  const gIn=add(sG,'<div class="scene" style="transform-origin:960px 700px"></div>');
+  const gsvg=add(gIn,`<div class="a">${gaugeSVG({w:1920,h:1080,cx:960,cy:895,rIn:372,rOut:548,n:84,tw:7,id:'gg'})}</div>`);
+  const band=gsvg.querySelector('.band'),ticks=[...gsvg.querySelectorAll('.ticks line')];
+  add(gIn,`<div class="a" style="left:560px;top:760px;width:800px;height:320px;border-radius:50%;background:radial-gradient(closest-side,rgba(244,244,242,.95),rgba(244,244,242,.6) 60%,rgba(244,244,242,0))"></div>`);
+  const numBox=add(gIn,'<div class="a" style="width:1920px;left:0;top:612px;text-align:center;font:500 272px Inter;letter-spacing:-.02em;color:#1d2613"></div>');
+  const score=new Odo(numBox,{places:4,minPlaces:3});
+  const FC=[['On-chain Wallets','Holdings &amp; transaction<br>history','wallet','#cf86f5',560,55,33,'l'],['CEX Accounts','Exchange history &amp;<br>realized PnL','swap','#f7c20a',1376,55,49,'r'],['Card Spending','Monthly swipe volume<br>&amp; consistency','card','#5fd3ee',272,343,33,'l'],['Bank accounts','Income &amp; spend patterns','bank','#f07ea5',1647,343,49,'r'],['Cash held','Average balance<br>over 30 days','dollar','#c9f22e',179,672,46,'l'],['Socials','Reputation &amp;<br>identity signals','badge','#f4e53c',1740,672,73,'r']];
+  const fchips=FC.map(([ti,sub,icn,col,x,y,v,side])=>{
+    const e=add(gIn,`<div class="fchip" style="left:${x-210}px;top:${y}px"><div class="ring"><svg viewBox="0 0 146 146" width="146" height="146" style="transform:rotate(150deg)"><circle cx="73" cy="73" r="66" fill="none" stroke="#e9e9e7" stroke-width="7"/><circle class="arc" cx="73" cy="73" r="66" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" pathLength="1" stroke-dasharray=".2 1"/></svg><div class="dot" style="background:${col}">${ic(icn,46,'#1d1d1d',1.8)}</div><span class="pls" style="${side==='l'?'left:-78px':'right:-86px'};top:-14px">+0</span></div><h4>${ti}</h4><p>${sub}</p></div>`);
+    return{pl:e.querySelector('.pls'),arc:e.querySelector('.arc'),v};
+  });
+
+  // --- rays behind the phone in the last beat
+  const sR=add(root,'<div class="scene" style="background:#fff"></div>');
+  const raysR=makeRays(sR,{n:16,duty:.5,color:'#d2f64e',size:3400,soft:1.2,mask:'radial-gradient(circle closest-side,transparent 6%,rgba(0,0,0,.35) 16%,#000 36%)'});
+
+  // --- phone
+  const ph=add(root,`<div class="brp"><div class="brs">
+    <div class="x" style="left:77px;top:22px;font:600 30px Inter">23:59</div><div class="x" style="left:250px;top:14px;width:164px;height:50px;border-radius:26px;background:#050505"></div><div class="x" style="left:492px;top:28px;display:flex;gap:7px;align-items:center">${SBI(.8)}</div>
+    <div class="x" style="left:36px;top:108px;width:66px;height:66px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e6fb8a,#c5f236 70%);display:grid;place-items:center;font:600 34px 'Source Serif 4';color:#27310f">M</div>
+    <div class="x" style="left:116px;top:114px;font:600 40px 'Source Serif 4';color:#1d2410">Score</div>
+    <div class="x" style="left:476px;top:106px;width:68px;height:68px;border-radius:50%;box-shadow:inset 0 0 0 2px #e4e4e2;display:grid;place-items:center">${ic('search',32,'#555',2)}</div>
+    <div class="x" style="left:556px;top:106px;width:68px;height:68px;border-radius:50%;box-shadow:inset 0 0 0 2px #e4e4e2;display:grid;place-items:center">${ic('menu',32,'#555',2)}</div>
+    <div class="x tint" style="left:-18px;top:180px;width:700px;height:420px;background:radial-gradient(60% 55% at 50% 80%,rgba(212,247,92,.75),rgba(212,247,92,0))"></div>
+    <div class="x" style="left:0;top:180px">${gaugeSVG({w:664,h:330,cx:332,cy:318,rIn:182,rOut:272,n:66,tw:4,id:'pg'})}</div>
+    <div class="x" style="left:0;width:664px;top:352px;text-align:center;font:500 124px Inter;letter-spacing:-.02em;color:#1d2613">1000</div>
+    <div class="card" style="left:22px;top:548px;width:300px;height:150px"><span class="lb">Rewards</span><span class="chev" style="left:238px;top:18px">${ic('chev',24,'#666',2.4)}</span><span class="vl rw">$54.20</span></div>
+    <div class="card" style="left:342px;top:548px;width:300px;height:150px"><span class="lb">Lottery</span><span class="x" style="left:190px;top:16px;padding:5px 14px;border-radius:22px;background:#d7f85e;font:500 28px Inter;color:#26300f">$1.1M</span><span class="x" style="left:268px;top:-4px">${ic('spark',26,'none',0,'#c8f23c')}</span><span class="vl">7 <small style="font-size:30px;color:#8c8c8c">Entries</small></span></div>
+    <div class="cl cl-lock"><span class="lb">Credit line</span><span class="chev" style="left:548px;top:20px;background:rgba(0,0,0,.05)">${ic('chev',24,'#555',2.4)}</span><span class="x" style="left:288px;top:78px">${ic('lock',48,'#5b5b5b',0,'#5b5b5b')}</span></div>
+    <div class="cl cl-open"><span class="lb">Credit line</span><span class="chev" style="left:548px;top:20px;background:rgba(255,255,255,.3)">${ic('chev',24,'#4d5a2a',2.4)}</span><span class="amt"><b class="ca">$217</b> <small>/ $500 left</small></span><span class="bar"><i></i></span></div>
+    <div class="x" style="left:38px;top:958px;width:78px;height:78px;border-radius:50%;background:#c9f22e;display:grid;place-items:center">${ic('dollar',44,'#1d2410',2.2)}</div>
+    <div class="x" style="left:136px;top:960px;font:500 30px Inter;color:#1d2410">Cash Held</div><div class="x" style="left:136px;top:1004px;font:400 23px Inter;color:#8c8c8c">Average balance over 30 days</div>
+    <div class="x" style="left:532px;top:950px;width:96px;height:96px"><svg viewBox="0 0 96 96" style="transform:rotate(120deg)"><circle cx="48" cy="48" r="42" fill="none" stroke="#ebebe9" stroke-width="5"/><circle cx="48" cy="48" r="42" fill="none" stroke="#c9f22e" stroke-width="5" pathLength="1" stroke-dasharray=".22 1" stroke-linecap="round"/></svg><span class="x" style="left:14px;top:28px;font:400 34px Inter;color:#333">+73</span></div>
+    <div class="x" style="left:36px;top:1066px;padding:10px 24px;border-radius:30px;background:#c9f22e;font:500 28px Inter;color:#1d2410;display:flex;gap:8px;align-items:center">${ic('plus',26,'#1d2410',2.6)}Top up</div>
+    <div class="x" style="left:38px;top:1168px;width:78px;height:78px;border-radius:50%;background:#62d4ee;display:grid;place-items:center">${ic('card',40,'#1d2410',2)}</div>
+    <div class="x" style="left:136px;top:1170px;font:500 30px Inter;color:#1d2410">Card Spending</div><div class="x" style="left:136px;top:1214px;font:400 23px Inter;color:#8c8c8c">How much you swipe each month</div>
+    <div class="x" style="left:560px;top:1182px;font:400 32px Inter;color:#333">+0</div>
+    <div class="x" style="left:0;right:0;top:1300px;height:120px;display:flex;justify-content:center;gap:90px;align-items:center;background:linear-gradient(rgba(245,245,243,0),#f5f5f3 40%)">${ic('home',40,'#999',2)}${ic('grid',40,'#999',2)}${ic('spark',40,'#999',2)}</div>
+  </div></div>`);
+  const clLock=ph.querySelector('.cl-lock'),clOpen=ph.querySelector('.cl-open'),ca=ph.querySelector('.ca'),bar=ph.querySelector('.bar i'),rw=ph.querySelector('.rw'),tint=ph.querySelector('.tint');
+  const pop=add(root,`<div class="pop"><div class="glass"></div><div class="blob"></div><span class="lb">Credit line</span><span class="chev" style="left:548px;top:20px;background:rgba(0,0,0,.05)">${ic('chev',24,'#555',2.4)}</span><span class="a lk" style="left:288px;top:74px;width:48px;height:56px"></span></div>`);
+  const lk=pop.querySelector('.lk');
+  lk.innerHTML=`<svg viewBox="0 0 24 28" width="48" height="56"><g class="sh"><path d="M7 13V9a5 5 0 0 1 10 0v4" fill="none" stroke="#fff" stroke-width="2.6"/></g><rect x="4" y="12.5" width="16" height="13" rx="3" fill="#fff"/></svg>`;
+  const shackle=lk.querySelector('.sh'),glass=pop.querySelector('.glass'),blob=pop.querySelector('.blob'),plb=pop.querySelector('.lb');
+
+  // phone camera: scale S, phone-local y "fy" pinned at screen y "sy"
+  const cam=(S,fy,sy)=>{const top=sy-fy*S;T(ph,`translate(${960-350*S}px,${top}px) scale(${S})`);return top};
+  function update(t){
+    const g=t<1.26,r=t>=3.02;
+    V(sG,g);V(sR,r);V(ph,!g);V(pop,t>=2.2&&t<3.02);
+    if(g){
+      const k=E.inQuad(seg(t,.3,1.26));
+      T(gIn,`translateY(${-70*k}px) scale(${1-.35*k})`);
+      const f=lerp(.2,1,E.outQuad(seg(t,0,.8)));
+      band.setAttribute('stroke-dasharray',`${f.toFixed(4)} 1`);
+      ticks.forEach((l,i)=>l.setAttribute('stroke',i/(ticks.length-1)<=f+.004?'#b4e23f':'#d3d3d1'));
+      const sv=x=>lerp(710,1000,E.outQuad(seg(x,0,.72)));
+      score.flow(sv,t,.125,.1);
+      const cp=.4+.53*E.outQuad(seg(t,0,.8))+.07*seg(t,.8,1.27);
+      fchips.forEach(c=>{c.pl.textContent='+'+Math.round(c.v*cp);c.arc.setAttribute('stroke-dasharray',`${(.1+.16*cp).toFixed(3)} 1`)});
+    }else if(!r){
+      let S,fy,sy;
+      if(t<1.52){const k=E.outCubic(seg(t,1.26,1.52));S=lerp(1.5,.76,k);fy=lerp(444,725,k);sy=lerp(562,540,k)}
+      else if(t<1.9){S=lerp(.76,.8,seg(t,1.52,1.9));fy=725;sy=540}
+      else{const k=E.inOutCubic(seg(t,1.9,2.2));S=lerp(.8,1.45,k)+.17*seg(t,2.2,3.02);fy=lerp(725,822,k);sy=540}
+      const top=cam(S,fy,sy);
+      O(clLock,1);O(clOpen,0);O(tint,.35);rw.textContent='$54.20';
+      if(t>=2.2){
+        const u=t-2.2;
+        const kx=u<.4?lerp(1,1.35,E.outCubic(seg(u,0,.4))):lerp(1.35,2.4,E.inCubic(seg(u,.4,.8)));
+        const cx=960,cy=top+(727+18+95)*S;
+        T(pop,at(cx,lerp(cy,540,seg(u,0,.4)),S*kx));
+        const lime=E.inOutCubic(seg(u,.05,.6));
+        T(blob,`scale(${lerp(.12,1,E.inOutSine(seg(u,0,.6)))+.7*seg(u,.6,.8)})`);O(glass,1-E.inCubic(seg(u,.5,.8)));
+        T(shackle,`translateY(${-4*E.outBack(seg(u,.12,.3),2)}px) rotateY(${180*seg(u,.12,.3)}deg)`);shackle.style.transformOrigin='17px 13px';
+        pop.style.filter=blur(6*E.inCubic(seg(u,.45,.8)));
+        plb.style.color=`rgb(${lerp(63,90,lime)},${lerp(69,120,lime)},${lerp(56,20,lime)})`;
+      }
+    }else{
+      const u=t-3.02;
+      T(raysR,at(960,560,1+.05*u,`rotate(${-4+7*u}deg)`));
+      cam(lerp(1.1,2.05,seg(t,3.05,3.93)),822,565);
+      O(clLock,0);O(clOpen,1);O(tint,.9);
+      const cr=E.inOutSine(seg(t,3.02,3.9)),amt=lerp(200,339,cr);
+      ca.textContent='$'+Math.round(amt);bar.style.width=(amt/500*100).toFixed(2)+'%';
+      rw.textContent='$'+lerp(40.2,54.19,cr).toFixed(2);
+    }
+  }
+  return{period:3.933,update};
+}
+
+/* =====================================================================
+   boot + playback
+   ===================================================================== */
+const FONTS=['800 44px Inter','900 78px Inter','400 86px Outfit','600 196px Figtree','700 262px Figtree','400 40px Inter','500 40px Inter','600 40px Inter','700 40px Inter','700 84px "IBM Plex Mono"','500 45px "Source Serif 4"','600 40px "Source Serif 4"','900 420px Rubik','italic 900 80px Archivo','900 152px "Roboto Slab"'];
+const params=new URLSearchParams(location.search);
+const EXPORT=params.has('export');
+let cells=[];
+function renderAt(t){for(const c of cells)c.update(((t%c.period)+c.period)%c.period)}
+window.renderAt=renderAt;
+window.DURATION=604/60;  // the reference's exact length (render.py reads it)
+function fit(){
+  const stage=document.getElementById('stage');
+  const s=Math.min(innerWidth/3840,innerHeight/2160);
+  stage.style.transform=`translate(${(innerWidth-3840*s)/2}px,${(innerHeight-2160*s)/2}px) scale(${s})`;
+  for(const st of STAGES)st.setPixelRatio(s*devicePixelRatio);
+}
+Promise.all(FONTS.map(f=>document.fonts.load(f))).then(()=>A3.loadCar()).then(()=>{
+  cells=[buildTL(),buildTR(),buildBL(),buildBR()];
+  fit();addEventListener('resize',fit);
+  const t0=params.has('t')?parseFloat(params.get('t')):null;
+  renderAt(t0??0);
+  window.__ready=true;
+  if(EXPORT||t0!==null)return;
+  let start=performance.now(),paused=false,pausedAt=0;
+  addEventListener('keydown',e=>{if(e.code==='Space'){paused=!paused;if(paused)pausedAt=(performance.now()-start)/1000;else start=performance.now()-pausedAt*1000}});
+  const loop=()=>{if(!paused)renderAt((performance.now()-start)/1000);requestAnimationFrame(loop)};
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>
