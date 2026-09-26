@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Don't Look Down</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #120d1c; --paper: #f4efe6; }
+  html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+  #view { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: crosshair; }
+  #hint {
+    position: fixed; left: 16px; bottom: 16px; max-width: calc(100vw - 32px);
+    font: 700 12px/1.35 'Comic Neue', 'Comic Sans MS', sans-serif; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--ink); background: var(--paper); border: 2px solid var(--ink); padding: 6px 9px;
+    box-shadow: 3px 3px 0 var(--ink); transition: opacity .4s; user-select: none;
+  }
+  #hint b { color: #d4202a; }
+  #hint.fade { opacity: 0; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="hint">Click: pull focus · <b>1</b> ones / <b>2</b> twos · <b>G</b> glitch · <b>P</b> print on/off · move to look</div>
+<script src="svpaint.js"></script>
+<script>
+'use strict';
+// A painting, not a render: every shape below is drawn in a 1600×1000 artboard.
+const AW = 1600, AH = 1000;
+const view = document.getElementById('view');
+const comp = P.compositor(view);
+
+// ------------------------------------------------------------------ palette
+const C = {
+  sky: ['#fff0c8', '#ffc193', '#ff8c8a', '#e45c9c', '#a24bb2', '#5a3490', '#2b1d5e'],
+  hazeLit: '#f5a9a2', hazeShade: '#8a6cb8',
+  lit: { masonry: '#e98f6f', glass: '#f3a09a', dark: '#94506e', win: '#6b2c55', hot: '#fff1a6', hi: '#ffdcc4', lo: '#c96b82', dots: '#a8457a', edge: '#ffe2c8' },
+  shade: { masonry: '#3c2d5d', glass: '#3c3474', dark: '#1e1734', win: '#1a1535', sky: '#6a5cb8', hot: '#ffc75a', tv: '#7fe3ff', hi: '#5a55a6', lo: '#29234f', hatch: '#221b45', edge: '#ff9f87' },
+  suit: { shadow: '#0d0913', midBg: '#150a18', midDot: '#43123a', lit: '#5b2b40', litDot: '#ff9c78', rim: '#c23fb2', rimDot: '#ffd6f4', rimLine: '#7a4ad0' },
+  // web lines warm up where the key light lands (book p.86)
+  web: '#ff5c3a', webDark: '#a31a2a', ink: '#0a0710', lens: '#f7f4ff', emblem: '#ea2430', strand: '#fdfaff',
+  shoe: { red: '#d8212b', redDark: '#8e1420', white: '#f4efe6', whiteShade: '#b7a8c9', sole: '#efe9dd', black: '#140f1c' },
+};
+const SUN = [1500, 1180];                 // off the bottom-right corner
+const KEY = [0.8, 0.6];                   // toward the sun (screen space)
+const RIM = [-0.72, -0.69];               // toward the cool sky rim, up-left
+const VPV = [800, -1750];                 // verticals converge up here (worm's-eye)
+const VPC = [905, 1330];                  // the avenue's far end, below the frame
+
+const S = { W: 0, H: 0, dpr: 1, s: 1, ox: 0, oy: 0, layers: [], mouse: [0, 0], sm: [0, 0], focus: 0, focusTo: 0, onOnes: false, print: true, glitch: 0, last: -1, t0: performance.now() };
+
+// ------------------------------------------------------------------ helpers
+const art = (ctx) => ctx.setTransform(S.s, 0, 0, S.s, S.ox, S.oy);        // draw in artboard units
+const vertical = (bx) => [[bx, 1100], VPV];                                // a building edge through VPV
+const roofline = (xTop) => [[xTop, -120], VPC];                            // a roof edge through VPC
+const fillPath = (ctx, path, col) => { ctx.fillStyle = col; ctx.fill(path); };
+
+// ------------------------------------------------------------------ sky
+function paintSky(ctx) {
+  const k = 0.5, w = Math.ceil(S.W * k), h = Math.ceil(S.H * k);
+  const g = P.screenGradient(w, h, (x, y) => {
+    const ax = (x / k - S.ox) / S.s, ay = (y / k - S.oy) / S.s;
+    return Math.pow(Math.hypot(ax - SUN[0], (ay - SUN[1]) * 1.15) / 1750, 0.95) * 1.12;
+  }, C.sky, { cell: 4.5 * S.dpr, angle: 0.3, band: 0.55 });
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(g, 0, 0, S.W, S.H);
+  art(ctx);
+  // brushwork arcing round the sun, so the sky reads painted
+  const around = (x, y) => Math.atan2(y - SUN[1], x - SUN[0]) + Math.PI / 2 + 0.12;
+  P.dryBrush(ctx, null, '#ffd9e8', { box: [300, -50, 1400, 900], len: 70, width: 9, alpha: 0.05, count: 380, angleAt: around, seed: 4 });
+  P.dryBrush(ctx, null, '#3d2378', { box: [300, -50, 1400, 500], len: 90, width: 11, alpha: 0.05, count: 260, angleAt: around, seed: 5 });
+  // dusk cloud streaks, lit from below
+  const cloud = (x, y, len, th, seed) => {
+    const r = P.rng(seed), pts = [];
+    for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push([x + len * t, y - Math.sin(t * Math.PI) * th * (0.7 + r() * 0.5) + t * 18]); }
+    for (let i = 10; i >= 0; i--) { const t = i / 10; pts.push([x + len * t, y + Math.sin(t * Math.PI) * th * 0.3 + t * 18]); }
+    const p = P.smooth(pts, true, 0.8);
+    fillPath(ctx, p, '#c85aa6');
+    ctx.save(); ctx.translate(4, 5); fillPath(ctx, p, '#ffb49a'); ctx.restore();
+  };
+  cloud(560, 360, 360, 16, 1); cloud(760, 470, 260, 10, 2); cloud(640, 250, 220, 9, 3); cloud(880, 560, 200, 7, 4);
+  // a plane and its contrail, for scale
+  ctx.strokeStyle = 'rgba(255,238,232,.8)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(1010, 150); ctx.lineTo(1190, 290); ctx.stroke();
+  ctx.fillStyle = '#2a1d4f'; ctx.beginPath(); ctx.moveTo(1004, 146); ctx.lineTo(1016, 150); ctx.lineTo(1006, 156); ctx.fill();
+}
+
+// ------------------------------------------------------------------ city
+// a wall = a strip between two verticals, capped by a roofline, constructed from the two vanishing points
+function wallQuad(b0, b1, xTop, side) {
+  const r = roofline(xTop);
+  const tl = P.meet(...vertical(b0), ...r), tr = P.meet(...vertical(b1), ...r);
+  // quad as [bottom-near, bottom-far, top-far, top-near] so u runs along the wall away from us
+  return side < 0 ? [[b0, 1100], [b1, 1100], tr, tl] : [[b1, 1100], [b0, 1100], tl, tr];
+}
+
+function paintFacade(ctx, q, style, lit, seed, o = {}) {
+  const L = lit ? C.lit : C.shade, H = P.homography(q), r = P.rng(seed), path = P.poly(q);
+  const box = P.bbox(q);
+  const haze = o.haze || 0, hz = (c) => (haze ? P.mix(c, lit ? C.hazeLit : C.hazeShade, haze) : c);
+  fillPath(ctx, path, hz(L[style === 'glass' ? 'glass' : style === 'dark' ? 'dark' : 'masonry']));
+  // paint texture along the verticals
+  const up = (x, y) => Math.atan2(VPV[1] - y, VPV[0] - x);
+  P.dryBrush(ctx, path, lit ? '#ffe0cc' : '#6a5cb0', { box, len: 90, width: 2.2, alpha: lit ? 0.14 : 0.12, angleAt: up, seed, count: Math.min(900, ((box[2] - box[0]) * (box[3] - box[1])) / 260) });
+  const nf = o.floors || 40, nb = o.bays || 8;
+  if (style === 'glass') {
+    for (let j = 0; j < nb * 2; j++) {                              // mullion stripes
+      const u0 = j / (nb * 2), u1 = u0 + 0.6 / (nb * 2);
+      fillPath(ctx, P.poly([H(u0, 0), H(u1, 0), H(u1, 1), H(u0, 1)]), hz(r() < 0.5 ? L.hi : L.lo));
+    }
+    for (let i = 0; i < nf; i++) for (let j = 0; j < nb * 2; j++) {
+      const k = r(); if (k > (lit ? 0.1 : 0.16)) continue;
+      const u0 = j / (nb * 2) + 0.004, u1 = (j + 0.62) / (nb * 2), v0 = i / nf + 0.1 / nf, v1 = (i + 0.9) / nf;
+      fillPath(ctx, P.poly([H(u0, v0), H(u1, v0), H(u1, v1), H(u0, v1)]), hz(k < 0.04 ? L.hot : lit ? L.lo : k < 0.08 ? L.hot : L.sky));
+    }
+  } else {
+    const mx = style === 'dark' ? 0.14 : 0.25, my = 0.28;
+    const drift = (o.drift ?? 0.12) / nb;                            // "broken model": panes slide off their grid
+    for (let i = 0; i < nf; i++) for (let j = 0; j < nb; j++) {
+      const k = r();
+      if (style === 'dark' && k > 0.2) continue;
+      const u0 = (j + mx) / nb + drift, u1 = (j + 1 - mx) / nb + drift, v0 = (i + my) / nf, v1 = (i + 0.9) / nf;
+      const col = style === 'dark' ? (k < 0.08 ? L.hot : lit ? L.win : L.sky)
+        : k < 0.14 ? L.hot : k < 0.18 && !lit ? L.tv : k < 0.6 ? L.win : lit ? L.lo : L.sky;
+      fillPath(ctx, P.poly([H(u0, v0), H(u1, v0), H(u1, v1), H(u0, v1)]), hz(col));
+    }
+    if (style === 'masonry') fillPath(ctx, P.poly([H(0, 0.985), H(1, 0.985), H(1, 1), H(0, 1)]), hz(lit ? '#b4546a' : '#171030'));
+  }
+  if (!lit) P.hatch(ctx, path, hz(C.shade.hatch), { box, gap: 5.5, width: 1.2, angle: -1.1, seed, weight: (x, y) => P.clamp((y - box[1]) / (box[3] - box[1] + 1) * 1.5 - 0.2) });
+}
+
+// the lit wall: sun catches only the top of the left canyon wall. halftone dots mark the terminator
+const SUNLINE = [[-120, 690], [980, 70]];
+function sunClip() { return P.poly([[-400, -400], [2000, -400], [2000, SUNLINE[1][1] + (2000 - SUNLINE[1][0]) * ((SUNLINE[1][1] - SUNLINE[0][1]) / (SUNLINE[1][0] - SUNLINE[0][0]))], [-400, SUNLINE[0][1] + (-400 - SUNLINE[0][0]) * ((SUNLINE[1][1] - SUNLINE[0][1]) / (SUNLINE[1][0] - SUNLINE[0][0]))]]); }
+
+function waterTower(ctx, at, s, col) {
+  const [x, y] = at;
+  ctx.fillStyle = col;
+  ctx.fillRect(x - 13 * s, y - 16 * s, 3 * s, 16 * s); ctx.fillRect(x + 10 * s, y - 16 * s, 3 * s, 16 * s); ctx.fillRect(x - 2 * s, y - 16 * s, 3 * s, 16 * s);
+  ctx.fillRect(x - 16 * s, y - 42 * s, 32 * s, 27 * s);
+  ctx.beginPath(); ctx.moveTo(x - 18 * s, y - 41 * s); ctx.lineTo(x, y - 58 * s); ctx.lineTo(x + 18 * s, y - 41 * s); ctx.fill();
+  ctx.fillRect(x - 1 * s, y - 64 * s, 2 * s, 7 * s);
+}
+
+const LEFT = [   // [bottom x of near vertical, of far vertical, roofline x at the top, style, floors, bays]
+  [-700, -170, 520, 'masonry', 34, 7], [-170, 250, 360, 'glass', 60, 9], [250, 470, 640, 'dark', 70, 8],
+  [470, 610, 470, 'masonry', 30, 6], [610, 700, 560, 'glass', 44, 7], [700, 760, 420, 'masonry', 24, 5], [760, 800, 610, 'dark', 50, 5], [800, 826, 500, 'glass', 34, 4],
+];
+const RIGHT = [
+  [2300, 1760, 1060, 'glass', 64, 10], [1760, 1400, 1260, 'masonry', 30, 7], [1400, 1200, 1010, 'dark', 60, 8],
+  [1200, 1090, 1180, 'masonry', 26, 6], [1090, 1020, 1080, 'glass', 40, 6], [1020, 985, 1190, 'masonry', 20, 5], [985, 962, 1110, 'dark', 30, 4],
+];
+
+function paintFar(ctx) {
+  // distant towers at the end of the avenue: pale, flat, hazed toward the sun
+  const r = P.rng(21);
+  const towers = [[780, 60, 300], [835, 44, 420], [872, 52, 250], [915, 38, 360], [950, 60, 290], [1000, 46, 380], [1040, 30, 250]];
+  for (const [x, w, h] of towers) {
+    const base = 1000, top = base - h, lean = (x - VPV[0]) / (base - VPV[1]);
+    const q = [[x - w / 2, base], [x + w / 2, base], [x + w / 2 - lean * h * 0.15, top], [x - w / 2 - lean * h * 0.15, top]];
+    fillPath(ctx, P.poly(q), P.mix('#b86aa8', '#ffc3a8', r() * 0.35));
+    fillPath(ctx, P.poly([q[1], [q[1][0] - w * 0.22, q[1][1]], [q[2][0] - w * 0.22, q[2][1]], q[2]]), '#ffd8b8');    // sunlit side
+    for (let i = 0; i < 18; i++) { ctx.fillStyle = '#fff3c4'; ctx.fillRect(x - w / 2 + 4 + r() * (w - 10), top + 8 + r() * h * 0.8, 2.5, 3.5); }
+  }
+  // a stepped deco spire
+  const sx = 895, sy = 1000 - 420;
+  ctx.fillStyle = '#c47ab0';
+  for (let i = 0; i < 5; i++) ctx.fillRect(sx - 16 + i * 3, sy - 24 - i * 14, 32 - i * 6, 16);
+  ctx.fillRect(sx - 1.2, sy - 130, 2.4, 50);
+  P.dryBrush(ctx, null, '#ffe6d6', { box: [700, 520, 1120, 1000], len: 40, width: 2, alpha: 0.16, count: 260, angle: -Math.PI / 2, seed: 8 });
+}
+
+// a billboard painted flat, then laid onto the wall in perspective. lit by its own lamps
+let BOARD = null;
+function boardArt() {
+  const w = 600, h = 250, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  x.fillStyle = '#1fcfc0'; x.fillRect(0, 0, w, h);
+  P.dots(x, null, '#63f0dc', { box: [0, 0, w, h], cell: 9, angle: 0.785, radius: (px, py) => 3.4 * (1 - py / h) });
+  x.fillStyle = '#ff3f9b'; x.beginPath(); x.arc(470, 125, 150, 0, 7); x.fill();
+  x.save(); x.translate(470, 128); x.rotate(0.12);
+  x.fillStyle = '#fff4d6'; x.fillRect(-42, -95, 84, 190); x.fillStyle = '#16102a'; x.fillRect(-42, -30, 84, 62);
+  x.fillStyle = '#ffd23f'; x.font = '44px Bangers, Impact'; x.textAlign = 'center'; x.fillText('LEAP', 0, 15);
+  x.strokeStyle = '#16102a'; x.lineWidth = 5; x.strokeRect(-42, -95, 84, 190); x.restore();
+  x.font = '92px Bangers, Impact'; x.lineJoin = 'round';
+  x.fillStyle = '#16102a'; x.fillText('TAKE THE', 34, 108); x.fillText('LEAP.', 34, 204);
+  x.fillStyle = '#fff7f0'; x.fillText('TAKE THE', 28, 102); x.fillText('LEAP.', 28, 198);
+  x.fillStyle = '#16102a'; x.font = '700 22px "Comic Neue", sans-serif'; x.fillText('ENERGY SODA · ICE COLD', 190, 232);
+  x.strokeStyle = '#0d0a18'; x.lineWidth = 16; x.strokeRect(0, 0, w, h);
+  return c;
+}
+function billboard(ctx, q, u0, u1, v0, v1, flip) {
+  const H = P.homography(q);
+  BOARD = BOARD || boardArt();
+  // on the right wall u runs away from us (right to left on screen), so read the art the other way
+  P.warp(ctx, BOARD, (u, v) => H(flip ? u1 - (u1 - u0) * u : u0 + (u1 - u0) * u, v0 + (v1 - v0) * v));
+  const c0 = H(u0 - 0.02, v0 - 0.012), c1 = H(u1 + 0.02, v0 - 0.012);
+  ctx.strokeStyle = '#0d0a18'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(...c0); ctx.lineTo(...c1); ctx.stroke();
+  for (let i = 0; i < 4; i++) { const l = H(u0 + (u1 - u0) * (0.12 + i * 0.26), v0 - 0.01); ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(l[0], l[1], 3.2, 0, 7); ctx.fill(); }
+}
+
+function lightBleed(ctx) {
+  const rings = [[520, 0.10], [380, 0.12], [250, 0.16], [140, 0.2]];
+  for (const [r, a] of rings) { ctx.fillStyle = `rgba(255,178,150,${a})`; ctx.beginPath(); ctx.arc(SUN[0], SUN[1] - 40, r, 0, 7); ctx.fill(); }
+}
+
+function paintWalls(ctx) {
+  // far to near so nearer strips overlap cleanly
+  const walls = [];
+  LEFT.forEach(([b0, b1, xt, st, nf, nb], i) => walls.push({ q: wallQuad(b0, b1, xt, -1), st, nf, nb, side: -1, d: 800 - b1, seed: 100 + i, xt }));
+  RIGHT.forEach(([b0, b1, xt, st, nf, nb], i) => walls.push({ q: wallQuad(b1, b0, xt, 1), st, nf, nb, side: 1, d: b1 - 960, seed: 200 + i, xt }));
+  walls.sort((a, b) => a.d - b.d);
+  for (const w of walls) {
+    const haze = P.clamp(1 - (w.side < 0 ? (900 - w.q[1][0]) : (w.q[0][0] - 950)) / 700) * 0.45;
+    paintFacade(ctx, w.q, w.st, false, w.seed, { floors: w.nf, bays: w.nb, haze });
+    if (w.side < 0) {                                              // sunlit top of the left wall
+      ctx.save(); ctx.clip(sunClip()); ctx.clip(P.poly(w.q));
+      paintFacade(ctx, w.q, w.st, true, w.seed, { floors: w.nf, bays: w.nb, haze });
+      ctx.restore();
+      const [a, b] = SUNLINE, nx = -(b[1] - a[1]), ny = b[0] - a[0], nl = Math.hypot(nx, ny);
+      ctx.save(); ctx.clip(sunClip());
+      P.dots(ctx, P.poly(w.q), P.mix(C.lit.dots, C.hazeLit, haze), { box: P.bbox(w.q), cell: 7, angle: 0.4, radius: (x, y) => 3.6 * (1 - Math.abs(((x - a[0]) * nx + (y - a[1]) * ny) / nl) / 80) });
+      ctx.restore();
+      // warm edge where the corner turns to the sun
+      ctx.strokeStyle = C.lit.edge; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(...w.q[2]); ctx.lineTo(...w.q[3]); ctx.stroke();
+    } else {
+      // right wall faces away from the sun: only its roof edge catches light
+      ctx.strokeStyle = C.shade.edge; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(...w.q[2]); ctx.lineTo(...w.q[3]); ctx.stroke();
+    }
+    if (w.side > 0 && w.seed === 201) billboard(ctx, w.q, 0.14, 0.84, 0.22, 0.34, true);
+    if (w.st === 'masonry' && w.nb < 7) {
+      const top = P.lerp2(w.q[3], w.q[2], 0.45), s = 1 - haze * 0.6;
+      waterTower(ctx, top, 0.9 * s, w.side < 0 ? '#2a1a48' : '#1b1233');
+    }
+    // ink the building corners, loosely
+    ctx.strokeStyle = 'rgba(12,8,20,.55)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(...w.q[0]); ctx.lineTo(...w.q[3]); ctx.lineTo(...w.q[2]); ctx.stroke();
+    // a floating ink tick off the corner: offset from the edge, capped at the top, never closing the shape (Retz, PDF 022)
+    if (w.seed % 2 === 0) {
+      const off = w.side < 0 ? 7 : -7, a = P.lerp2(w.q[0], w.q[3], 0.35), b = P.lerp2(w.q[0], w.q[3], 0.97);
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(a[0] + off, a[1]); ctx.lineTo(b[0] + off, b[1]); ctx.lineTo(b[0] + off + (w.side < 0 ? 12 : -12), b[1] + 2); ctx.stroke();
+    }
+  }
+}
+
+// ------------------------------------------------------------------ Miles
+// joints in artboard px, drawn pose. near side = his right (screen-left)
+const REST = {
+  grip: [505, 160], wristR: [522, 205], elbowR: [548, 302], shoulderR: [598, 394],
+  neck: [648, 392], head: [676, 334],
+  shoulderL: [714, 410], elbowL: [792, 470], wristL: [862, 454],
+  chest: [656, 458], pelvis: [690, 604], hipR: [656, 614], hipL: [724, 616],
+  kneeR: [586, 628], ankleR: [604, 750], toeR: [566, 800],
+  kneeL: [786, 742], ankleL: [828, 864], toeL: [892, 902],
+};
+const rot = (p, c, a) => { const s = Math.sin(a), k = Math.cos(a), x = p[0] - c[0], y = p[1] - c[1]; return [c[0] + x * k - y * s, c[1] + x * s + y * k]; };
+function poseAt(t) {
+  const J = {}, sw = 0.035 * Math.sin(t * 2.2), kick = 0.06 * Math.sin(t * 2.2 - 0.9);
+  for (const k in REST) J[k] = rot(REST[k], REST.grip, sw);         // the whole body pendulums from the grip
+  // trailing leg lags the swing, knee leg tucks
+  for (const k of ['kneeL', 'ankleL', 'toeL']) J[k] = rot(J[k], J.hipL, kick);
+  for (const k of ['ankleL', 'toeL']) J[k] = rot(J[k], J.kneeL, kick * 0.8);
+  for (const k of ['ankleR', 'toeR']) J[k] = rot(J[k], J.kneeR, -kick * 0.7);
+  for (const k of ['wristL']) J[k] = rot(J[k], J.elbowL, -kick * 0.6);
+  J.headTilt = 0.36 + 0.03 * Math.sin(t * 1.1);
+  return J;
+}
+
+function torsoPath(J) {
+  const o = (p, dx, dy) => [p[0] + dx, p[1] + dy];
+  return P.smooth([
+    o(J.neck, -18, 2), o(J.shoulderR, -10, -12), o(J.shoulderR, -8, 20), o(J.chest, -42, 30), o(J.chest, -30, 76), o(J.pelvis, -30, -34),
+    o(J.hipR, -12, 2), o(J.pelvis, -4, 26), o(J.hipL, 10, 2), o(J.pelvis, 30, -38), o(J.chest, 62, 70), o(J.chest, 72, 22),
+    o(J.shoulderL, 24, 20), o(J.shoulderL, 12, -10), o(J.neck, 22, -2),
+  ], true, 0.85);
+}
+
+function handOpen(J) {
+  // big open hand: palm + splayed fingers, drawn in hand space
+  const w = J.wristL, d = [J.wristL[0] - J.elbowL[0], J.wristL[1] - J.elbowL[1]], L = Math.hypot(...d), u = [d[0] / L, d[1] / L], n = [-u[1], u[0]];
+  const at = (x, y) => [w[0] + (u[0] * x + n[0] * y) * 1.2, w[1] + (u[1] * x + n[1] * y) * 1.2];
+  const parts = [P.smooth([at(-4, -14), at(14, -19), at(34, -16), at(40, 0), at(34, 17), at(14, 18), at(-4, 12)], true, 0.8)];
+  const fingers = [[36, -14, -0.5, 30], [40, -4, -0.15, 36], [38, 7, 0.18, 34], [33, 15, 0.5, 26]];
+  for (const [x, y, a, l] of fingers) {
+    const A = at(x, y), dir = [u[0] * Math.cos(a) - u[1] * Math.sin(a), u[1] * Math.cos(a) + u[0] * Math.sin(a)];
+    const B = [A[0] + dir[0] * l * 1.2, A[1] + dir[1] * l * 1.2];
+    parts.push(P.limb(A, B, [[0, 7, 7], [0.5, 6.4, 6.4], [1, 5, 5]], { capLen: 1 }).path);
+  }
+  const T = at(10, -18), td = [n[0] * -0.7 + u[0] * 0.7, n[1] * -0.7 + u[1] * 0.7];
+  parts.push(P.limb(T, [T[0] + td[0] * 36, T[1] + td[1] * 36], [[0, 9, 9], [1, 6, 6]], { capLen: 1 }).path);
+  return parts;
+}
+
+function fist(J) {
+  const w = J.wristR, g = J.grip, d = [g[0] - w[0], g[1] - w[1]], L = Math.hypot(...d), u = [d[0] / L, d[1] / L], n = [-u[1], u[0]];
+  const at = (x, y) => [w[0] + (u[0] * x + n[0] * y) * 1.12, w[1] + (u[1] * x + n[1] * y) * 1.12];
+  const body = P.smooth([at(-4, -17), at(18, -22), at(44, -21), at(56, -12), at(58, 0), at(56, 12), at(46, 20), at(20, 21), at(-4, 15)], true, 0.8);
+  const thumb = P.smooth([at(20, 14), at(36, 24), at(50, 18), at(48, 8), at(32, 8)], true, 0.8);
+  const knuckles = [0, 1, 2, 3].map((i) => [at(52, -15 + i * 10), at(58, -12 + i * 10)]);
+  return { body, thumb, knuckles, at };
+}
+
+function shoe(ankle, toe, up, s, flip) {
+  // high-top sneaker drawn in foot space: x from heel to toe, y up the leg
+  const d = [toe[0] - ankle[0], toe[1] - ankle[1]], L = Math.hypot(...d), u = [d[0] / L, d[1] / L];
+  let n = [-u[1], u[0]]; if (n[0] * up[0] + n[1] * up[1] < 0) n = [-n[0], -n[1]];
+  const len = 96 * s, origin = [ankle[0] - u[0] * len * 0.22 - n[0] * len * 0.5, ankle[1] - u[1] * len * 0.22 - n[1] * len * 0.5];
+  const at = (x, y) => [origin[0] + (u[0] * x + n[0] * y) * len, origin[1] + (u[1] * x + n[1] * y) * len];
+  const sh = (pts) => P.smooth(pts.map(([x, y]) => at(x, y)), true, 0.6);
+  return {
+    sole: sh([[-0.06, 0], [0.96, 0], [1.04, 0.07], [1.0, 0.15], [-0.07, 0.15]]),
+    outsole: sh([[-0.05, -0.01], [0.95, -0.01], [1.03, 0.05], [0.96, 0.04], [-0.05, 0.04]]),
+    upper: sh([[-0.05, 0.14], [1.0, 0.14], [1.0, 0.22], [0.86, 0.31], [0.6, 0.39], [0.42, 0.56], [0.32, 0.64], [0.03, 0.64], [-0.07, 0.46], [-0.09, 0.22]]),
+    toe: sh([[0.62, 0.14], [1.0, 0.14], [1.0, 0.22], [0.86, 0.31], [0.66, 0.36], [0.6, 0.22]]),
+    heel: sh([[-0.09, 0.14], [0.2, 0.14], [0.22, 0.42], [0.07, 0.64], [-0.07, 0.46]]),
+    collar: sh([[0.03, 0.56], [0.32, 0.57], [0.32, 0.64], [0.03, 0.64]]),
+    stripe: [[0.2, 0.2], [0.42, 0.26], [0.66, 0.3]].map(([x, y]) => at(x, y)),
+    laces: [[0.44, 0.44], [0.5, 0.4], [0.56, 0.36]].map(([x, y]) => [at(x - 0.04, y + 0.03), at(x + 0.05, y + 0.07)]),
+  };
+}
+
+// light every body part the same way: stacked offset silhouettes, no gradients
+function lightPart(ctx, path, big = 1) {
+  const s = C.suit;
+  P.toon(ctx, path, {
+    key: KEY, rimDir: RIM, shadow: s.shadow,
+    rim: s.rim, rimW: 5.5 * big,
+    midW: 17 * big, mid: P.dotPattern(ctx, s.midDot, 4, 1.35, 0.785, s.midBg),
+    litW: 7 * big, lit: P.dotPattern(ctx, s.litDot, 4, 0.9, 0.3, s.lit),
+  });
+  // rim gets white dots and an offset line just outside it on the shadow side (misprinted rim)
+  ctx.save(); ctx.clip(path);
+  ctx.clip(new Path2D((() => { const p = new Path2D(); p.rect(-1e4, -1e4, 2e4, 2e4); p.addPath(P.translate(path, -RIM[0] * 5.5 * big, -RIM[1] * 5.5 * big)); return p; })()), 'evenodd');
+  ctx.fillStyle = P.dotPattern(ctx, s.rimDot, 3.2, 0.8, 0.785); ctx.fill(path);
+  ctx.restore();
+}
+
+function webLinesLimb(ctx, limb, path, seed) {
+  const lines = [];
+  for (const s of [-0.5, 0.08, 0.6]) {
+    const pts = []; for (let i = 0; i <= 10; i++) pts.push(limb.at(0.04 + i * 0.092, s));
+    lines.push(P.smooth(pts, false));
+  }
+  const bow = limb.u[1] > 0 ? -1 : 1;                              // cross-contours bow toward screen-up (seen from below)
+  for (const t of [0.24, 0.52, 0.8]) {
+    const pts = [];
+    for (let i = 0; i <= 8; i++) {
+      const s = -1 + (i / 8) * 2, p = limb.at(t, s * 0.99), w = 14, b = (1 - s * s) * w * 0.45 * bow;
+      pts.push([p[0] + limb.u[0] * b, p[1] + limb.u[1] * b]);
+    }
+    lines.push(P.smooth(pts, false));
+  }
+  strokeWeb(ctx, path, lines);
+}
+
+// dark red everywhere, bright red where the key light lands
+function strokeWeb(ctx, clip, lines, big = 1) {
+  ctx.save(); ctx.clip(clip);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = C.webDark; ctx.lineWidth = 1.7 * big; for (const l of lines) ctx.stroke(l);
+  ctx.restore();
+  ctx.save(); P.litClip(ctx, clip, KEY, 26 * big);
+  ctx.strokeStyle = C.web; ctx.lineWidth = 1.9 * big; for (const l of lines) ctx.stroke(l);
+  ctx.restore();
+}
+
+function spiderWeb(center, rays, radii, reach, a0 = 0) {
+  const lines = [];
+  const ang = Array.from({ length: rays }, (_, i) => a0 + (i / rays) * Math.PI * 2);
+  for (const a of ang) { const p = new Path2D(); p.moveTo(...center); p.lineTo(center[0] + Math.cos(a) * reach, center[1] + Math.sin(a) * reach); lines.push(p); }
+  for (const r of radii) {                                          // scalloped rings: sag toward the centre between rays
+    const p = new Path2D();
+    ang.forEach((a, i) => {
+      const b = ang[(i + 1) % rays] + (i === rays - 1 ? Math.PI * 2 : 0), m = (a + b) / 2;
+      const A = [center[0] + Math.cos(a) * r, center[1] + Math.sin(a) * r], B = [center[0] + Math.cos(b) * r, center[1] + Math.sin(b) * r];
+      if (i === 0) p.moveTo(...A);
+      p.quadraticCurveTo(center[0] + Math.cos(m) * r * 0.82, center[1] + Math.sin(m) * r * 0.82, ...B);
+    });
+    lines.push(p);
+  }
+  return lines;
+}
+
+function ink(ctx, path, w = 2.6) { ctx.strokeStyle = C.ink; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.stroke(path); }
+// a chain of parts reads as ONE drawn shape: ink the union underneath, paint every part over it
+function chain(ctx, parts, w = 2.7) {
+  ctx.strokeStyle = C.ink; ctx.lineJoin = 'round'; ctx.lineWidth = w * 2;
+  for (const p of parts) ctx.stroke(p.path);
+  for (const p of parts) { lightPart(ctx, p.path, p.big || 1); if (p.web) p.web(p.path); }
+}
+// a crease drawn on the inside of a bend (knee, elbow) instead of a joint seam
+function crease(ctx, a, j, b, len = 16, w = 2.4) {
+  const u = [a[0] - j[0], a[1] - j[1]], v = [b[0] - j[0], b[1] - j[1]], lu = Math.hypot(...u), lv = Math.hypot(...v);
+  const bis = [u[0] / lu + v[0] / lv, u[1] / lu + v[1] / lv], lb = Math.hypot(...bis) || 1, d = [bis[0] / lb, bis[1] / lb];
+  const c = [j[0] + d[0] * 7, j[1] + d[1] * 7], n = [-d[1], d[0]];
+  P.inkStroke(ctx, [[c[0] - n[0] * len / 2, c[1] - n[1] * len / 2], [c[0] + d[0] * 3, c[1] + d[1] * 3], [c[0] + n[0] * len / 2, c[1] + n[1] * len / 2]], { width: w, color: C.ink, seed: (j[0] | 0) });
+}
+
+function paintShoe(ctx, sh) {
+  const c = C.shoe;
+  fillPath(ctx, sh.upper, c.white);
+  ctx.save(); P.litClip(ctx, sh.upper, [-KEY[0], -KEY[1]], 10); fillPath(ctx, sh.upper, c.whiteShade); ctx.restore();
+  fillPath(ctx, sh.toe, c.red); fillPath(ctx, sh.heel, c.red); fillPath(ctx, sh.collar, c.black);
+  ctx.save(); ctx.clip(sh.toe); P.hatch(ctx, sh.toe, c.redDark, { gap: 3.2, width: 1.3, angle: 0.5, seed: 3, box: [0, 0, AW, AH] }); ctx.restore();
+  ink(ctx, sh.toe, 1.6); ink(ctx, sh.heel, 1.6);
+  fillPath(ctx, sh.sole, c.sole); fillPath(ctx, sh.outsole, c.red);
+  ctx.strokeStyle = c.black; ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.stroke(P.smooth(sh.stripe, false));
+  ctx.strokeStyle = c.white; ctx.lineWidth = 1.8; for (const [a, b] of sh.laces) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); }
+  ink(ctx, sh.upper, 2.4); ink(ctx, sh.sole, 2.2);
+}
+
+function paintEmblem(ctx, J, torso) {
+  // spray-painted spider with overspray and a drip
+  const c = [J.chest[0] + 4, J.chest[1] + 10], ax = [(J.neck[0] - J.pelvis[0]), (J.neck[1] - J.pelvis[1])], al = Math.hypot(...ax), up = [ax[0] / al, ax[1] / al], rt = [-up[1], up[0]];
+  const at = (x, y) => [c[0] + rt[0] * x + up[0] * y, c[1] + rt[1] * x + up[1] * y];
+  ctx.save(); ctx.clip(torso);
+  const body = P.smooth([[0, 26], [9, 12], [8, -8], [0, -30], [-8, -8], [-9, 12]].map(([x, y]) => at(x, y)), true, 0.9);
+  const head = P.smooth([[0, 36], [7, 29], [0, 22], [-7, 29]].map(([x, y]) => at(x, y)), true, 0.9);
+  fillPath(ctx, body, C.emblem); fillPath(ctx, head, C.emblem);
+  ctx.strokeStyle = C.emblem; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const legs = [[[6, 20], [34, 44], [44, 74]], [[8, 10], [44, 22], [66, 44]], [[8, -2], [46, -10], [68, -34]], [[6, -14], [30, -40], [38, -72]]];
+  for (const sg of [1, -1]) for (const leg of legs) {
+    const pts = leg.map(([x, y]) => at(x * sg, y));
+    P.inkStroke(ctx, pts, { width: 6, color: C.emblem, seed: leg[1][0] * sg + 50, taper0: 0.3, taper1: 1 });
+    P.spray(ctx, pts, C.emblem, { count: 26, reach: 7, size: 0.9, seed: leg[2][1] + sg * 7 });
+  }
+  P.spray(ctx, [at(0, 30), at(9, 0), at(0, -30), at(-9, 0)], C.emblem, { count: 120, reach: 9, size: 0.9, seed: 11 });
+  P.inkStroke(ctx, [at(3, -28), at(3.5, -52), at(3.2, -64)], { width: 2.4, color: C.emblem, taper0: 0, taper1: 0.2, seed: 2 });
+  ctx.fillStyle = C.emblem; ctx.beginPath(); ctx.arc(...at(3.2, -66), 2.6, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+function headPath(J) {
+  const c = J.head, R = (x, y) => rot([c[0] + x, c[1] + y], c, J.headTilt);
+  return P.smooth([[0, -52], [27, -46], [41, -18], [40, 12], [28, 38], [8, 52], [-11, 50], [-29, 35], [-40, 6], [-38, -25], [-23, -46]].map(([x, y]) => R(x, y)), true, 0.9);
+}
+function paintHead(ctx, J, t, head) {
+  const c = J.head, a = J.headTilt, R = (x, y) => rot([c[0] + x, c[1] + y], c, a);
+  strokeWeb(ctx, head, spiderWeb(R(-6, 8), 12, [14, 28, 44, 62], 90, a + 0.2), 0.9);
+  // lenses: big teardrops, the shape is the expression. near eye (his right, screen-left) is larger
+  const blink = (Math.floor(t * 12) % 60) < 2 ? 0.15 : 1;        // two drawings of blink every five seconds
+  const lens = (cx, cy, w, h, sg) => P.smooth([
+    [cx - w * 0.5 * sg, cy + h * 0.22], [cx - w * 0.2 * sg, cy - h * 0.55 * blink], [cx + w * 0.3 * sg, cy - h * 0.62 * blink], [cx + w * 0.58 * sg, cy - h * 0.5 * blink],
+    [cx + w * 0.5 * sg, cy + h * 0.1], [cx + w * 0.1 * sg, cy + h * 0.45 * blink], [cx - w * 0.36 * sg, cy + h * 0.42],
+  ].map(([x, y]) => R(x, y)), true, 0.85);
+  for (const [lx, ly, w, h, sg] of [[-15, -4, 34, 30, -1], [21, -2, 22, 27, 1]]) {
+    const L = lens(lx, ly, w, h, sg);
+    ctx.save(); ctx.translate(2.5, 2.5); ctx.strokeStyle = C.ink; ctx.lineWidth = 7; ctx.stroke(L); ctx.restore();
+    fillPath(ctx, L, C.lens);
+    ctx.save(); ctx.clip(L);
+    const [, y0, , y1] = P.bbox([R(lx, ly - h / 2), R(lx, ly + h / 2)]);
+    P.dots(ctx, L, '#cdb8ff', { box: [c[0] - 60, c[1] - 60, c[0] + 60, c[1] + 60], cell: 4, angle: 0.785, radius: (x, y) => 1.6 * P.clamp((y - y0) / (y1 - y0 + 1) * 1.8 - 0.6) });
+    ctx.restore();
+    ink(ctx, L, 4.6);
+  }
+}
+
+function paintMiles(ctx, t) {
+  const J = poseAt(t);
+  const limb = (a, b, prof) => P.limb(J[a], J[b], prof, { tension: 0.72 });
+  const wl = (L) => (path) => webLinesLimb(ctx, L, path);
+  // far arm + far leg (behind the torso)
+  const thL = limb('hipL', 'kneeL', [[0, 19, 17], [0.2, 29, 24], [0.55, 26, 22], [0.9, 19, 18], [1, 18, 17]]);
+  const shL = limb('kneeL', 'ankleL', [[0, 18, 17], [0.28, 24, 17], [0.6, 18, 14], [1, 10, 10]]);
+  chain(ctx, [{ path: thL.path, web: wl(thL) }, { path: shL.path, web: wl(shL) }]);
+  crease(ctx, J.hipL, J.kneeL, J.ankleL);
+  paintShoe(ctx, shoe(J.ankleL, J.toeL, [J.kneeL[0] - J.ankleL[0], J.kneeL[1] - J.ankleL[1]], 1.04));
+  const uaL = limb('shoulderL', 'elbowL', [[0, 22, 21], [0.2, 23, 21], [0.55, 18, 17], [1, 13, 13]]);
+  const faL = limb('elbowL', 'wristL', [[0, 13, 13], [0.22, 16, 16], [0.6, 13, 12], [1, 10, 10]]);
+  chain(ctx, [{ path: uaL.path, web: wl(uaL) }, { path: faL.path, web: wl(faL) }, ...handOpen(J).map((h) => ({ path: h, big: 0.5 }))]);
+  crease(ctx, J.shoulderL, J.elbowL, J.wristL, 12, 2);
+  // one drawn mass: torso, head, the near leg and the raised arm share a single outline (no ball joints)
+  const torso = torsoPath(J);
+  const neck = P.limb(J.neck, rot([J.head[0], J.head[1] + 36], J.head, J.headTilt), [[0, 17, 17], [1, 15, 15]]);
+  const head = headPath(J);
+  const thR = limb('hipR', 'kneeR', [[0, 24, 26], [0.3, 28, 32], [0.7, 23, 26], [1, 19, 20]]);
+  const shR = limb('kneeR', 'ankleR', [[0, 20, 19], [0.25, 27, 19], [0.55, 20, 16], [1, 11, 11]]);
+  const uaR = limb('shoulderR', 'elbowR', [[0, 24, 22], [0.18, 27, 23], [0.55, 20, 22], [1, 15, 15]]);
+  const faR = limb('elbowR', 'wristR', [[0, 15, 16], [0.22, 19, 19], [0.6, 15, 14], [1, 11, 11]]);
+  const f = fist(J);
+  chain(ctx, [
+    { path: torso, big: 1.4, web: (p) => strokeWeb(ctx, p, spiderWeb([J.chest[0] + 4, J.chest[1] + 8], 14, [38, 74, 112, 152, 196], 260, 0.1), 1.05) },
+    { path: neck.path }, { path: head, big: 1.1 },
+    { path: thR.path, web: wl(thR) }, { path: shR.path, web: wl(shR) },
+    { path: uaR.path, web: wl(uaR) }, { path: faR.path, web: wl(faR) }, { path: f.body, big: 0.6 },
+  ], 2.8);
+  paintEmblem(ctx, J, torso);
+  paintHead(ctx, J, t, head);
+  // drawn creases where forms fold over each other
+  const across = (L, t, s0, s1, w = 2.4) => { const pts = []; for (let i = 0; i <= 6; i++) pts.push(L.at(t, s0 + (s1 - s0) * (i / 6))); P.inkStroke(ctx, pts, { width: w, color: C.ink, seed: (t * 100) | 0 }); };
+  across(thR, 0.1, -1, 0.35, 2.8);                  // where the thigh folds up out of the hip
+  across(uaR, 0.16, 1, -0.2, 2.4);                   // deltoid over the upper arm
+  crease(ctx, J.hipR, J.kneeR, J.ankleR, 18);
+  crease(ctx, J.shoulderR, J.elbowR, J.wristR, 12, 2);
+  paintShoe(ctx, shoe(J.ankleR, J.toeR, [J.kneeR[0] - J.ankleR[0], J.kneeR[1] - J.ankleR[1]], 1.12));
+  ctx.strokeStyle = C.webDark; ctx.lineWidth = 1.6; for (const [a, b] of f.knuckles) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); }
+  lightPart(ctx, f.thumb, 0.4); ink(ctx, f.thumb, 2.2);
+  paintStrand(ctx, J, t);
+  return J;
+}
+
+function paintStrand(ctx, J, t) {
+  // the web: a loose white line with loops where it leaves the hand (after Mielgo)
+  const A = J.grip, B = [150, -260], r = P.rng(Math.floor(t * 12) + 7);
+  const pts = [], n = 44, dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+  for (let i = 0; i <= n; i++) {
+    const s = i / n, sag = Math.sin(Math.PI * s) * 16;
+    let x = A[0] + dx * s + nx * sag, y = A[1] + dy * s + ny * sag;
+    if (s < 0.16) { const k = 1 - s / 0.16, a = s * 62; x += Math.cos(a) * 22 * k; y += Math.sin(a) * 9 * k; }
+    pts.push([x + (r() - 0.5) * 1.2, y + (r() - 0.5) * 1.2]);
+  }
+  P.inkStroke(ctx, pts, { width: 6.5, color: C.ink, wobble: 0.3, taper0: 0, taper1: 0, seed: 1 });
+  P.inkStroke(ctx, pts, { width: 3.2, color: C.strand, wobble: 0.3, taper0: 0, taper1: 0, seed: 1 });
+  // a second, thinner strand for the gunk trailing off the wrist
+  const q = pts.slice(0, 14).map(([x, y], i) => [x + 5 + i * 0.4, y + 3]);
+  P.inkStroke(ctx, q, { width: 1.6, color: C.strand, wobble: 0.3, seed: 3 });
+}
+
+function paintMotion(ctx, J) {
+  // loose unfilled strokes trailing the swing (comic motion lines, not blur)
+  ctx.strokeStyle = 'rgba(255,214,236,.7)'; ctx.lineCap = 'round';
+  const lines = [[[980, 930], [920, 902]], [[1010, 880], [940, 850]], [[990, 820], [930, 800]], [[760, 960], [700, 925]]];
+  lines.forEach(([a, b], i) => { ctx.lineWidth = 2.4 - i * 0.3; ctx.beginPath(); ctx.moveTo(...a); ctx.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 6, ...b); ctx.stroke(); });
+}
+
+// ------------------------------------------------------------------ snow (near and far, never blurred)
+const FLAKES = (() => { const r = P.rng(99); return Array.from({ length: 120 }, () => ({ x: r() * 1800 - 100, y: r() * 1100, s: r(), ph: r() * 6.28 })); })();
+function paintSnow(ctx, t) {
+  for (const f of FLAKES) {
+    const y = ((f.y + t * (18 + f.s * 40)) % 1150) - 60, x = f.x + Math.sin(t * 0.8 + f.ph) * 12;
+    const rr = 1.2 + f.s * f.s * 7;
+    ctx.fillStyle = f.s > 0.85 ? 'rgba(170,222,240,.8)' : f.s > 0.6 ? 'rgba(255,246,252,.85)' : 'rgba(255,240,250,.7)';
+    ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.fill();
+  }
+}
+
+// ------------------------------------------------------------------ lettering (the print layer is always sharp)
+function letter(ctx, J, t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, S.W, S.H);
+  const dpr = S.dpr, vw = S.W / dpr, small = vw < 700, sz = small ? 13 : 17;
+  const box = (x, y, lines, o) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0);
+    ctx.font = `700 ${o.size * dpr}px 'Comic Neue', 'Comic Sans MS', sans-serif`;
+    const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + o.size * 1.3 * dpr, h = lines.length * o.size * 1.18 * dpr + o.size * 0.9 * dpr;
+    ctx.fillStyle = C.ink; ctx.fillRect(4 * dpr, 4 * dpr, w, h);
+    ctx.fillStyle = o.fill; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2.4 * dpr; ctx.strokeRect(0, 0, w, h);
+    ctx.fillStyle = C.ink; ctx.textBaseline = 'top';
+    lines.forEach((l, i) => ctx.fillText(l, o.size * 0.65 * dpr, o.size * 0.5 * dpr + i * o.size * 1.18 * dpr));
+    ctx.restore();
+  };
+  box(20 * dpr, 20 * dpr, ['MIDTOWN, MANHATTAN.', '7:42 P.M.'], { size: sz, fill: '#f4efe6' });
+  box(S.W - (small ? 205 : 330) * dpr, (small ? 80 : 30) * dpr, ["DON'T LOOK DOWN.", "DON'T LOOK DOWN.", '...OKAY, LOOKING UP IS WORSE.'].slice(0, small ? 2 : 3), { size: sz, fill: '#ffe23d', rot: 0.025 });
+  // THWIP — pops for two drawings, holds, then goes
+  const age = (t + 3.0) % 3.4; if (age > 1.2) return;
+  const g = [J.grip[0] * S.s + S.ox, J.grip[1] * S.s + S.oy], pop = age < 0.17 ? 0.72 : 1;
+  ctx.save(); ctx.translate(g[0] + 150 * S.s, g[1] - 20 * S.s); ctx.rotate(-0.18); ctx.scale(pop, pop);
+  const size = Math.max(40, 86 * S.s / dpr) * dpr;
+  ctx.font = `${size}px Bangers, Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  ctx.fillStyle = '#27d8ff'; ctx.fillText('THWIP!', 6 * dpr, 6 * dpr);
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 8 * dpr; ctx.strokeText('THWIP!', 0, 0);
+  ctx.fillStyle = '#fff7fb'; ctx.fillText('THWIP!', 0, 0);
+  ctx.restore();
+}
+
+// ------------------------------------------------------------------ assemble
+const layerCanvas = () => { const c = document.createElement('canvas'); c.width = S.W; c.height = S.H; return c; };
+function build() {
+  const [sky, far, walls, hero, fg, text] = (S.layers = Array.from({ length: 6 }, layerCanvas));
+  const t0 = performance.now();
+  paintSky(sky.getContext('2d'));
+  const fc = far.getContext('2d'); art(fc); paintFar(fc);
+  const wc = walls.getContext('2d'); art(wc); paintWalls(wc); lightBleed(wc);
+  console.log(`[build] ${(performance.now() - t0) | 0}ms`);
+  [sky, far, walls].forEach((c, i) => comp.upload(i, c));
+}
+
+function resize() {
+  S.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  S.W = Math.round(innerWidth * S.dpr); S.H = Math.round(innerHeight * S.dpr);
+  view.width = S.W; view.height = S.H;
+  // cover the window; keep Miles (x≈680) in view when the window is narrow
+  S.s = Math.max(S.W / AW, S.H / AH);
+  S.ox = P.clamp(S.W / 2 - 690 * S.s, S.W - AW * S.s, 0); S.oy = (S.H - AH * S.s) / 2;
+  build(); S.last = -1;
+}
+
+function tick(now) {
+  const t = (now - S.t0) / 1000, tt = S.onOnes ? P.ones(t) : P.twos(t);
+  S.sm[0] += (S.mouse[0] - S.sm[0]) * 0.08; S.sm[1] += (S.mouse[1] - S.sm[1]) * 0.08;   // camera drift: on ones
+  if (tt !== S.last) {                                                                  // drawings: on twos
+    S.last = tt;
+    S.focus += (S.focusTo - S.focus) * 0.4;
+    const [, , , hero, fg, text] = S.layers;
+    const hc = hero.getContext('2d'); hc.setTransform(1, 0, 0, 1, 0, 0); hc.clearRect(0, 0, S.W, S.H); art(hc);
+    paintMotion(hc);
+    const J = paintMiles(hc, tt);
+    const sc = fg.getContext('2d'); sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, S.W, S.H); art(sc); paintSnow(sc, tt);
+    letter(text.getContext('2d'), J, tt);
+    comp.upload(3, hero); comp.upload(4, fg); comp.upload(5, text);
+    S.glitch = S.glitch > 0.03 ? S.glitch * 0.78 : 0;
+  }
+  // focus = which plane is in register. focus 0: Miles sharp, city slightly off; 1: city sharp, Miles off
+  const f = S.focus, k = S.print ? S.dpr : 0, mx = S.sm[0] * 16 * S.dpr, my = S.sm[1] * 10 * S.dpr;
+  const mis = [0.6 + f * 0.2, 2.2 * (1 - f), 1.4 * (1 - f), 5 * f, 4 - f, 0].map((m) => m * k);
+  const par = [0.1, 0.3, 0.8, 1.6, 2.6, 0];
+  comp.draw(mis.map((m, i) => ({ par: [mx * par[i], my * par[i]], mis: [m, m * 0.3] })), { grain: S.print ? 0.05 : 0, seed: Math.floor(tt * 12) % 97, glitch: S.glitch, vignette: 0.28 });
+  requestAnimationFrame(tick);
+}
+
+addEventListener('pointermove', (e) => { S.mouse = [e.clientX / innerWidth - 0.5, e.clientY / innerHeight - 0.5]; });
+view.addEventListener('click', () => { S.focusTo = S.focusTo ? 0 : 1; });
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === '1') S.onOnes = true;
+  if (k === '2') S.onOnes = false;
+  if (k === 'g') S.glitch = 1;
+  if (k === 'p') S.print = !S.print;
+  if (k === 'f') S.focusTo = S.focusTo ? 0 : 1;
+});
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+setTimeout(() => document.getElementById('hint').classList.add('fade'), 7000);
+(document.fonts ? Promise.all([document.fonts.load('40px Bangers'), document.fonts.load("700 20px 'Comic Neue'")]) : Promise.resolve())
+  .catch(() => {}).then(() => { resize(); requestAnimationFrame(tick); window.__ready = true; });
+window.scene = { S, focus: (v) => (S.focus = S.focusTo = v), glitch: () => (S.glitch = 1) };
+</script>
+</body>
+</html>

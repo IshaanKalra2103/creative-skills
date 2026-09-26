@@ -25,6 +25,7 @@
 | [signal-print](skills/signal-print) | A grainy signal-orange "ops-print" identity in two sheets of 4:5 plates: rotated tape strips with tickers, a crosshair emblem, a numbered run log, barred type crossed by a ring-matrix word, a live terminal, a halftone mark with a cursor loupe, a night-shift dial and an ID badge — plus an all-SVG asset kit (icons on keylines, mark construction and lockups, a blueprint, pattern tiles, seals and rubber stamps, an animated weave diagram, dingbats, live instruments) where every asset downloads as a clean .svg. |
 | [isometric-svg](skills/isometric-svg) | Animated isometric line art in plain SVG + JS: black faces, hairline white strokes, glare bands, one accent. A tiny engine for boxes, extruded profiles, wheels, tubes, rounded plates and clipping through openings, all driven by a freezable clock. Examples: a draggable filing cabinet and a seven-panel F1 pit wall (pit stop with jacks and tyre change, scanner bay, live circuit map, telemetry, wind tunnel, tyres, timing tower) on one race clock, plus a contact-sheet script. |
 | [motion-replica](skills/motion-replica) | Any motion-graphics video (app ad, promo, grid reel, UI walkthrough) rebuilt shot for shot in code: a deterministic HTML page with DOM for UI and type and three.js layers for 3D props, rendered frame by frame to an MP4 that matches the original's size, fps, length and audio. Scripts measure the reference (per-cell loop periods, cuts, contact sheets, 20 fps bursts for easing), compare replica and reference side by side and on motion sheets, and render on the GPU. Includes a procedural 3D kit (foil pouch, $100 bills, basketball, watch, embossed/glass/cel-shaded coins, bevelled 3D digits, a GLB repaint loader) and a full 2×2 fintech-ad example. |
+| [spider-verse-look](skills/spider-verse-look) | Scenes and characters painted in the visual language of *Into the Spider-Verse*, as 2D drawings in Canvas + a small WebGL print pass: Ben-Day dots instead of gradients, misregistered plates instead of blur, characters on twos, ink that doesn't register. A reference built from reading every page of the film's art book and a making-of video (style bible, per-character and per-location rules with sampled hex, FX, 90 code recipes), a no-dependency painting kit, and a finished example of Miles swinging through a dusk Midtown canyon. |
 
 ## Install
 
@@ -51,6 +52,7 @@ ln -s ~/src/claude-skills/skills/motion-reel ~/.claude/skills/motion-reel
 ln -s ~/src/claude-skills/skills/signal-print ~/.claude/skills/signal-print
 ln -s ~/src/claude-skills/skills/isometric-svg ~/.claude/skills/isometric-svg
 ln -s ~/src/claude-skills/skills/motion-replica ~/.claude/skills/motion-replica
+ln -s ~/src/claude-skills/skills/spider-verse-look ~/.claude/skills/spider-verse-look
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -351,3 +353,17 @@ Inspired by a screen recording of an isometric SVG filing cabinet and a pit-wall
 - `references/`: `study.md` (reading timing, curves, counters, colour and type off frames), `timeline.md` (layers, coordinates, beat recipes), `3d-assets.md` (kit API, material recipes, licence-clear model sourcing), `gotchas.md`.
 
 Made by rebuilding a 10 s grid ad frame by frame. The example's brand names come from that reference; the code and 3D assets are original, and the car is "Car Concept" by Eric Chadwick / Darmstadt Graphics Group (CC-BY 4.0), fetched at setup, not stored in the repo.
+
+## spider-verse-look
+
+![Don't Look Down: Miles swinging through a dusk Midtown canyon](skills/spider-verse-look/assets/dont-look-down.jpg)
+
+- `SKILL.md`: the workflow (pick the beat and its rules → construct and paint the world → draw the character from joints → letter it → print pass → verify by looking) and the rules that matter most.
+- `references/style-bible.md`: what replaces each CG default (gradients, depth of field, motion blur, bloom, rim falloff, accurate geometry), plus line, colour and light, shape, camera, texture, timing, lettering and a pre-ship checklist, each attributed to a page of the book.
+- `references/characters.md`, `environments.md`, `fx.md`: every character (heads tall, primitive shape, palette, render rule), every location, and every effect (focus, speed, spider-sense, Venom Strike, invisibility, glitch, quakes, portal).
+- `references/book/`: the full extraction, one file per 35 pages, with attributed insights, page-by-page visual notes with sampled hex and code recipes. `references/video-making-of.md`: notes from a making-of video with timestamps.
+- `engine/svpaint.js`: the painting kit. Limb contours, perspective walls from vanishing points, image warping, dry brush, spray, brush-pen ink, dot screens, hatching, stacked-silhouette toon light, on-twos timing, and a WebGL compositor for misregistration, grain and glitch. Classic script, opens from `file://`.
+- `examples/dont-look-down/`: the finished painting. Click pulls focus between Miles and the city; `1` / `2` put Miles on ones or twos; `G` glitches; `P` toggles the print pass.
+- `scripts/`: `shot.mjs` (GPU headless screenshots with JS between frames) and `serve.mjs`.
+
+Built from *The Art of Spider-Man: Into the Spider-Verse* (Ramin Zahed, Titan Books, 2018) and "Making Spider-Verse Was Absolute Chaos" (PM. Films). Quotes are short and attributed; the book's text and art are not included. The example is fan art; Spider-Man and Miles Morales are trademarks of Marvel.
