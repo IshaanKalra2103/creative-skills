@@ -293,6 +293,7 @@ addEventListener("load", setMode);
 if (SHOT_Y !== null) {
   // screenshot mode: no smooth scroll, reveal everything, jump straight to ?y=
   history.scrollRestoration = "manual";
+  root.style.scrollBehavior = "auto"; // CSS smooth-scrolls anchors when Lenis is off; screenshots must land exactly
   const go = () => { $$(".reveal").forEach((el) => el.classList.add("in")); setMode(); scrollTo(0, SHOT_Y); frame(); };
   document.fonts?.ready.then(go);
   addEventListener("load", go);

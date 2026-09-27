@@ -5,7 +5,7 @@
 //   node shot.mjs <index.html> <out.png> [scrollY...]      default: 0 450 900 1350 1800 2300 2800 3300 3800 4300
 //   node shot.mjs <index.html> <out.png> --nav             hover each nav link (frames of the top of the page)
 //   WIDTH=390 HEIGHT=844 node shot.mjs ...                 phone size (the static layout, no 3D)
-//   CLIP=420,20,600,240 node shot.mjs ... --nav             capture only that viewport rect, at full size
+//   CLIP=420,20,600,240 node shot.mjs ...                   capture only that viewport rect, at full size (any scroll, or --nav)
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -53,19 +53,23 @@ await evaluate("document.fonts.ready.then(() => new Promise(r => setTimeout(r, 6
 
 const frames = [];
 const snap = async () => {
-  const clip = CLIP && { x: CLIP[0], y: CLIP[1], width: CLIP[2], height: CLIP[3], scale: 1 };
+  // CDP clips in document coordinates; CLIP is given in viewport coordinates
+  const [sx, sy] = CLIP ? await evaluate("[scrollX, scrollY]") : [0, 0];
+  const clip = CLIP && { x: CLIP[0] + sx, y: CLIP[1] + sy, width: CLIP[2], height: CLIP[3], scale: 1 };
   const { data } = await send("Page.captureScreenshot", { format: "png", ...(clip && { clip }) });
   const p = join(tmp, `${String(frames.length).padStart(3, "0")}.png`);
   writeFileSync(p, Buffer.from(data, "base64"));
   frames.push(p);
 };
 for (const y of ys) {
-  await evaluate(`scrollTo(0, ${y}); new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))`);
+  // "instant" overrides CSS scroll-behavior: smooth, which would otherwise shoot the frame mid-scroll
+  const at = await evaluate(`scrollTo({ top: ${y}, behavior: "instant" }); new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(Math.round(scrollY)))))`);
+  if (Math.abs(at - y) > 1) console.log(`y=${y}: page stops at ${at}`);
   await sleep(350);
   await snap();
 }
 if (navMode) {
-  await evaluate("scrollTo(0, 0)");
+  await evaluate(`scrollTo({ top: 0, behavior: "instant" })`);
   const links = await evaluate("[...document.querySelectorAll('.nav__link')].map(a => { const r = a.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })");
   for (const [x, y] of links) {
     await send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
@@ -75,7 +79,7 @@ if (navMode) {
 }
 ws.close(); chrome.kill();
 
-const cols = 2, rows = Math.ceil(frames.length / cols);
+const cols = Math.min(2, frames.length), rows = Math.ceil(frames.length / cols);
 await new Promise((ok, fail) => {
   const ff = spawn("ffmpeg", ["-loglevel", "error", "-y", "-i", join(tmp, "%03d.png"), "-vf", `${CLIP ? "" : "scale=iw/2:-1,"}tile=${cols}x${rows}:padding=8:color=white`, out], { stdio: "inherit" });
   ff.on("exit", (c) => (c === 0 ? ok() : fail(new Error("ffmpeg failed"))));

@@ -25,7 +25,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html:not(.lenis) { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: no-preference) { html:not(.lenis) { scroll-behavior: smooth; } }
 body {
   background: var(--bg) var(--noise-light);
   color: var(--cream);
@@ -368,12 +368,14 @@ html:not(.fx) .work { padding-top: 170px; }
 .cross::before { left: 50%; top: 0; bottom: 0; width: 1.5px; }
 .cross::after { top: 50%; left: 0; right: 0; height: 1.5px; }
 .board__caption {
-  position: absolute; right: 70px; bottom: 150px; width: 250px; text-align: center;
+  position: absolute; left: 82%; bottom: 150px; width: min(250px, 26%); translate: -50% 0; text-align: center; /* centred in the 3rd column */
   font: 26px/1.2 var(--f-hand); color: var(--chalk); transform: rotate(-3deg);
 }
+/* no free slot bottom-right (the last row is full): centre it under the cards instead */
+.board__caption--below { left: 50%; bottom: 44px; width: auto; white-space: nowrap; }
 
 .card {
-  position: absolute; width: 318px;
+  position: absolute; width: clamp(280px, 28.5%, 318px); /* slots are % of the board; a fixed width spills off it at 1101–1200px */
   background: var(--cream-2);
   border-radius: 16px; padding: 9px 9px 16px;
   box-shadow: 0 20px 34px rgba(0,0,0,.5);
@@ -550,9 +552,9 @@ html:not(.fx) .work { padding-top: 170px; }
 }
 @media (max-width: 1100px) {
   .board { height: auto; padding: 56px 20px 150px 70px; display: flex; flex-wrap: wrap; justify-content: center; gap: 36px 28px; }
-  .card { position: relative; left: auto !important; top: auto !important; }
+  .card { position: relative; left: auto !important; top: auto !important; width: 318px; }
   .cross { display: none; }
-  .board__caption { right: 50%; bottom: 50px; transform: translateX(50%) rotate(-2deg); }
+  .board__caption { left: 50%; bottom: 50px; width: min(250px, 80%); white-space: normal; transform: rotate(-2deg); }
 }
 @media (max-width: 860px) {
   .nav { padding-top: 110px; }
