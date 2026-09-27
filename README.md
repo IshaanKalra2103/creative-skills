@@ -26,6 +26,7 @@
 | [isometric-svg](skills/isometric-svg) | Animated isometric line art in plain SVG + JS: black faces, hairline white strokes, glare bands, one accent. A tiny engine for boxes, extruded profiles, wheels, tubes, rounded plates and clipping through openings, all driven by a freezable clock. Examples: a draggable filing cabinet and a seven-panel F1 pit wall (pit stop with jacks and tyre change, scanner bay, live circuit map, telemetry, wind tunnel, tyres, timing tower) on one race clock, plus a contact-sheet script. |
 | [motion-replica](skills/motion-replica) | Any motion-graphics video (app ad, promo, grid reel, UI walkthrough) rebuilt shot for shot in code: a deterministic HTML page with DOM for UI and type and three.js layers for 3D props, rendered frame by frame to an MP4 that matches the original's size, fps, length and audio. Scripts measure the reference (per-cell loop periods, cuts, contact sheets, 20 fps bursts for easing), compare replica and reference side by side and on motion sheets, and render on the GPU. Includes a procedural 3D kit (foil pouch, $100 bills, basketball, watch, embossed/glass/cel-shaded coins, bevelled 3D digits, a GLB repaint loader) and a full 2×2 fintech-ad example. |
 | [spider-verse-look](skills/spider-verse-look) | Scenes and characters painted in the visual language of *Into the Spider-Verse*, as 2D drawings in Canvas + a small WebGL print pass: Ben-Day dots instead of gradients, misregistered plates instead of blur, characters on twos, ink that doesn't register. A reference built from reading every page of the film's art book and a making-of video (style bible, per-character and per-location rules with sampled hex, FX, 90 code recipes), a no-dependency painting kit, and a finished example of Miles swinging through a dusk Midtown canyon. |
+| [sketch-storyboarding](skills/sketch-storyboarding) | Trailers, gameplay clips, scripts and scene ideas as rough graphite storyboard sheets with shot sizes, camera moves, motion arrows and production notes. A script cuts a clip into numbered shots on contact sheets, the plan lives in one board.json that prints as a blank lettered sheet for approval, an image model draws the panels from a bundled style reference, and a second script letters and assembles the sheet so every caption is exact. Also before/after camera-fix boards and animatic timing boards. |
 
 ## Install
 
@@ -53,6 +54,7 @@ ln -s ~/src/claude-skills/skills/signal-print ~/.claude/skills/signal-print
 ln -s ~/src/claude-skills/skills/isometric-svg ~/.claude/skills/isometric-svg
 ln -s ~/src/claude-skills/skills/motion-replica ~/.claude/skills/motion-replica
 ln -s ~/src/claude-skills/skills/spider-verse-look ~/.claude/skills/spider-verse-look
+ln -s ~/src/claude-skills/skills/sketch-storyboarding ~/.claude/skills/sketch-storyboarding
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -367,3 +369,20 @@ Made by rebuilding a 10 s grid ad frame by frame. The example's brand names come
 - `scripts/`: `shot.mjs` (GPU headless screenshots with JS between frames) and `serve.mjs`.
 
 Built from *The Art of Spider-Man: Into the Spider-Verse* (Ramin Zahed, Titan Books, 2018) and "Making Spider-Verse Was Absolute Chaos" (PM. Films). Quotes are short and attributed; the book's text and art are not included. The example is fan art; Spider-Man and Miles Morales are trademarks of Marvel.
+
+## sketch-storyboarding
+
+![A 12-shot action-game trailer board: skyline, rooftop, leap, swing, dive, street fight, serpent reveal, ally](skills/sketch-storyboarding/assets/reference_storyboard.png)
+
+- `SKILL.md`: the workflow (read the clip → plan the shots in `board.json` → approve a blank lettered sheet → draw panels → letter and assemble → check), plus camera grammar, readable action and boss beats, a trailer arc, how to re-direct existing footage, output modes and a quality checklist.
+- `scripts/shots.py`: cuts a trailer or gameplay clip into shots with ffmpeg's scene score, merges flash frames, samples long takes every few seconds, and writes numbered contact sheets with timecodes plus `shots.json`.
+- `scripts/sheet.py`: `board.json` → the finished sheet with hand-ruled frames and hand lettering (Architects Daughter), empty frames for panels not drawn yet, `"mode": "pairs"` for CURRENT / PROBLEM beside REDIRECTED / PROPOSED, and `--prompts` to build per-panel and one-shot sheet prompts that fit Meshy's 600-character limit.
+- `examples/trailer/`: the 12-shot trailer plan the reference sheet was drawn from.
+
+Example requests:
+
+> Storyboard this 70-second game trailer. Find the weak camera shots, redesign them, then make a 15-panel board with shot numbers, camera directions and action arrows. Keep the characters as simple figure sketches.
+
+> Storyboard this boss intro as 8 rough pencil shots. The creature should feel enormous: detail reveal, low-angle scale shot, attack setup, hero reaction, dodge, impact, aftermath, stinger.
+
+Drawing the panels needs an image model (the skill uses the Meshy tools when they're connected and asks before spending credits). The reference sheet is AI-generated fan art; Spider-Man is a trademark of Marvel.

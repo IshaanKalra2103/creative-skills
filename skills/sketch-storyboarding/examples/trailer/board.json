@@ -1,0 +1,36 @@
+{
+  "title": "Action-game trailer — 12-shot board",
+  "columns": 3,
+  "cast": {
+    "HERO": "lean masked hero, dark suit, white chest emblem, white eye lenses",
+    "THUGS": "three bulky street thugs in hoodies",
+    "SERPENT": "colossal armoured serpent, fanged head, coils through the street",
+    "ALLY": "hooded masked partner, smaller build"
+  },
+  "panels": [
+    {"n": 1, "shot": "EST", "move": "SLOW PUSH", "action": "City skyline at dusk", "note": "establish the world", "dur": "2.5s",
+     "draw": "Wide skyline across a river at dusk, low sun, bridge on the right, horizon on the lower third."},
+    {"n": 2, "shot": "WIDE", "move": "STATIC", "action": "Downtown / neon reveal", "note": "busy. alive.", "dur": "1.5s",
+     "draw": "Street-level canyon of towers and billboards, crowds and cars, strong one-point perspective."},
+    {"n": 3, "shot": "CU", "move": "STATIC", "action": "Hero on rooftop", "note": "looks out over the city", "dur": "1.5s", "cast": ["HERO"],
+     "draw": "Hero's masked head and shoulder fill the left third, looking right toward the skyline."},
+    {"n": 4, "shot": "LOW", "move": "TILT UP", "action": "Hero leaps off rooftop", "note": "into the city", "dur": "1s", "cut": "cut on leap", "cast": ["HERO"],
+     "draw": "Looking up past a rooftop edge as the hero launches overhead, towers leaning in, arrow down-right."},
+    {"n": 5, "shot": "SIDE", "move": "TRACK", "action": "Hero swings through canyon", "note": "fast traversal", "dur": "1.5s", "cast": ["HERO"],
+     "draw": "Side-on, hero stretched out left to right on a swing line, speed lines, street far below."},
+    {"n": 6, "shot": "HIGH", "move": "TRACK", "action": "Hero dives over traffic", "note": "speed / momentum", "dur": "1s", "cast": ["HERO"],
+     "draw": "Top-down over a busy avenue, hero diving along the lanes toward camera, cars below."},
+    {"n": 7, "shot": "WIDE", "move": "STATIC", "action": "Street confrontation", "note": "3 thugs block the way", "dur": "1.5s", "cast": ["HERO", "THUGS"],
+     "draw": "Hero from behind at left in a crouch facing three thugs spread across a wet street, van at right."},
+    {"n": 8, "shot": "CU", "move": "SNAP PAN", "action": "Combat impact", "note": "hero hits thug", "dur": "0.5s", "cut": "hold 12f on impact", "cast": ["HERO", "THUGS"],
+     "draw": "Hero's punch connects with a thug's jaw, impact burst, the thug's head snapping back right."},
+    {"n": 9, "shot": "WIDE", "move": "TRACK", "action": "Traversal montage", "note": "across the city", "dur": "2s", "cast": ["HERO"],
+     "draw": "Hero small in frame arcing between towers, trajectory arrow, billboards on both sides."},
+    {"n": 10, "shot": "WIDE", "move": "STATIC", "action": "Monster reveal", "note": "colossal serpent appears", "dur": "2s", "cut": "silence before reveal", "cast": ["HERO", "SERPENT"],
+     "draw": "Serpent rears over the street with open jaws, tiny hero in the foreground centre for scale."},
+    {"n": 11, "shot": "LOW WIDE", "move": "HANDHELD", "action": "Boss fight beat", "note": "monster attacks", "dur": "1.5s", "cast": ["HERO", "SERPENT"],
+     "draw": "Low angle, the serpent's head strikes down at the hero who dodges right, debris flying."},
+    {"n": 12, "shot": "MED", "move": "STATIC", "action": "Hero meets ally", "note": "a new partner", "dur": "2s", "cast": ["HERO", "ALLY"],
+     "draw": "Two-shot: hero crouched at left, hooded ally crouched at right, serpent coils behind them."}
+  ]
+}
