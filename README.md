@@ -27,6 +27,7 @@
 | [motion-replica](skills/motion-replica) | Any motion-graphics video (app ad, promo, grid reel, UI walkthrough) rebuilt shot for shot in code: a deterministic HTML page with DOM for UI and type and three.js layers for 3D props, rendered frame by frame to an MP4 that matches the original's size, fps, length and audio. Scripts measure the reference (per-cell loop periods, cuts, contact sheets, 20 fps bursts for easing), compare replica and reference side by side and on motion sheets, and render on the GPU. Includes a procedural 3D kit (foil pouch, $100 bills, basketball, watch, embossed/glass/cel-shaded coins, bevelled 3D digits, a GLB repaint loader) and a full 2×2 fintech-ad example. |
 | [spider-verse-look](skills/spider-verse-look) | Scenes and characters painted in the visual language of *Into the Spider-Verse*, as 2D drawings in Canvas + a small WebGL print pass: Ben-Day dots instead of gradients, misregistered plates instead of blur, characters on twos, ink that doesn't register. A reference built from reading every page of the film's art book and a making-of video (style bible, per-character and per-location rules with sampled hex, FX, 90 code recipes), a no-dependency painting kit, and a finished example of Miles swinging through a dusk Midtown canyon. |
 | [sketch-storyboarding](skills/sketch-storyboarding) | Trailers, gameplay clips, scripts and scene ideas as rough graphite storyboard sheets with shot sizes, camera moves, motion arrows and production notes. A script cuts a clip into numbered shots on contact sheets, the plan lives in one board.json that prints as a blank lettered sheet for approval, an image model draws the panels from a bundled style reference, and a second script letters and assembles the sheet so every caption is exact. Also before/after camera-fix boards and animatic timing boards. |
+| [hairline-create](skills/hairline-create) | One isometric line figure that answers the pointer, in the style and on the engine of [@lucasmarkes/hairline](https://github.com/lucasmarkes/hairline): rounded solids in a single stroke, springs instead of timers, a slider that drives one number. You pick a concept, it writes one figure file against a fixed kernel, then builds, validates and screenshots it into a single self-contained HTML page. By Lucas Marques. |
 
 ## Install
 
@@ -55,6 +56,7 @@ ln -s ~/src/claude-skills/skills/isometric-svg ~/.claude/skills/isometric-svg
 ln -s ~/src/claude-skills/skills/motion-replica ~/.claude/skills/motion-replica
 ln -s ~/src/claude-skills/skills/spider-verse-look ~/.claude/skills/spider-verse-look
 ln -s ~/src/claude-skills/skills/sketch-storyboarding ~/.claude/skills/sketch-storyboarding
+ln -s ~/src/claude-skills/skills/hairline-create ~/.claude/skills/hairline-create
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -164,7 +166,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev) and scientific-figure-making (CC BY-NC 4.0, Chen Liu). The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu) and hairline-create (MIT, Lucas Marques). The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
 
 ## pixel-showcase
 
@@ -386,3 +388,18 @@ Example requests:
 > Storyboard this boss intro as 8 rough pencil shots. The creature should feel enormous: detail reveal, low-angle scale shot, attack setup, hero reaction, dodge, impact, aftermath, stinger.
 
 Drawing the panels needs an image model (the skill uses the Meshy tools when they're connected and asks before spending credits). The reference sheet is AI-generated fan art; Spider-Man is a trademark of Marvel.
+
+## hairline-create
+
+![The six Hairline figures: a tray of cards, a field of pillars, a window in layers, a dot matrix, a conveyor belt and a turntable](skills/hairline-create/assets/hero.gif)
+
+- `SKILL.md`: the workflow (offer two or three concepts → write one figure → build, validate and look → hand over → adjust) and a table of what goes wrong (labels, colour, timers, twelve-edge boxes, flat rest poses).
+- `concepts.md`: how to find an object and a gesture worth a figure. `rules.md`: the ten rules a figure must keep.
+- `kernel.js`: the fixed engine (iso projection, rounded prisms, springs and tweens, the stage). The figure only calls what the index at its top lists. `bench.html`: the fixed page the figure is assembled into.
+- `examples/terrain.js`, `examples/riffle.js`: two of the library's figures in the format the skill writes, one continuous field and one set of discrete items.
+- `build.mjs`: `<name>.js` → `hairline-<name>.html`. `validate.mjs`: checks the kernel and bench are untouched and the figure passes the static rules.
+- `look.mjs` + `look.md`: builds, validates and shoots eight pictures onto one contact sheet, checks the frame, read-out and console, then twelve questions to answer from the sheet. Installs `playwright-core` once into a cache folder outside the skill.
+
+**Use:** `/hairline-create a mailbox whose flag rises as the pointer gets close`, or just ask for a new Hairline figure.
+
+Copied unchanged from [lucasmarkes/hairline](https://github.com/lucasmarkes/hairline/tree/main/skills/hairline-create) (`c3692e0`) by Lucas Marques. MIT: see the skill's `LICENSE`. The preview is upstream's `assets/hero.gif`. Live figures: [hairline.lucasmarkes.com](https://hairline.lucasmarkes.com).
