@@ -1,0 +1,35 @@
+// fx: Pixelate
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/Pixelate (MIT)
+// about: the image as a grid of flat color cells, optionally gapped and rounded into tiles or dots.
+// uniform: uScale float 50
+// uniform: uGap float 0
+// uniform: uRoundness float 0
+// note: scale = cells along the longer edge; each cell reads the child at its top-left corner
+//       (as upstream) and the gap/roundness cut is a hard, un-antialiased alpha mask (as upstream).
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uScale;
+uniform float uGap;
+uniform float uRoundness;
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    bool wide = aspect > 1.0;
+    float2 count = float2(max(wide ? uScale * aspect : uScale, 1.0),
+                          max(wide ? uScale : uScale / aspect, 1.0));
+
+    float2 sampleUv = floor(uv * count) / count;
+    float2 local = fract(uv * count) - 0.5;
+
+    float halfSize = 0.5 - uGap * 0.5;
+    float r = uRoundness * halfSize;
+    float2 q = max(abs(local) - halfSize + r, 0.0);
+    float mask = (length(q) - r) <= 0.0 ? 1.0 : 0.0;
+
+    half4 s = uSrc.eval(sampleUv * uSrcSize);
+    return s * half(mask);
+}

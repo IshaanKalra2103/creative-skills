@@ -1,0 +1,124 @@
+// fx: Glitch
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/Glitch (MIT)
+// about: bursty digital corruption: jittering horizontal bands, shifted and mirrored blocks, RGB split, neon/SMPTE bar fills and scanlines.
+// uniform: uIntensity float 0.5
+// uniform: uSpeed float 1
+// uniform: uRgbShift float 5
+// uniform: uBlockDensity float 10
+// uniform: uColorBarIntensity float 0.2
+// uniform: uMirrorAmount float 0.3
+// uniform: uScanlineIntensity float 0.2
+// note: upstream is already a single gather pass (glitchGeom frame -> RGB split -> color-bar
+//       fills -> distortion-gated scanlines); no feedback or compute was dropped. The kit's integer
+//       bitcast hash11 is replaced by the Hoskins float hash11, so which bands/blocks fire at a given
+//       time differs; burst rhythm, band scales and amplitudes match. Global clock (iTime x speed).
+//       Bursts are intermittent: at defaults some frames are clean.
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uIntensity;
+uniform float uSpeed;
+uniform float uRgbShift;
+uniform float uBlockDensity;
+uniform float uColorBarIntensity;
+uniform float uMirrorAmount;
+uniform float uScanlineIntensity;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float hash11(float p) {
+    p = fract(p * 0.1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return fract(p);
+}
+
+// Premultiplied linear-light tap, clamp-to-edge.
+float4 tapLin(float2 uv) {
+    half4 s = uSrc.eval(clamp(uv * uSrcSize, float2(0.5), uSrcSize - 0.5));
+    float a = float(s.a);
+    float3 rgb = a > 0.0 ? lin(float3(s.rgb) / a) : float3(0.0);
+    return float4(rgb * a, a);
+}
+
+// One jitter band scale: returns (displace, active, seed).
+float3 bandJitter(float bandY, float frame, float seedScale, float frameScale, float gateFactor,
+                  float hashOffset, float amplitude, float strength) {
+    float seed = bandY * seedScale + frame * frameScale;
+    float active = step(1.0 - strength * gateFactor, hash11(seed));
+    float displace = (hash11(seed + hashOffset) - 0.5) * amplitude * active;
+    return float3(displace, active, seed);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float t = iTime * uSpeed;
+    float slowFrame = floor(t * 2.5);
+    float fastFrame = floor(t * 10.0);
+
+    // Burst pulse: cubed slow hash gates major bursts, squared fast hash minor flickers.
+    float slowHash = hash11(slowFrame);
+    float fastHash = hash11(fastFrame + 73.0);
+    float threshold = 1.0 - uIntensity;
+    float strength = clamp(step(threshold, slowHash * slowHash * slowHash) * 0.8
+                         + step(threshold + 0.15, fastHash * fastHash) * 0.4, 0.0, 1.0) * uIntensity;
+
+    // Multi-scale band displacement.
+    float bandY1 = floor(uv.y * uBlockDensity);
+    float3 band1 = bandJitter(bandY1, slowFrame, 0.37, 7.13, 0.5, 42.0, 0.25, strength);
+    float3 band2 = bandJitter(floor(uv.y * uBlockDensity * 2.0), fastFrame, 0.53, 3.37, 0.7, 99.0, 0.12, strength);
+    float3 band3 = bandJitter(floor(uv.y * uBlockDensity * 4.0), fastFrame, 0.71, 11.71, 0.9, 173.0, 0.05, strength);
+
+    // Coarse block shift on a 4-column grid.
+    float colX = floor(uv.x * 4.0);
+    float blockSeed = colX * 0.41 + bandY1 * 0.67 + slowFrame * 2.31;
+    float blockActive = step(1.0 - strength * 0.35, hash11(blockSeed));
+    float blockDisplace = (hash11(blockSeed + 77.0) - 0.5) * 0.18 * blockActive;
+
+    float totalX = band1.x + band2.x + band3.x + blockDisplace;
+    float vertJitter = band1.y * (hash11(band1.z + 200.0) - 0.5) * 0.012;
+    float2 duv = float2(clamp(uv.x + totalX * strength, 0.0, 1.0),
+                        clamp(uv.y + vertJitter * strength, 0.0, 1.0));
+
+    // Mirror flips in some active blocks.
+    float mirrorSeed = colX * 0.83 + bandY1 * 1.17 + slowFrame * 4.57;
+    float hMirror = step(1.0 - uMirrorAmount * strength, hash11(mirrorSeed)) * band1.y;
+    float vMirror = step(1.0 - uMirrorAmount * strength * 0.4, hash11(mirrorSeed + 500.0)) * band1.y;
+    float2 muv = float2(mix(duv.x, 1.0 - duv.x, hMirror), mix(duv.y, 1.0 - duv.y, vMirror));
+
+    float spread = strength + abs(totalX) * 2.0;
+    float distortion = clamp(band1.y + band2.y + band3.y, 0.0, 1.0);
+
+    // RGB split around the mirrored coordinate; alpha from the green tap.
+    float off = uRgbShift * 0.003 * spread;
+    float4 g = tapLin(muv);
+    float4 color = float4(tapLin(float2(clamp(muv.x + off, 0.0, 1.0), muv.y)).r,
+                          g.g,
+                          tapLin(float2(clamp(muv.x - off, 0.0, 1.0), muv.y)).b,
+                          g.a);
+
+    // Color-bar fills: SMPTE bars or a solid neon hue per active block.
+    float fillStyle = hash11(blockSeed + 555.0);
+    float barOffset = hash11(bandY1 + slowFrame * 3.33 + 333.0);
+    float barIndex = floor(fract(uv.x * 3.0 + barOffset * 7.0) * 7.0);
+    float3 smpte = float3((1.0 - step(2.0, barIndex)) + step(4.0, barIndex) * (1.0 - step(6.0, barIndex)),
+                          1.0 - step(4.0, barIndex),
+                          1.0 - step(0.5, fract(barIndex * 0.5)));
+    float sh6 = fract(hash11(bandY1 + 13.0) * 0.8 + slowFrame * 0.07) * 6.0;
+    float3 solid = float3(clamp(abs(sh6 - 3.0) - 1.0, 0.0, 1.0),
+                          clamp(2.0 - abs(sh6 - 2.0), 0.0, 1.0),
+                          clamp(2.0 - abs(sh6 - 4.0), 0.0, 1.0)) * 1.3;
+    float3 fill = mix(solid, smpte, step(0.5, fillStyle));
+    float barStrength = band1.y * blockActive * uColorBarIntensity * strength;
+    color.rgb = mix(color.rgb, fill * color.a, barStrength);
+
+    // Scanlines only where bands are distorting (2 px period).
+    color.rgb *= 1.0 - uScanlineIntensity * (sin(coord.y * 3.14159265) * 0.5 + 0.5) * 0.3 * distortion;
+
+    float a = color.a;
+    float3 straight = a > 0.0 ? color.rgb / a : float3(0.0);
+    return half4(half3(toSrgb(straight) * a), half(a));
+}

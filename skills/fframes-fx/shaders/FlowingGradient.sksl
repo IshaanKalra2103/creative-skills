@@ -1,0 +1,148 @@
+// fx: FlowingGradient
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/FlowingGradient (MIT)
+// about: liquid-silk gradient: four colors folded through two chained domain warps, with lit folds; a moody full-frame backdrop.
+// uniform: uColorA color #0a0015
+// uniform: uColorB color #6b17e6
+// uniform: uColorC color #ff4d6a
+// uniform: uColorD color #ff6b35
+// uniform: uSpeed float 1
+// uniform: uDistortion float 0.5
+// uniform: uSeed float 0
+// note: colorSpace fixed to the default `oklch` (hue interpolated linearly in radians like upstream,
+//       no shortest-arc). MaterialX perlin uses a float lattice hash, so the folds land in different
+//       places than upstream for the same seed.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float4 uColorC;
+uniform float4 uColorD;
+uniform float uSpeed;
+uniform float uDistortion;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float3 rgbToOklab(float3 c) {
+    float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+    float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+    float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+    l = sign(l) * pow(abs(l), 1.0 / 3.0);
+    m = sign(m) * pow(abs(m), 1.0 / 3.0);
+    s = sign(s) * pow(abs(s), 1.0 / 3.0);
+    return float3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                  1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                  0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+float3 oklabToRgb(float3 lab) {
+    float l = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
+    float m = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
+    float s = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
+    l = l * l * l; m = m * m * m; s = s * s * s;
+    return float3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                  -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                  -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float hash13(float3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// MaterialX perlin (3D): mx_gradient_float over a float lattice hash, quintic fade, 0.982 scale.
+float mxGrad3(float3 i, float3 f) {
+    float h = floor(hash13(i) * 16.0);
+    float u = h < 8.0 ? f.x : f.y;
+    float inner = (h == 12.0 || h == 14.0) ? f.x : f.z;
+    float v = h < 4.0 ? f.y : inner;
+    float uu = mod(h, 2.0) >= 1.0 ? -u : u;
+    float vv = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return uu + vv;
+}
+float mxPerlin3(float3 p) {
+    float3 i = floor(p);
+    float3 f = p - i;
+    float3 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float v0 = mxGrad3(i, f);
+    float v1 = mxGrad3(i + float3(1, 0, 0), f - float3(1, 0, 0));
+    float v2 = mxGrad3(i + float3(0, 1, 0), f - float3(0, 1, 0));
+    float v3 = mxGrad3(i + float3(1, 1, 0), f - float3(1, 1, 0));
+    float v4 = mxGrad3(i + float3(0, 0, 1), f - float3(0, 0, 1));
+    float v5 = mxGrad3(i + float3(1, 0, 1), f - float3(1, 0, 1));
+    float v6 = mxGrad3(i + float3(0, 1, 1), f - float3(0, 1, 1));
+    float v7 = mxGrad3(i + float3(1, 1, 1), f - float3(1, 1, 1));
+    return 0.982 * mix(mix(mix(v0, v1, w.x), mix(v2, v3, w.x), w.y),
+                       mix(mix(v4, v5, w.x), mix(v6, v7, w.x), w.y), w.z);
+}
+
+float3 toOklch(float4 c) {
+    float3 lab = rgbToOklab(lin(c.rgb));
+    return float3(lab.x, sqrt(lab.y * lab.y + lab.z * lab.z), atan(lab.z, lab.y));
+}
+
+// One chained Inigo-Quilez warp level: xy = warped position, zw = the two noise reads.
+float4 warpStep(float2 pos, float scale, float z, float2 offA, float2 offB, float k, float strength) {
+    float3 wp = float3(pos * scale, z);
+    float nx = mxPerlin3(wp + float3(offA, 0.0));
+    float ny = mxPerlin3(wp + float3(offB, 0.0));
+    return float4(pos.x + nx * k * strength, pos.y + ny * k * strength, nx, ny);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float t = iTime * uSpeed * 0.075;
+    float seedOff = uSeed * 0.17;
+    float strength = uDistortion;
+    float2 centred = uv - 0.5;
+
+    // Organic rotation of the aspect-squashed canvas by one noise read.
+    float spinNoise = mxPerlin3(float3(centred.x * 0.8 + t * 0.4, centred.y * 0.8 - t * 0.25, seedOff));
+    float angle = spinNoise * 12.566370614359172 * strength;
+    float2 squashed = float2(centred.x, centred.y / aspect);
+    float ca = cos(angle);
+    float sa = sin(angle);
+    float2 spun = float2(squashed.x * ca - squashed.y * sa, squashed.x * sa + squashed.y * ca);
+    float2 rot = float2(spun.x, spun.y * aspect);
+
+    // Sine shear (y reads the just-sheared x).
+    float shearT = t * 2.0;
+    float shearX = rot.x + sin(rot.y * 5.0 + shearT) / 50.0 * strength;
+    float shearY = rot.y + sin(shearX * 7.5 + shearT) / 25.0 * strength;
+
+    float4 level1 = warpStep(float2(shearX, shearY), 2.0, t * 0.5 + seedOff, float2(5.2, 1.3), float2(1.7, 9.2), 0.25, strength);
+    float tz = t * 0.3 + seedOff;
+    float4 level2 = warpStep(level1.xy, 1.5, tz, float2(8.3, 2.8), float2(3.1, 7.4), 0.2, strength);
+
+    float zoneNoise = mxPerlin3(float3(level2.x * 1.8, level2.y * 1.8, tz));
+    float edgeHardness = pow(level1.z * 0.5 + 0.5, 1.5);
+    float edgeWidth = mix(0.5, 0.008, edgeHardness);
+    float t1 = smoothstep(-edgeWidth, edgeWidth, zoneNoise);
+    float t2 = smoothstep(-edgeWidth, edgeWidth, level1.w);
+
+    // 2D four-color blend in OKLCh.
+    float3 row1 = mix(toOklch(uColorA), toOklch(uColorB), t1);
+    float3 row2 = mix(toOklch(uColorC), toOklch(uColorD), t1);
+    float3 lch = mix(row1, row2, t2);
+    float3 base = srgbToP3(oklabToRgb(float3(lch.x, lch.y * cos(lch.z), lch.y * sin(lch.z))));
+
+    // Fold lighting.
+    float fold1 = 1.0 - abs(t1 * 2.0 - 1.0);
+    float fold2 = 1.0 - abs(t2 * 2.0 - 1.0);
+    float foldHighlight = max(fold1, fold2) * edgeHardness;
+    float surfaceLight = (level2.z * 0.5 + 0.5) * 0.12 + 0.94;
+    float litScale = surfaceLight * (1.0 + foldHighlight * 0.35);
+    float3 rgb = clamp(base * litScale, 0.0, 1.0);
+    return half4(half3(toSrgb(rgb)), 1.0);
+}

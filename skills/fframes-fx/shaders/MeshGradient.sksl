@@ -1,0 +1,204 @@
+// fx: MeshGradient
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/MeshGradient (MIT)
+// about: soft drifting swaths of color from a scattered, swirled constellation of anchors; a full-bleed brand backdrop.
+// uniform: uStop0 color #1a0533
+// uniform: uStop1 color #6d2fd1
+// uniform: uStop2 color #e04b9e
+// uniform: uStop3 color #ff8c42
+// uniform: uStop4 color #ffdf8e
+// uniform: uStopPositions float3 0.26 0.52 0.76
+// uniform: uCount float 5
+// uniform: uSmoothness float 2
+// uniform: uVariation float 0.35
+// uniform: uSwirl float 0.3
+// uniform: uDrift float 0.5
+// uniform: uWrapping float 0
+// uniform: uSpeed float 1
+// uniform: uSeed float 0
+// note: the `stops` prop is fixed at its 5-stop default length (colors uStop0..4, stops 0 and 4 at
+//       positions 0 and 1); the colorA/colorB two-color fallback is not ported. colorSpace fixed to
+//       the default `oklab`. Hashes and MaterialX perlin use float hashes, so the anchor layout
+//       differs from upstream for the same seed. wrapRamp's sub-pixel fade (fwidth) is dropped.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uStop0;
+uniform float4 uStop1;
+uniform float4 uStop2;
+uniform float4 uStop3;
+uniform float4 uStop4;
+uniform float3 uStopPositions;
+uniform float uCount;
+uniform float uSmoothness;
+uniform float uVariation;
+uniform float uSwirl;
+uniform float uDrift;
+uniform float uWrapping;
+uniform float uSpeed;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float3 rgbToOklab(float3 c) {
+    float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+    float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+    float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+    l = sign(l) * pow(abs(l), 1.0 / 3.0);
+    m = sign(m) * pow(abs(m), 1.0 / 3.0);
+    s = sign(s) * pow(abs(s), 1.0 / 3.0);
+    return float3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                  1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                  0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+float3 oklabToRgb(float3 lab) {
+    float l = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
+    float m = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
+    float s = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
+    l = l * l * l; m = m * m * m; s = s * s * s;
+    return float3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                  -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                  -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float hash11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float2 hash22(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.xx + p3.yz) * p3.zy);
+}
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float hash13(float3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// MaterialX perlin (3D): mx_gradient_float over a float lattice hash, quintic fade, 0.982 scale.
+float mxGrad3(float3 i, float3 f) {
+    float h = floor(hash13(i) * 16.0);
+    float u = h < 8.0 ? f.x : f.y;
+    float inner = (h == 12.0 || h == 14.0) ? f.x : f.z;
+    float v = h < 4.0 ? f.y : inner;
+    float uu = mod(h, 2.0) >= 1.0 ? -u : u;
+    float vv = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return uu + vv;
+}
+float mxPerlin3(float3 p) {
+    float3 i = floor(p);
+    float3 f = p - i;
+    float3 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float v0 = mxGrad3(i, f);
+    float v1 = mxGrad3(i + float3(1, 0, 0), f - float3(1, 0, 0));
+    float v2 = mxGrad3(i + float3(0, 1, 0), f - float3(0, 1, 0));
+    float v3 = mxGrad3(i + float3(1, 1, 0), f - float3(1, 1, 0));
+    float v4 = mxGrad3(i + float3(0, 0, 1), f - float3(0, 0, 1));
+    float v5 = mxGrad3(i + float3(1, 0, 1), f - float3(1, 0, 1));
+    float v6 = mxGrad3(i + float3(0, 1, 1), f - float3(0, 1, 1));
+    float v7 = mxGrad3(i + float3(1, 1, 1), f - float3(1, 1, 1));
+    return 0.982 * mix(mix(mix(v0, v1, w.x), mix(v2, v3, w.x), w.y),
+                       mix(mix(v4, v5, w.x), mix(v6, v7, w.x), w.y), w.z);
+}
+
+// Two-level Inigo-Quilez domain warp (both levels displace the original position).
+float3 domainWarp2(float3 pos, float t, float amount) {
+    float qx = mxPerlin3(pos + float3(t * 0.3, t * -0.2, 0.0));
+    float qy = mxPerlin3(pos + float3(5.2, 1.3, t * 0.25));
+    float3 w1 = pos + float3(qx, qy, 0.0) * amount;
+    float rx = mxPerlin3(w1 + float3(1.7, 9.2, t * 0.15));
+    float ry = mxPerlin3(w1 + float3(8.3, 2.8, t * 0.13));
+    return pos + float3(rx, ry, 0.0) * amount;
+}
+
+// One golden-angle spiral point with jitter and Lissajous drift, in [0, aspect] x [0, 1].
+float2 spiralScatter(float fi, float count, float seed, float drift, float aspect, float animTime) {
+    float theta = fi * 2.39996322972865332 + hash11(seed * 0.7311 + 1.618) * 6.283185307;
+    float r = sqrt((fi + 0.5) / count);
+    float2 j = (hash22(float2(fi * 3.77 + 0.917, seed * 1.093 + 2.236)) - 0.5) * 0.26;
+    float2 ph = hash22(float2(fi * 7.13 + 1.618, seed * 0.531 + 3.71)) * 6.283185307;
+    float w1 = 0.5 + hash11(fi * 5.417 + seed * 0.291 + 0.917) * 0.7;
+    float dx = sin(animTime * 0.11 * w1 + ph.x);
+    float dy = cos(animTime * 0.11 * w1 * 1.37 + ph.y);
+    float nx = cos(theta) * r * 0.62 + j.x + dx * drift * 0.16;
+    float ny = sin(theta) * r * 0.62 + j.y + dy * drift * 0.16;
+    return float2((0.5 + nx) * aspect, 0.5 + ny);
+}
+
+float3 stopColor(int i) {
+    float3 c = i == 0 ? uStop0.rgb : (i == 1 ? uStop1.rgb : (i == 2 ? uStop2.rgb : (i == 3 ? uStop3.rgb : uStop4.rgb)));
+    return rgbToOklab(lin(c));
+}
+float stopPos(int i) {
+    return i == 0 ? 0.0 : (i == 1 ? uStopPositions.x : (i == 2 ? uStopPositions.y : (i == 3 ? uStopPositions.z : 1.0)));
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float t = iTime * uSpeed;
+    float seed = uSeed;
+
+    // Vortex swirl about the frame centre.
+    float2 centred = float2(uv.x * aspect - aspect * 0.5, uv.y - 0.5);
+    float swirlAngle = -3.0 * uSwirl * smoothstep(0.0, 1.0, length(centred));
+    float cs = cos(swirlAngle);
+    float sn = sin(swirlAngle);
+    float2 swirled = float2(centred.x * cs - centred.y * sn, centred.x * sn + centred.y * cs);
+    float2 uvS = swirled + float2(aspect * 0.5, 0.5);
+
+    // Organic domain warp, divided back to uv units.
+    float3 warped = domainWarp2(float3(uvS * 1.6, seed * 7.31), t * 0.125, 0.48);
+    float2 q = warped.xy / 1.6;
+
+    float basePower = 8.0 / (uSmoothness + 0.5);
+    float varNoise = mxPerlin3(float3(q * 1.9, seed * 3.17 + t * 0.045));
+    float softness = clamp(basePower * exp(varNoise * uVariation * 1.4), 0.6, 16.0);
+
+    // Inverse-distance blend of up to 8 anchors, each carrying a golden-ratio unit value.
+    float num = 0.0;
+    float den = 0.0;
+    float seedShuffle = hash11(seed * 0.531 + 0.77);
+    for (int i = 0; i < 8; i++) {
+        float fi = float(i);
+        float active = fi < uCount - 0.5 ? 1.0 : 0.0;
+        float2 anchor = spiralScatter(fi, uCount, seed, uDrift, aspect, t);
+        float dist = max(length(q - anchor), 0.01);
+        float w = active / pow(dist, softness);
+        float ti = fract(fi * 0.6180339887 + seedShuffle);
+        num += w * ti;
+        den += w;
+    }
+    float field = num / max(den, 0.000001);
+
+    // Palette wrap (triangle wave; identity at wrapping 0).
+    float s = field * (1.0 + uWrapping * 9.0);
+    float wrapped = 1.0 - abs(fract(s * 0.5) * 2.0 - 1.0);
+
+    // Five-stop ramp mixed in OKLab.
+    float tc = clamp(wrapped, 0.0, 1.0);
+    float3 conv = stopColor(0);
+    for (int i = 1; i < 5; i++) {
+        float a = stopPos(i - 1);
+        float b = stopPos(i);
+        float seg = clamp((tc - a) / max(b - a, 1e-6), 0.0, 1.0);
+        conv = mix(conv, stopColor(i), seg);
+    }
+    float3 rgb = srgbToP3(oklabToRgb(conv));   // upstream mixes in OKLab, then hands P3 numbers to an sRGB canvas
+
+    // Output dither (+-0.002) against banding.
+    float n = hash12(floor(coord) + float2(t, t * 1.618));
+    rgb = clamp(rgb + (n - 0.5) * 0.004, 0.0, 1.0);
+    return half4(half3(toSrgb(rgb)), 1.0);
+}

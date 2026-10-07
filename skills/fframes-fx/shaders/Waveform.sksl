@@ -1,0 +1,174 @@
+// fx: Waveform
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Waveform (MIT)
+// about: audio-visualizer equalizer bars (or wave / line / dots) driven by a simulated spectrum, gradient from start to end; podcast and music cards — drive uAmplitude from your audio level.
+// uniform: uStyle float 0
+// uniform: uColorA color #3b5bff
+// uniform: uColorB color #ff3bd4
+// uniform: uFrom float2 0 0.5
+// uniform: uTo float2 1 0.5
+// uniform: uAmplitude float 1
+// uniform: uFrequency float 1
+// uniform: uHeight float 0.6
+// uniform: uAlign float 0
+// uniform: uCount float 32
+// uniform: uBarWidth float 0.6
+// uniform: uRounding float 1
+// uniform: uDotSize float 0.7
+// uniform: uLineWidth float 0.006
+// uniform: uSoftness float 0
+// uniform: uSpeed float 1
+// uniform: uSeed float 1
+// note: uStyle 0 bars | 1 wave | 2 line | 3 dots; uAlign 0 mirrored | 1 top | 2 bottom
+//       (compile-time selects upstream, runtime branches here). colorSpace fixed to the default
+//       `oklab` (the start->end gradient mixes in OKLab); the `stops` ramp is not ported.
+//       uFrom/uTo are in uv with y down. Output is straight color over transparent.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uStyle;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float2 uFrom;
+uniform float2 uTo;
+uniform float uAmplitude;
+uniform float uFrequency;
+uniform float uHeight;
+uniform float uAlign;
+uniform float uCount;
+uniform float uBarWidth;
+uniform float uRounding;
+uniform float uDotSize;
+uniform float uLineWidth;
+uniform float uSoftness;
+uniform float uSpeed;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float3 rgbToOklab(float3 c) {
+    float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+    float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+    float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+    l = sign(l) * pow(abs(l), 1.0 / 3.0);
+    m = sign(m) * pow(abs(m), 1.0 / 3.0);
+    s = sign(s) * pow(abs(s), 1.0 / 3.0);
+    return float3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                  1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                  0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+
+float3 oklabToRgb(float3 lab) {
+    float l = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
+    float m = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
+    float s = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
+    l = l * l * l;
+    m = m * m * m;
+    s = s * s * s;
+    return float3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                  -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                  -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+
+// The simulated spectrum: weighted products of traveling sines (weights sum to 1).
+float rawAt(float xs, float t) {
+    float x = xs * uFrequency;
+    return 0.28 * sin(x * 5.1 + t * 1.3)
+         + 0.24 * sin(x * 9.7 - t * 1.9) * sin(x * 1.7 + t * 0.6)
+         + 0.18 * sin(x * 17.3 + t * 2.7)
+         + 0.14 * sin(x * 31.9 - t * 3.4) * sin(x * 3.3 - t * 0.9)
+         + 0.09 * sin(x * 67.7 + t * 4.1)
+         + 0.07 * sin(x * 131.3 - t * 5.3) * sin(x * 7.9 + t * 1.1);
+}
+
+float envelopeAt(float xs) {
+    float d = xs - 0.5;
+    return mix(0.4, 1.0, exp(-d * d * 4.0));
+}
+
+float signalAt(float xs, float t) { return clamp(rawAt(xs, t) * envelopeAt(xs) * uAmplitude, -1.0, 1.0); }
+float levelAt(float xs, float t) { return clamp((0.45 + rawAt(xs, t) * 0.6) * envelopeAt(xs) * uAmplitude, 0.0, 1.0); }
+
+float crispFill(float dist, float footprint) {
+    float h = footprint * 0.5;
+    return 1.0 - smoothstep(-h, h, dist);
+}
+
+float roundedRect(float dx, float dy, float w, float h, float r) {
+    float qx = abs(dx) - w + r;
+    float qy = abs(dy) - h + r;
+    return length(float2(max(qx, 0.0), max(qy, 0.0))) + min(max(qx, qy), 0.0) - r;
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float t = iTime * uSpeed + uSeed;
+    float px = 1.0 / iResolution.y;
+    bool mirrored = uAlign < 0.5;
+
+    // segmentFrame: along the start->end baseline, across = signed distance (positive below).
+    float2 a0 = float2(uFrom.x * aspect, uFrom.y);
+    float2 rel = float2(uv.x * aspect, uv.y) - a0;
+    float2 toRel = float2(uTo.x * aspect, uTo.y) - a0;
+    float len = max(length(toRel), 0.0001);
+    float2 dir = toRel / len;
+    float along = dot(rel, dir);
+    float across = rel.x * -dir.y + rel.y * dir.x;
+    float x = along / len;
+
+    float dy = uAlign > 0.5 && uAlign < 1.5 ? -across : across;
+    float rise = mirrored ? abs(dy) : dy;
+    float extentScale = uHeight * (mirrored ? 0.5 : 1.0);
+
+    // Column frame for bars/dots.
+    float cell = len / uCount;
+    float xCells = x * uCount;
+    float columnX = (floor(xCells) + 0.5) / uCount;
+    float acrossColumn = (fract(xCells) - 0.5) * cell;
+
+    float coverage = 0.0;
+    if (uStyle < 0.5) {
+        // bars: rounded rect per column, never shorter than wide.
+        float halfW = uBarWidth * cell * 0.5;
+        float extent = max(levelAt(columnX, t) * extentScale, mirrored ? halfW : halfW * 2.0);
+        float halfH = mirrored ? extent : extent * 0.5;
+        float barY = mirrored ? dy : dy - halfH;
+        coverage = crispFill(roundedRect(acrossColumn, barY, halfW, halfH, uRounding * halfW), px);
+    } else if (uStyle < 1.5) {
+        // wave: filled envelope, feathered by softness.
+        float extent = levelAt(x, t) * extentScale;
+        float bd = mirrored ? rise - extent : max(rise - extent, -rise);
+        coverage = crispFill(bd, px + uSoftness * 0.2);
+    } else if (uStyle < 2.5) {
+        // line: oscilloscope stroke with slope-corrected distance.
+        const float EPS = 0.002;
+        float c0 = (mirrored ? signalAt(x, t) : levelAt(x, t)) * extentScale;
+        float cp = (mirrored ? signalAt(x + EPS, t) : levelAt(x + EPS, t)) * extentScale;
+        float cm = (mirrored ? signalAt(x - EPS, t) : levelAt(x - EPS, t)) * extentScale;
+        float slope = (cp - cm) / (2.0 * EPS * len);
+        float d = (dy - c0) / sqrt(1.0 + slope * slope);
+        coverage = crispFill(abs(d) - uLineWidth * 0.5, px);
+    } else {
+        // dots: cells stacked from the baseline, lit up to the level.
+        float rows = rise / cell;
+        float rowCentre = (floor(rows) + 0.5) * cell;
+        float extent = levelAt(columnX, t) * extentScale;
+        float lit = (1.0 - smoothstep(extent - cell * 0.5, extent + cell * 0.5, rowCentre)) * (mirrored ? 1.0 : step(0.0, rise));
+        float radius = uDotSize * cell * 0.5;
+        float dd = length(float2(acrossColumn, (fract(rows) - 0.5) * cell)) - radius;
+        coverage = crispFill(dd, px) * lit;
+    }
+
+    float inSpan = crispFill(max(-along, along - len), px);
+
+    // start->end gradient in OKLab (alpha-weighted like mixColorsOklab).
+    float tt = x;
+    float wA = uColorA.a * (1.0 - tt);
+    float wB = uColorB.a * tt;
+    float sum = wA + wB;
+    float3 lab = (rgbToOklab(lin(uColorA.rgb)) * wA + rgbToOklab(lin(uColorB.rgb)) * wB) / max(sum, 0.001);
+    float3 rgb = toSrgb(oklabToRgb(lab));
+    float alpha = clamp(sum * coverage * inSpan, 0.0, 1.0);
+    return half4(half3(rgb * alpha), half(alpha));
+}

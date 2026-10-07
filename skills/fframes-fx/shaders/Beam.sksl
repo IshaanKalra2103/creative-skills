@@ -1,0 +1,63 @@
+// fx: Beam
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Beam (MIT)
+// about: a glowing tapered beam between two points, core color fading to an edge color; laser, light-saber or connector accents.
+// uniform: uStartPosition float2 0.2 0.5
+// uniform: uEndPosition float2 0.8 0.5
+// uniform: uStartThickness float 0.2
+// uniform: uEndThickness float 0.2
+// uniform: uStartSoftness float 0.5
+// uniform: uEndSoftness float 0.5
+// uniform: uInsideColor color #ff0000
+// uniform: uOutsideColor color #0000ff
+// note: colorSpace fixed to the default `linear`. Positions are 0..1 with 0,0 at the top-left.
+//       Transparent outside the glow, so it composites over anything.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float2 uStartPosition;
+uniform float2 uEndPosition;
+uniform float uStartThickness;
+uniform float uEndThickness;
+uniform float uStartSoftness;
+uniform float uEndSoftness;
+uniform float4 uInsideColor;
+uniform float4 uOutsideColor;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float2 a = float2(uStartPosition.x * aspect, uStartPosition.y);
+    float2 b = float2(uEndPosition.x * aspect, uEndPosition.y);
+    float2 p = float2(uv.x * aspect, uv.y);
+
+    // Project onto the segment.
+    float2 lineVec = b - a;
+    float t = clamp(dot(p - a, lineVec) / max(dot(lineVec, lineVec), 0.0001), 0.0, 1.0);
+    float dist = length(p - (a + lineVec * t));
+
+    // Tapered glow cross-section.
+    float thickness = mix(uStartThickness * 0.25, uEndThickness * 0.25, t);
+    float softness = max(mix(uStartSoftness, uEndSoftness, t), 0.0001);
+    float nd = dist / max(thickness, 0.0001);
+    float alphaBase = 1.0 - smoothstep(1.0, 1.0 + softness, nd);
+    float alpha = pow(alphaBase, 1.0 + softness * 1.5);
+    float colorT = smoothstep(1.0 - softness, 1.0 + softness, nd);
+
+    // Alpha-weighted linear mix (mixColorsLinear).
+    float wA = uInsideColor.a * (1.0 - colorT);
+    float wB = uOutsideColor.a * colorT;
+    float3 rgb = (srgbToP3(lin(uInsideColor.rgb)) * wA + srgbToP3(lin(uOutsideColor.rgb)) * wB) / max(wA + wB, 0.001);
+    float outA = clamp((uInsideColor.a + uOutsideColor.a) * 0.5 * alpha, 0.0, 1.0);
+    return half4(half3(toSrgb(rgb) * outA), half(outA));
+}

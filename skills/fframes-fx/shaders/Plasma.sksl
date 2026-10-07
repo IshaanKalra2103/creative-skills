@@ -1,0 +1,99 @@
+// fx: Plasma
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Plasma (MIT)
+// about: glowing plasma: domain-warped noise toned into bright cores over a dark ground; energy, sci-fi or ambient loops.
+// uniform: uDensity float 2
+// uniform: uSpeed float 2
+// uniform: uIntensity float 1.5
+// uniform: uWarp float 0.4
+// uniform: uContrast float 1
+// uniform: uBalance float 50
+// uniform: uColorA color #7018be
+// uniform: uColorB color #000000
+// note: colorSpace fixed to the default `linear`; the optional multi-stop `stops` prop is not
+//       ported (two-color colorA -> colorB path only). MaterialX perlin uses a float lattice hash.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uDensity;
+uniform float uSpeed;
+uniform float uIntensity;
+uniform float uWarp;
+uniform float uContrast;
+uniform float uBalance;
+uniform float4 uColorA;
+uniform float4 uColorB;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float hash13(float3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// MaterialX perlin (3D): mx_gradient_float over a float lattice hash, quintic fade, 0.982 scale.
+float mxGrad3(float3 i, float3 f) {
+    float h = floor(hash13(i) * 16.0);
+    float u = h < 8.0 ? f.x : f.y;
+    float inner = (h == 12.0 || h == 14.0) ? f.x : f.z;
+    float v = h < 4.0 ? f.y : inner;
+    float uu = mod(h, 2.0) >= 1.0 ? -u : u;
+    float vv = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return uu + vv;
+}
+float mxPerlin3(float3 p) {
+    float3 i = floor(p);
+    float3 f = p - i;
+    float3 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float v0 = mxGrad3(i, f);
+    float v1 = mxGrad3(i + float3(1, 0, 0), f - float3(1, 0, 0));
+    float v2 = mxGrad3(i + float3(0, 1, 0), f - float3(0, 1, 0));
+    float v3 = mxGrad3(i + float3(1, 1, 0), f - float3(1, 1, 0));
+    float v4 = mxGrad3(i + float3(0, 0, 1), f - float3(0, 0, 1));
+    float v5 = mxGrad3(i + float3(1, 0, 1), f - float3(1, 0, 1));
+    float v6 = mxGrad3(i + float3(0, 1, 1), f - float3(0, 1, 1));
+    float v7 = mxGrad3(i + float3(1, 1, 1), f - float3(1, 1, 1));
+    return 0.982 * mix(mix(mix(v0, v1, w.x), mix(v2, v3, w.x), w.y),
+                       mix(mix(v4, v5, w.x), mix(v6, v7, w.x), w.y), w.z);
+}
+
+// Two-level Inigo-Quilez domain warp (both levels displace the original position).
+float3 domainWarp2(float3 pos, float t, float amount) {
+    float qx = mxPerlin3(pos + float3(t * 0.3, t * -0.2, 0.0));
+    float qy = mxPerlin3(pos + float3(5.2, 1.3, t * 0.25));
+    float3 w1 = pos + float3(qx, qy, 0.0) * amount;
+    float rx = mxPerlin3(w1 + float3(1.7, 9.2, t * 0.15));
+    float ry = mxPerlin3(w1 + float3(8.3, 2.8, t * 0.13));
+    return pos + float3(rx, ry, 0.0) * amount;
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float animTime = iTime * uSpeed;
+
+    // Aspect-corrected z = 0 slab, zoomed by e^(density - 1), then the two-level warp.
+    float3 pos = float3(uv.x * aspect, uv.y, 0.0) * exp(uDensity - 1.0);
+    float3 warped = domainWarp2(pos, animTime * 0.125, uWarp * 4.0);
+    float v = mxPerlin3(warped) * 0.5 + 0.5;
+
+    // Glow-gamma tone, contrast around mid-grey, balance shift, inverted.
+    float spread = pow(max(v, 0.0), 5.0 / uIntensity);
+    float contrasted = clamp((spread - 0.5) * uContrast + 0.5, 0.0, 1.0);
+    float balanced = clamp(contrasted + (uBalance / 100.0 - 0.5), 0.0, 1.0);
+    float t = 1.0 - balanced;
+
+    float3 a = srgbToP3(lin(uColorA.rgb));
+    float3 b = srgbToP3(lin(uColorB.rgb));
+    float3 rgb = mix(a, b, t);
+    return half4(half3(toSrgb(rgb)), 1.0);
+}

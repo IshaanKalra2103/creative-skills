@@ -1,0 +1,96 @@
+// fx: Sparkle
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/Sparkle (MIT)
+// about: twinkling four-ray star glints added as light over the bright parts of an image, tinted by the color beneath.
+// uniform: uSize float 100
+// uniform: uIntensity float 10
+// uniform: uThreshold float 0.2
+// uniform: uRayLength float 5
+// uniform: uColorize float 0.45
+// uniform: uSpeed float 1
+// uniform: uSeed float 0
+// note: `expand` (glints up to N px outside bright areas, a 4-tap brightest-near ring upstream)
+//       is not ported; this is the default expand = 0 path (one tap per glint point). Two
+//       scattered grids (spacing x1 and x2/3), 4 nearest points each = 8 source taps + 1. The
+//       kit's integer hash32 is replaced by Hoskins hash32, so glint positions differ; density,
+//       blink rate and star shape match. Spacing is in canvas pixels; light is added in linear.
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uSize;
+uniform float uIntensity;
+uniform float uThreshold;
+uniform float uRayLength;
+uniform float uColorize;
+uniform float uSpeed;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float3 hash32(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yxz + 33.33);
+    return fract((p3.xxy + p3.yzz) * p3.zyx);
+}
+
+// Straight linear-light tap (rgb) and its Rec.709 luma x alpha (w), clamp-to-edge.
+float4 tapStraight(float2 uv) {
+    half4 s = uSrc.eval(clamp(uv * uSrcSize, float2(0.5), uSrcSize - 0.5));
+    float a = float(s.a);
+    float3 rgb = a > 0.0 ? lin(float3(s.rgb) / a) : float3(0.0);
+    return float4(rgb, dot(rgb, float3(0.2126, 0.7152, 0.0722)) * a);
+}
+
+// One scattered grid of glints: the 4 cell points nearest the pixel.
+float3 glintLayer(float2 px, float cellSize, float seed, float t) {
+    float2 salt = float2(seed * 97.13, seed * 31.71);
+    float2 base = floor(px / cellSize - 0.5);
+    float rayRate = 0.45 / max(uRayLength, 0.01);
+    float reach = cellSize * 0.5;
+    float3 sum = float3(0.0);
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float2 cell = base + float2(mod(fi, 2.0), floor(fi / 2.0));
+        float3 r = hash32(cell + salt);
+        float2 point = (cell + 0.5 + (r.xy - 0.5) * 0.6) * cellSize;
+        float2 o = px - point;
+
+        float4 src = tapStraight(point / iResolution.xy);
+        float presence = smoothstep(uThreshold, uThreshold + 0.12, sqrt(max(src.w, 0.0)));
+
+        float blink = max(sin(t * (0.8 + r.z * 1.2) + r.x * 6.283185307179586), 0.0);
+        blink *= blink;
+        blink *= blink;
+        blink *= blink;
+        float level = 0.35 + 0.65 * step(0.45, r.z);
+
+        float ax = abs(o.x);
+        float ay = abs(o.y);
+        float star = exp(-(ax * ax + ay * ay) * 0.9)
+                   + 0.25 * (exp(-(ax * 1.6 + ay * rayRate)) + exp(-(ay * 1.6 + ax * rayRate)));
+        star *= 1.0 - smoothstep(reach * 0.6, reach, max(ax, ay));
+
+        float3 hue = src.rgb / max(dot(src.rgb, float3(0.2126, 0.7152, 0.0722)), 0.001) * 0.6;
+        float3 tint = mix(float3(1.0), hue, uColorize);
+        sum += tint * (star * blink * presence * level * uIntensity);
+    }
+    return sum;
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float t = iTime * uSpeed;
+    float2 px = coord;
+    float3 glow = glintLayer(px, uSize, uSeed, t) + glintLayer(px, uSize * (2.0 / 3.0), uSeed + 0.31, t);
+
+    half4 s = uSrc.eval(clamp(uv * uSrcSize, float2(0.5), uSrcSize - 0.5));
+    float a = float(s.a);
+    float3 child = a > 0.0 ? lin(float3(s.rgb) / a) * a : float3(0.0);
+    float spill = max(max(glow.r, glow.g), glow.b);
+    float3 rgb = child + glow;
+    float outA = min(a + spill, 1.0);
+    float3 straight = outA > 0.0 ? rgb / outA : float3(0.0);
+    return half4(half3(toSrgb(straight) * outA), half(outA));
+}

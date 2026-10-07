@@ -1,0 +1,40 @@
+// fx: ChromaticAberration
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/ChromaticAberration (MIT)
+// about: red, green and blue copies of the image pushed apart along one direction, a prismatic lens fringe.
+// uniform: uStrength float 0.2
+// uniform: uAngle float 0
+// uniform: uRedOffset float -1.0
+// uniform: uGreenOffset float 0.0
+// uniform: uBlueOffset float 1.0
+// note: three taps, alpha from the green tap; strength 1 = a tenth of the canvas height. Taps
+//       clamp to the image edge (upstream samples with clamp-to-edge).
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uStrength;
+uniform float uAngle;
+uniform float uRedOffset;
+uniform float uGreenOffset;
+uniform float uBlueOffset;
+
+half4 tap(float2 uv) {
+    return uSrc.eval(clamp(uv * uSrcSize, float2(0.5), uSrcSize - 0.5));
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float r = radians(uAngle);
+    float2 base = float2(cos(r) / aspect, sin(r)) * (uStrength * 0.1);
+    half4 rs = tap(uv + base * uRedOffset);
+    half4 gs = tap(uv + base * uGreenOffset);
+    half4 bs = tap(uv + base * uBlueOffset);
+    // Premultiplied taps recombined; alpha from the green tap. Channel selection commutes with
+    // the sRGB transfer, so no linear decode is needed for a pure re-sample.
+    float a = float(gs.a);
+    float3 rgb = float3(rs.r, gs.g, bs.b);
+    rgb = min(rgb, float3(a));
+    return half4(half3(rgb), half(a));
+}

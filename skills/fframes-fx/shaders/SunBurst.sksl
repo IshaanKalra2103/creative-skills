@@ -1,0 +1,56 @@
+// fx: SunBurst
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/SunBurst (MIT)
+// about: slowly rotating soft sunburst rays feathered out from a centre; retro title cards and reveal backdrops.
+// uniform: uColor color #ffdd88
+// uniform: uBackground color #000000
+// uniform: uCenter float2 0.5 0.5
+// uniform: uRayCount float 12
+// uniform: uSoftness float 0.3
+// uniform: uRadius float 0.8
+// uniform: uFeather float 0.5
+// uniform: uSpeed float 0.2
+// note: exact port; uCenter is 0..1 with 0,0 at the top-left.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColor;
+uniform float4 uBackground;
+uniform float2 uCenter;
+uniform float uRayCount;
+uniform float uSoftness;
+uniform float uRadius;
+uniform float uFeather;
+uniform float uSpeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float animTime = iTime * uSpeed;
+
+    // Radial frame around the centre (aspect-corrected).
+    float dx = uv.x * aspect - uCenter.x * aspect;
+    float dy = uv.y - uCenter.y;
+    float dist = sqrt(dx * dx + dy * dy);
+    float angle = atan(dy, dx);
+
+    // Spinning soft lobes (positive speed = clockwise) times the outer feather.
+    float sharpness = 1.0 / (uSoftness + 0.05) * 0.3;
+    float lobes = pow(sin(angle * uRayCount - animTime) * 0.5 + 0.5, sharpness);
+    float feather = 1.0 - smoothstep(uRadius * (1.0 - uFeather), uRadius, dist);
+    float alpha = lobes * feather;
+
+    float3 rgb = mix(srgbToP3(lin(uBackground.rgb)), srgbToP3(lin(uColor.rgb)), alpha);
+    float a = mix(uBackground.a, uColor.a, alpha);
+    return half4(half3(toSrgb(rgb) * a), half(a));
+}

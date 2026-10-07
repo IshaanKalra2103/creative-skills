@@ -1,0 +1,91 @@
+// fx: Godrays
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Godrays (MIT)
+// about: shimmering volumetric light rays fanning out from a point; a sunbeam or spotlight backdrop.
+// uniform: uCenter float2 0 0
+// uniform: uDensity float 0.3
+// uniform: uIntensity float 0.8
+// uniform: uSpotty float 1
+// uniform: uSpeed float 0.5
+// uniform: uRayColor color #4283fb
+// uniform: uBackgroundColor color #00000000
+// note: uCenter uses upstream's convention (0,0 = top-left corner; the cover is shot at 0.5 0.5).
+//       The value-noise hash is a float Hoskins hash12 instead of the integer bitcast hash.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float2 uCenter;
+uniform float uDensity;
+uniform float uIntensity;
+uniform float uSpotty;
+uniform float uSpeed;
+uniform float4 uRayColor;
+uniform float4 uBackgroundColor;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float valueNoise(float2 st) {
+    float2 i = floor(st);
+    float2 f = fract(st);
+    float a = hash12(i);
+    float b = hash12(i + float2(1.0, 0.0));
+    float c = hash12(i + float2(0.0, 1.0));
+    float e = hash12(i + float2(1.0, 1.0));
+    float2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(a, b, u.x), mix(c, e, u.x), u.y);
+}
+
+// Ray shape on both atan2 branches, cross-faded across the seam.
+float raysShape(float4 frame, float r, float freq, float power) {
+    float nLeft = pow(valueNoise(float2(frame.x * freq, r)), power);
+    float nRight = pow(valueNoise(float2(frame.y * freq, r)), power);
+    return mix(nRight, nLeft, frame.z);
+}
+
+float rayLayer(float4 frame, float animTime, float spots, float power, float dens, float4 sched, float2 freqs) {
+    float rA = frame.w * sched.x - animTime * sched.y;
+    float rB = frame.w * sched.z * (1.0 + spots) - animTime * sched.w;
+    float f = dens * freqs.x;
+    return raysShape(frame, rA, f, power) * raysShape(frame, rB, f * freqs.y, power);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+
+    // Seam-free radial frame: vec4(angle, angleWrapped, blend, radius).
+    float2 delta = uv - uCenter;                     // == uv - (c.x, 1 - (1 - c.y)) upstream
+    float2 shapeUV = float2(delta.x * aspect, delta.y);
+    float angle = atan(shapeUV.y, shapeUV.x);
+    float angleWrapped = angle - 6.283185307 * floor(angle / 6.283185307);
+    float4 frame = float4(angle, angleWrapped, smoothstep(-0.15, 0.15, shapeUV.x), length(shapeUV));
+
+    float animTime = iTime * uSpeed * 0.2;
+    float spots = 6.5 * abs(uSpotty);
+    float power = 4.0 - 3.0 * clamp(uIntensity, 0.0, 1.0);
+    float dens = 6.0 * uDensity;
+    float layer1 = rayLayer(frame, animTime, spots, power, dens, float4(1.0, 3.0, 0.5, 2.0), float2(5.0, 4.0));
+    float layer2 = rayLayer(frame, animTime, spots, power, dens, float4(1.4, 2.5, 0.7, 1.8), float2(4.5, 3.5));
+    float coverage = clamp(layer1 + layer2 * 0.7, 0.0, 1.0);
+
+    // Straight-alpha over of the ray color on the background, in linear light.
+    float3 ray = srgbToP3(lin(uRayColor.rgb));
+    float3 bg = srgbToP3(lin(uBackgroundColor.rgb));
+    float rayA = coverage * uRayColor.a;
+    float outA = rayA + uBackgroundColor.a * (1.0 - rayA);
+    float3 rgb = (ray * rayA + bg * uBackgroundColor.a * (1.0 - rayA)) / clamp(outA, 0.001, 1.0);
+    return half4(half3(toSrgb(rgb) * outA), half(outA));
+}

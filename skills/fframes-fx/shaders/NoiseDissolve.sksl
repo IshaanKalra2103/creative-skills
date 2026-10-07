@@ -1,0 +1,75 @@
+// fx: NoiseDissolve
+// kind: mask
+// from: shader-effects-inc/shaders packages/core/src/shaders/NoiseDissolve (MIT)
+// about: the classic film dissolve: soft organic blobs eat the layer away as uProgress goes
+//        0 -> 1 (alpha = 1 where the outgoing layer still shows). The pattern never moves.
+// uniform: uProgress float 0.5
+// uniform: uScale float 3
+// uniform: uSoftness float 0.25
+// uniform: uSeed float 0
+// uniform: uInvert float 0
+// note: exact chain: reveal.fbmCoverageCoord (3-octave MaterialX Perlin fbm, 0.5 + n * 0.9) ->
+//       revealMask with feather = softness. The MaterialX lattice hash is an integer Jenkins
+//       hash (no bitwise ops in SkSL); here a Hoskins float hash picks the same 8 gradient
+//       directions, so the blob layout differs from the cover but size and softness match.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uProgress;
+uniform float uScale;
+uniform float uSoftness;
+uniform float uSeed;
+uniform float uInvert;
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// mx_gradient_float (2D): one of 8 gradients (+-1, +-2) picked by the low 3 bits of the hash.
+float mxGrad(float2 cell, float x, float y) {
+    float h = floor(hash12(cell + 0.5) * 8.0);
+    bool lo = h < 4.0;
+    float u = lo ? x : y;
+    float v = 2.0 * (lo ? y : x);
+    u = mod(h, 2.0) >= 1.0 ? -u : u;
+    v = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return u + v;
+}
+
+float mxFade(float t) { return t * t * t * (t * (t * 6.0 - 15.0) + 10.0); }
+
+float mxPerlin(float2 p) {
+    float2 i = floor(p);
+    float fx = p.x - i.x;
+    float fy = p.y - i.y;
+    float u = mxFade(fx);
+    float v = mxFade(fy);
+    float v0 = mxGrad(i, fx, fy);
+    float v1 = mxGrad(i + float2(1.0, 0.0), fx - 1.0, fy);
+    float v2 = mxGrad(i + float2(0.0, 1.0), fx, fy - 1.0);
+    float v3 = mxGrad(i + float2(1.0, 1.0), fx - 1.0, fy - 1.0);
+    float s1 = 1.0 - u;
+    float r = (1.0 - v) * (v0 * s1 + v1 * u) + v * (v2 * s1 + v3 * u);
+    return 0.6616 * r;
+}
+
+float revealMask(float c, float progress, float feather, float invert) {
+    c = invert > 0.0 ? 1.0 - c : c;
+    float f = max(feather, 0.0001);
+    float front = progress * (1.0 + 2.0 * f) - f;
+    return smoothstep(front - f, front + f, c);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float2 p = float2(uv.x * aspect * uScale + uSeed * 13.7, uv.y * uScale + uSeed * 7.9);
+    float n1 = mxPerlin(p);
+    float n2 = mxPerlin(float2(p.x * 2.0 + 17.3 + uSeed * 3.1, p.y * 2.0 + 9.1)) * 0.5;
+    float n3 = mxPerlin(float2(p.x * 4.0 + 41.7, p.y * 4.0 + 27.9 + uSeed * 5.3)) * 0.25;
+    float n = (n1 + n2 + n3) / 1.75;
+    float c = clamp(0.5 + n * 0.9, 0.0, 1.0);
+    float a = revealMask(c, uProgress, uSoftness, uInvert);
+    return half4(half(a));
+}

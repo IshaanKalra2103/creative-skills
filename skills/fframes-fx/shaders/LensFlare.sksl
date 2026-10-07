@@ -1,0 +1,128 @@
+// fx: LensFlare
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/LensFlare (MIT)
+// about: camera lens flare (ghost discs, chromatic halo, starburst, anamorphic streak, glare, core) from a light point; screen it over footage or a scene.
+// uniform: uLightPosition float2 0.3 0.3
+// uniform: uIntensity float 0.5
+// uniform: uGhostIntensity float 0.4
+// uniform: uGhostSpread float 0.7
+// uniform: uGhostChroma float 0.3
+// uniform: uHaloIntensity float 0.4
+// uniform: uHaloRadius float 0.6
+// uniform: uHaloChroma float 0.6
+// uniform: uHaloSoftness float 0.8
+// uniform: uStarburstIntensity float 0.3
+// uniform: uStarburstPoints float 6
+// uniform: uStreakIntensity float 0.15
+// uniform: uStreakLength float 0.5
+// uniform: uGlareIntensity float 0.2
+// uniform: uGlareSize float 0.5
+// uniform: uEdgeFade float 0.2
+// uniform: uSpeed float 0.5
+// note: exact port. Alpha = clamp(luma * 2) like upstream, so faint artifacts are also dimmed by
+//       coverage; uLightPosition is 0..1 with 0,0 at the top-left.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float2 uLightPosition;
+uniform float uIntensity;
+uniform float uGhostIntensity;
+uniform float uGhostSpread;
+uniform float uGhostChroma;
+uniform float uHaloIntensity;
+uniform float uHaloRadius;
+uniform float uHaloChroma;
+uniform float uHaloSoftness;
+uniform float uStarburstIntensity;
+uniform float uStarburstPoints;
+uniform float uStreakIntensity;
+uniform float uStreakLength;
+uniform float uGlareIntensity;
+uniform float uGlareSize;
+uniform float uEdgeFade;
+uniform float uSpeed;
+
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+const float TAU = 6.283185307179586;
+
+float3 ringBand(float dist, float center, float spread, float width) {
+    float w = max(width, 0.0001);
+    return float3(1.0 - smoothstep(0.0, w, abs(dist - (center + spread))),
+                  1.0 - smoothstep(0.0, w, abs(dist - center)),
+                  1.0 - smoothstep(0.0, w, abs(dist - (center - spread))));
+}
+
+// One internal-reflection ghost disc with a prismatic edge ring.
+float3 ghost(float2 uv, float aspect, float2 lightPos, float2 flareAxis, float t, float4 disc, float4 tint) {
+    float2 ghostPos = lightPos + flareAxis * (disc.x * uGhostSpread * 2.0);
+    float dist = length(float2((uv.x - ghostPos.x) * aspect, uv.y - ghostPos.y));
+    float sz = disc.y;
+    float discShape = 1.0 - smoothstep(sz * 0.12, sz, dist);
+    float innerFade = 1.0 - smoothstep(sz * 0.05, sz * 0.45, dist);
+    float shape = discShape * (1.0 - innerFade * disc.w);
+    float gShimmer = sin(t * 4.3 + tint.w) * 0.08 + sin(t * 9.1 + tint.w * 1.7) * 0.05 + 0.95;
+    float3 ring = ringBand(dist, sz * 0.78, sz * uGhostChroma * 0.14, sz * 0.10);
+    float brightness = disc.z * uGhostIntensity * gShimmer;
+    return (shape * tint.rgb + ring * uGhostChroma) * brightness;
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float t = iTime * uSpeed;
+
+    // Flare frame.
+    float2 lightPos = uLightPosition;
+    float2 flareAxis = float2(0.5) - lightPos;
+    float shimmer = sin(t * 3.7) * 0.04 + sin(t * 7.3) * 0.03 + sin(t * 13.1) * 0.02 + 0.97;
+    float edgeDist = max(abs(lightPos.x - 0.5) * 2.0, abs(lightPos.y - 0.5) * 2.0);
+    float fadeStart = 1.0 - uEdgeFade * 0.5;
+    float edgeFadeV = mix(1.0, 1.0 - smoothstep(fadeStart, 1.0, edgeDist), uEdgeFade);
+    float masterFade = uIntensity * edgeFadeV * shimmer;
+    float2 toLight = float2((uv.x - lightPos.x) * aspect, uv.y - lightPos.y);
+    float lightDist = length(toLight);
+    float lightAngle = atan(toLight.y, toLight.x);
+
+    float3 total = float3(0.0);
+    total += ghost(uv, aspect, lightPos, flareAxis, t, float4(0.15, 0.2, 0.3, 0.1), float4(1.0, 0.95, 0.9, 0.0));
+    total += ghost(uv, aspect, lightPos, flareAxis, t, float4(0.3, 0.12, 0.25, 0.65), float4(1.0, 0.85, 0.55, 2.17));
+    total += ghost(uv, aspect, lightPos, flareAxis, t, float4(0.5, 0.08, 0.35, 0.15), float4(0.62, 0.82, 1.0, 4.34));
+    total += ghost(uv, aspect, lightPos, flareAxis, t, float4(0.72, 0.14, 0.18, 0.75), float4(0.75, 1.0, 0.7, 6.51));
+    total += ghost(uv, aspect, lightPos, flareAxis, t, float4(0.95, 0.06, 0.3, 0.0), float4(1.0, 0.6, 0.85, 8.68));
+    total += ghost(uv, aspect, lightPos, flareAxis, t, float4(1.25, 0.1, 0.15, 0.8), float4(0.55, 0.88, 1.0, 10.85));
+    total += ghost(uv, aspect, lightPos, flareAxis, t, float4(1.55, 0.07, 0.2, 0.25), float4(1.0, 0.92, 0.6, 13.02));
+
+    // Halo about the anti-light point.
+    float2 antiLight = float2(1.0) - lightPos;
+    float2 toAnti = float2((uv.x - antiLight.x) * aspect, uv.y - antiLight.y);
+    float3 halo = ringBand(length(toAnti), uHaloRadius, uHaloRadius * uHaloChroma * 0.06, uHaloSoftness * 0.12 + 0.005);
+    total += halo * uHaloIntensity * (sin(atan(toAnti.y, toAnti.x) * 3.0 + t * 0.5) * 0.12 + 0.88);
+
+    // Diffraction starburst.
+    float rotation = atan(flareAxis.y, flareAxis.x * aspect) * 0.5 + t * 0.06;
+    float spikeAngle = lightAngle + rotation;
+    float primary = pow(abs(cos(spikeAngle * (uStarburstPoints / 2.0))), 3.5);
+    float secondary = pow(abs(cos((spikeAngle + 0.25) * (uStarburstPoints / 2.0))), 7.0) * 0.4;
+    float radialFall = 1.0 / (1.0 + lightDist * lightDist * 60.0);
+    float st = spikeAngle / TAU + 0.5;
+    float3 spectral = float3(cos(TAU * st), cos(TAU * (st - 0.333)), cos(TAU * (st - 0.666))) * 0.5 + 0.5;
+    total += mix(float3(1.0, 0.97, 0.92), spectral, 0.12) * ((primary + secondary) * radialFall * uStarburstIntensity);
+
+    // Anamorphic streak.
+    float dy = abs(uv.y - lightPos.y);
+    float dx = abs(uv.x - lightPos.x);
+    float vertFall = exp(-800.0 * dy * dy);
+    float lenSq = uStreakLength * uStreakLength * 0.25 + 0.001;
+    total += float3(vertFall * exp(-dx * dx / (lenSq * 0.7)) * 0.5,
+                    vertFall * exp(-dx * dx / lenSq) * 0.65,
+                    vertFall * exp(-dx * dx / (lenSq * 1.4)) * 0.9) * uStreakIntensity;
+
+    // Veiling glare and the bright core.
+    total += float3(1.0, 0.98, 0.95) * (exp(-(lightDist * lightDist / (uGlareSize * uGlareSize + 0.01))) * uGlareIntensity);
+    float coreSoft = exp(-500.0 * lightDist * lightDist);
+    float coreSharp = 1.0 - smoothstep(0.0, 0.025, lightDist);
+    total += float3(1.0, 0.98, 0.96) * ((coreSoft + coreSharp * 1.5) * uIntensity);
+
+    float3 color = total * masterFade;
+    float a = clamp(dot(color, float3(0.299, 0.587, 0.114)) * 2.0, 0.0, 1.0);
+    return half4(half3(toSrgb(clamp(color, 0.0, 1.0)) * a), half(a));
+}

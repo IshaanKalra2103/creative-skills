@@ -1,0 +1,102 @@
+// fx: VHS
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/VHS (MIT)
+// about: worn analog tape: bursty wobble, creases, head-switching noise at the top, per-line jitter and color bleeding right.
+// uniform: uWobble float 1
+// uniform: uScanlineNoise float 0.6
+// uniform: uSmear float 0.2
+// uniform: uSpeed float 1
+// note: the kit hashes with an integer bitcast hash; this uses Hoskins float hashes (same look,
+//       different random pattern). Driven by the global clock (iTime x speed) like upstream. YIQ
+//       recombine runs on linear light. Taps clamp to the image edge.
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uWobble;
+uniform float uScanlineNoise;
+uniform float uSmear;
+uniform float uSpeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float vnoise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    float2 u = f * f * (3.0 - 2.0 * f);
+    float a = hash12(i);
+    float b = hash12(i + float2(1.0, 0.0));
+    float c = hash12(i + float2(0.0, 1.0));
+    float d = hash12(i + float2(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// Premultiplied linear-light tap, clamp-to-edge.
+float4 tapLin(float2 uv) {
+    half4 s = uSrc.eval(clamp(uv * uSrcSize, float2(0.5), uSrcSize - 0.5));
+    float a = float(s.a);
+    float3 rgb = a > 0.0 ? lin(float3(s.rgb) / a) : float3(0.0);
+    return float4(rgb * a, a);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float t = iTime * uSpeed;
+
+    // Tape geometry (vhsSampleUVs).
+    float burst = smoothstep(0.45, 0.8, vnoise(float2(t * 0.4, 0.0)));
+    float rowInt = floor(uv.y * 487.0);
+    float h0 = (hash12(float2(rowInt, t)) - 0.5) * 2.0;
+    float h1 = (hash12(float2(rowInt, t + 69.42)) - 0.5) * 2.0;
+    float fineGate = 0.25 + burst * 0.75;
+    float chromaRow = h0 * uScanlineNoise * 0.008 * fineGate;
+    float lumaRow = h1 * uScanlineNoise * 0.004 * fineGate;
+
+    float switchPhase = 1.0 - smoothstep(0.0, 0.06, uv.y);
+    float switchX = switchPhase * (vnoise(float2(uv.y * 60.0, t * 14.0)) - 0.5) * uWobble * 0.09;
+    float switchY = switchPhase * uWobble * burst * 0.02;
+
+    float wave = ((vnoise(float2(uv.y * 3.0, t * 0.8)) - 0.5) * 0.008
+                + (vnoise(float2(uv.y * 30.0, t * 6.0)) - 0.5) * 0.002) * uWobble;
+    float crease = smoothstep(0.92, 0.99, sin(uv.y * 8.0 - t * 3.77))
+                 * smoothstep(0.3, 1.0, vnoise(float2(uv.y * 4.77, t))) * uWobble * -0.018;
+
+    float globalX = wave + crease + switchX;
+    float sy = uv.y + switchY;
+    float2 lumaUv = float2(uv.x + globalX + lumaRow, sy);
+    float2 chromaUv = float2(uv.x + globalX + chromaRow, sy);
+
+    // Sharp luma + 5 chroma taps trailing by smear*0.0075 each, recombined through YIQ.
+    float4 luma = tapLin(lumaUv);
+    float smearScale = uSmear * 0.0075;
+    float3 iAxis = float3(0.596, -0.274, -0.322);
+    float3 qAxis = float3(0.211, -0.523, 0.312);
+    float accI = 0.0;
+    float accQ = 0.0;
+    for (int i = 1; i <= 5; i++) {
+        float fi = float(i);
+        float3 c = tapLin(float2(chromaUv.x - fi * smearScale, chromaUv.y)).rgb;
+        float w = fi / 15.0;
+        accI += dot(c, iAxis) * w;
+        accQ += dot(c, qAxis) * w;
+    }
+    float sharpY = dot(luma.rgb, float3(0.299, 0.587, 0.114));
+    float3 rgb = float3(sharpY + accI * 0.956 + accQ * 0.621,
+                        sharpY - accI * 0.272 - accQ * 0.647,
+                        sharpY - accI * 1.106 + accQ * 1.703);
+
+    // AC beat: a faint brightness throb.
+    float beat = 1.0 + cos(mod(t, 6.2831853) * 2.0 + uv.y * 0.5) * 0.015 * uWobble;
+    rgb = clamp(rgb * beat, 0.0, 1.0);
+
+    float a = luma.a;
+    float3 straight = a > 0.0 ? rgb / a : float3(0.0);
+    return half4(half3(toSrgb(straight) * a), half(a));
+}

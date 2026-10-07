@@ -1,0 +1,65 @@
+// fx: Dither
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/Dither (MIT)
+// about: 1-bit ordered (Bayer 4x4) dither of an image on a chunky pixel grid; white dots on transparent by default.
+// uniform: uPixelSize float 4
+// uniform: uThreshold float 0.5
+// uniform: uSpread float 1.0
+// uniform: uColorMode float 0
+// uniform: uColorA color #00000000
+// uniform: uColorB color #ffffff
+// note: `pattern` is compile-time upstream; this port is fixed at the default bayer4. The other
+//       patterns (bayer2/8, clusteredDot, blueNoise, whiteNoise, floydSteinberg) are not ported.
+//       `colorMode` is a float here: 0 = custom (colorA -> colorB), 1 = source (cell color x0.3 / x1.3).
+//       Luminance is Rec.601 on linear light (as upstream); the cell grid is in canvas pixels.
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uPixelSize;
+uniform float uThreshold;
+uniform float uSpread;
+uniform float uColorMode;
+uniform float4 uColorA;
+uniform float4 uColorB;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Bayer quad term bQ(x,y) = y*3 + x*2 - x*y*4, x,y in {0,1}.
+float bayerQuad(float a, float b) { return b * 3.0 + a * 2.0 - a * b * 4.0; }
+
+// Closed-form 4x4 Bayer threshold at a cell coordinate.
+float bayer4(float2 coord) {
+    float2 t = coord - 8.0 * floor(coord / 8.0);
+    float2 p2 = t - 2.0 * floor(t / 2.0);
+    float2 p4 = t - 4.0 * floor(t / 4.0);
+    float2 p4h = floor(p4 / 2.0);
+    return (bayerQuad(p2.x, p2.y) * 4.0 + bayerQuad(p4h.x, p4h.y)) / 16.0;
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float px = max(uPixelSize, 1.0);
+    float2 cell = floor(uv * iResolution.xy / px);
+    float2 cellUv = (cell + 0.5) * px / iResolution.xy;
+
+    half4 s = uSrc.eval(cellUv * uSrcSize);
+    float a = float(s.a);
+    float3 src = a > 0.0 ? lin(float3(s.rgb) / a) : float3(0.0);
+
+    float luma = dot(src, float3(0.299, 0.587, 0.114)) * a;
+    float d = 0.5 + (bayer4(cell) - 0.5) * uSpread;
+    float level = step(d, luma + (uThreshold - 0.5));
+
+    float3 rgb;
+    float outA;
+    if (uColorMode < 0.5) {
+        rgb = mix(lin(uColorA.rgb), lin(uColorB.rgb), level);
+        outA = mix(uColorA.a, uColorB.a, level);
+    } else {
+        rgb = mix(src * 0.3, min(src * 1.3, float3(1.0)), level);
+        outA = a;
+    }
+    return half4(half3(toSrgb(rgb) * outA), half(outA));
+}

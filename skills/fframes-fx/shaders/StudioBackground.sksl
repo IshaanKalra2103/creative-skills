@@ -1,0 +1,165 @@
+// fx: StudioBackground
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/StudioBackground (MIT)
+// about: a photo-studio cove (wall curving into floor) lit by key, fill, back and bounce lights with slow drifting ambient glows; product-shot backdrop.
+// uniform: uColor color #d8dbec
+// uniform: uBrightness float 20
+// uniform: uKeyColor color #d5e4ea
+// uniform: uKeyIntensity float 40
+// uniform: uKeySoftness float 50
+// uniform: uFillColor color #d5e4ea
+// uniform: uFillIntensity float 10
+// uniform: uFillSoftness float 70
+// uniform: uFillAngle float 70
+// uniform: uBackColor color #c8d4e8
+// uniform: uBackIntensity float 20
+// uniform: uBackSoftness float 80
+// uniform: uCenter float2 0.5 0.8
+// uniform: uLightTarget float 100
+// uniform: uWallCurvature float 10
+// uniform: uVignette float 0
+// uniform: uAmbientIntensity float 50
+// uniform: uAmbientSpeed float 2
+// uniform: uSeed float 0
+// note: the four ambient-glow orbits upstream integrates on the CPU are evaluated per pixel here
+//       from iTime * uAmbientSpeed (same hash constants). uCenter is 0..1, 0,0 at the top-left.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColor;
+uniform float uBrightness;
+uniform float4 uKeyColor;
+uniform float uKeyIntensity;
+uniform float uKeySoftness;
+uniform float4 uFillColor;
+uniform float uFillIntensity;
+uniform float uFillSoftness;
+uniform float uFillAngle;
+uniform float4 uBackColor;
+uniform float uBackIntensity;
+uniform float uBackSoftness;
+uniform float2 uCenter;
+uniform float uLightTarget;
+uniform float uWallCurvature;
+uniform float uVignette;
+uniform float uAmbientIntensity;
+uniform float uAmbientSpeed;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float hash01(float x) { return fract(sin(x * 12.9898) * 43758.5453); }
+
+// Cove-frame values shared by every light (set in main, read by downSpot).
+float gAspect;
+float gCenterX;
+float gWallNormY2;
+float gConeWidth;
+float gWallFallY2;
+float gFloorDy2;
+float gIsFloor;
+float gNotFloor;
+float gWallBias;
+float gFloorBias;
+
+// A downward spotlight: a wall cone narrowing toward the source plus a pool on the floor.
+float downSpot(float x, float sourceX, float decay) {
+    float beamX = mix(sourceX, gCenterX, gWallNormY2);
+    float wDx = (x - beamX) * gAspect / gConeWidth;
+    float wall = exp(-(wDx * wDx + gWallFallY2) * decay) * gNotFloor * gWallBias;
+    float poolX = mix(gCenterX, sourceX, 0.25);
+    float fDx = (x - poolX) * gAspect * 1.4;
+    float pool = exp(-(fDx * fDx + gFloorDy2) * (decay * 1.5)) * gIsFloor * gFloorBias;
+    return wall + pool;
+}
+
+float glowSpot(float du, float dv, float sharpness) { return exp((du * du + dv * dv) * -sharpness); }
+
+// One orbiting ambient glow (upstream computes the orbit on the CPU each frame).
+float ambientGlow(float2 uv, float i, float ambTime, float anchorY) {
+    float sd = uSeed + i * 73.1;
+    float sizeVal = hash01(sd + 311.0) * 0.12 + 0.1;
+    float radiusX = hash01(sd) * 0.5 + 0.2;
+    float radiusY = hash01(sd + 37.0) * 0.25 + 0.1;
+    float freqX = hash01(sd + 91.0) * 0.3 + 0.1;
+    float freqY = hash01(sd + 143.0) * 0.25 + 0.08;
+    float phaseX = hash01(sd + 200.0) * 6.283185307;
+    float phaseY = hash01(sd + 257.0) * 6.283185307;
+    float lx = gCenterX + sin(ambTime * freqX + phaseX) * radiusX;
+    float ly = anchorY + cos(ambTime * freqY + phaseY) * radiusY;
+    float dx = (uv.x - lx) * gAspect;
+    float dy = uv.y - ly;
+    return exp(-0.5 * (dx * dx + dy * dy) / (sizeVal * sizeVal));
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    gAspect = iResolution.x / max(iResolution.y, 1e-6);
+
+    float brightness = uBrightness * 0.02;
+    float keyInt = uKeyIntensity * 0.015;
+    float fillInt = uFillIntensity * 0.015;
+    float fillOffset = uFillAngle * 0.005;
+    float backInt = uBackIntensity * 0.015;
+    float lightTarget = uLightTarget * 0.01;
+    float curvature = uWallCurvature * 0.01;
+    float keyDecay = mix(5.0, 0.8, uKeySoftness * 0.01);
+    float fillDecay = mix(5.0, 0.8, uFillSoftness * 0.01);
+    float backDecay = mix(5.0, 0.8, uBackSoftness * 0.01);
+
+    // The cove frame.
+    gCenterX = uCenter.x;
+    float centerY = uCenter.y;
+    float transitionWidth = mix(0.015, 0.15, curvature);
+    gIsFloor = smoothstep(centerY - transitionWidth, centerY + transitionWidth, uv.y);
+    gNotFloor = 1.0 - gIsFloor;
+    float wallNormY = clamp(uv.y / max(centerY, 1e-6), 0.0, 1.0);
+    gWallNormY2 = wallNormY * wallNormY;
+    float floorNormY = clamp((uv.y - centerY) / max(1.0 - centerY, 1e-6), 0.0, 1.0);
+    float uvXCentered = (uv.x - gCenterX) * gAspect;
+    gConeWidth = mix(0.05, 0.45, gWallNormY2);
+    float wallFallY = (1.0 - wallNormY) * 1.2;
+    gWallFallY2 = wallFallY * wallFallY;
+    float floorPoolY = centerY + (1.0 - centerY) * 0.3;
+    float floorDy = (uv.y - floorPoolY) * 4.0;
+    gFloorDy2 = floorDy * floorDy;
+
+    // Unlit base: wall/floor ambient gradient + the crease glow.
+    float ambient = mix(mix(0.2, 0.4, wallNormY), mix(0.38, 0.18, floorNormY), gIsFloor) * brightness;
+    float curveDist = (uv.y - centerY) / (transitionWidth + 0.001);
+    float curveGlow = exp(-0.5 * curveDist * curveDist) * curvature * brightness * 0.1;
+    float base = ambient + curveGlow;
+    gWallBias = (1.0 - lightTarget) * 1.4 + 0.3;
+    gFloorBias = lightTarget * 1.4 + 0.3;
+
+    float3 light = float3(base);
+    light += srgbToP3(lin(uKeyColor.rgb)) * (downSpot(uv.x, gCenterX, keyDecay) * keyInt);
+    float fills = downSpot(uv.x, gCenterX - fillOffset, fillDecay) * fillInt
+                + downSpot(uv.x, gCenterX + fillOffset, fillDecay) * fillInt;
+    light += srgbToP3(lin(uFillColor.rgb)) * fills;
+    float backFloor = glowSpot(uvXCentered * 0.5, (uv.y - mix(1.0, centerY, 0.15)) * 4.0, backDecay) * gIsFloor;
+    float backWall = glowSpot(uvXCentered * 0.6, (centerY - uv.y) * 3.0, backDecay * 0.8) * gNotFloor * gWallNormY2;
+    light += srgbToP3(lin(uBackColor.rgb)) * ((backFloor + backWall) * backInt);
+    float bounce = glowSpot(uvXCentered * 0.7, (uv.y - centerY + 0.02) * 10.0, 2.5) * (keyInt * 0.12) * gNotFloor;
+    light += float3(bounce);
+
+    float ambTime = iTime * uAmbientSpeed;
+    float anchorY = centerY - 0.2;
+    float orbits = ambientGlow(uv, 0.0, ambTime, anchorY) + ambientGlow(uv, 1.0, ambTime, anchorY)
+                 + ambientGlow(uv, 2.0, ambTime, anchorY) + ambientGlow(uv, 3.0, ambTime, anchorY);
+    light += float3(orbits * (uAmbientIntensity * 0.012 * 0.25));
+
+    float vigX = (uv.x - 0.5) * gAspect;
+    float vigY = uv.y - 0.5;
+    float vig = clamp(1.0 - (vigX * vigX + vigY * vigY) * (uVignette * 0.025), 0.0, 1.0);
+    float3 lit = clamp(srgbToP3(lin(uColor.rgb)) * clamp(light, 0.0, 3.0) * vig, 0.0, 1.0);
+    return half4(half3(toSrgb(lit)), 1.0);
+}

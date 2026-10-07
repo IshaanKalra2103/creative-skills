@@ -1,0 +1,68 @@
+// fx: CRTScreen
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/CRTScreen (MIT)
+// about: retro CRT monitor: red/blue split, sine scanlines, faint RGB phosphor stripes and a round vignette.
+// uniform: uPixelSize float 128
+// uniform: uColorShift float 1
+// uniform: uScanlineIntensity float 0.3
+// uniform: uScanlineFrequency float 200
+// uniform: uBrightness float 1
+// uniform: uContrast float 1
+// uniform: uVignetteIntensity float 1
+// uniform: uVignetteRadius float 0.5
+// note: upstream is already one gather pass (rgbSplit -> adjust -> scanlines -> phosphorMask ->
+//       vignette -> opaque); nothing dropped. Shading runs on linear light. Output is opaque
+//       (a transparent source shows as black, as upstream).
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uPixelSize;
+uniform float uColorShift;
+uniform float uScanlineIntensity;
+uniform float uScanlineFrequency;
+uniform float uBrightness;
+uniform float uContrast;
+uniform float uVignetteIntensity;
+uniform float uVignetteRadius;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Premultiplied linear-light tap, clamp-to-edge.
+float3 tapLin(float2 uv) {
+    half4 s = uSrc.eval(clamp(uv * uSrcSize, float2(0.5), uSrcSize - 0.5));
+    float a = float(s.a);
+    return a > 0.0 ? lin(float3(s.rgb) / a) * a : float3(0.0);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+
+    // RGB split: red from +x, blue from -x (colorShift * 0.002 of the width).
+    float shift = uColorShift * 0.002;
+    float3 color = float3(tapLin(float2(uv.x + shift, uv.y)).r,
+                          tapLin(uv).g,
+                          tapLin(float2(uv.x - shift, uv.y)).b);
+
+    // Brightness + contrast around 0.5.
+    color = ((color - 0.5) * uContrast + 0.5) * uBrightness;
+
+    // Sine scanlines.
+    float wave = sin(uv.y * uScanlineFrequency * (3.14159 * 2.0));
+    color *= 1.0 - uScanlineIntensity * (wave * 0.5 + 0.5);
+
+    // Phosphor stripes: about pixelSize/2 RGB triads across the width.
+    float px = fract(uv.x * uPixelSize * 0.5) * 6.28318;
+    color *= float3(sin(px) * 0.1 + 0.95, sin(px + 2.09) * 0.1 + 0.95, sin(px + 4.18) * 0.1 + 0.95);
+
+    // Round vignette (x in height units).
+    float2 c = uv - 0.5;
+    float dist = length(float2(c.x * aspect, c.y));
+    float inner = 1.0 - uVignetteRadius * 0.9;
+    float v = 1.0 - smoothstep(inner, inner + 0.5, dist);
+    color *= mix(1.0, v, uVignetteIntensity);
+
+    return half4(half3(toSrgb(color)), 1.0);
+}

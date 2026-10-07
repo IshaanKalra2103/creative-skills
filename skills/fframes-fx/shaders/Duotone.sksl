@@ -1,0 +1,37 @@
+// fx: Duotone
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/Duotone (MIT)
+// about: repaints the image in two colors by brightness: uColorA in the shadows, uColorB in the
+//        highlights; uBlend moves the crossover. The poster/duotone print look.
+// uniform: uColorA color #ff0000
+// uniform: uColorB color #023af4
+// uniform: uBlend float 0.5
+// note: exact chain: colorOps.duotoneT (Rec.601 luma of the linear child, smoothstep over
+//       blend +- 0.5) -> mixColorsLinear (the upstream default colorSpace 'linear'; the oklch/
+//       oklab/hsl/... options are not ported). Alpha kept.
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float uBlend;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    half4 src = uSrc.eval(uv * uSrcSize);
+    float alpha = float(src.a);
+    float3 rgb = alpha > 0.0 ? lin(float3(src.rgb) / alpha) : float3(0.0);
+
+    float luminance = dot(rgb, float3(0.299, 0.587, 0.114));
+    float t = smoothstep(uBlend - 0.5, uBlend + 0.5, luminance);
+    // mixColorsLinear: alpha-weighted lerp of the two (straight) colors.
+    float wA = uColorA.a * (1.0 - t);
+    float wB = uColorB.a * t;
+    float total = wA + wB;
+    float3 duo = (lin(uColorA.rgb) * wA + lin(uColorB.rgb) * wB) / max(total, 0.001);
+    return half4(half3(toSrgb(duo) * alpha), half(alpha));
+}

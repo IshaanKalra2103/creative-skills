@@ -1,0 +1,91 @@
+// fx: Scratches
+// kind: overlay
+// blend: screen
+// from: shader-effects-inc/shaders packages/core/src/shaders/Scratches (MIT)
+// about: fine curved hairline scratches that flicker in place, like worn film stock or a scuffed lens; lay it over any scene with mix-blend-mode:screen (light scratches) or set uColorA dark and use multiply for dark ones.
+// uniform: uColorA color #ffffff
+// uniform: uColorB color #000000
+// uniform: uScale float 2
+// uniform: uThickness float 1
+// uniform: uSeed float 0
+// uniform: uSpeed float 1
+// note: upstream is a generator (colorA streaks on colorB); the defaults are white on black, so
+//       the same pixels work as a screen overlay and are shipped as one. The per-cell sin
+//       hashes (huge arguments) and the integer bitcast flicker hash become Hoskins float
+//       hashes; fwidth() is replaced by its analytic value (scratch layout differs, look and
+//       density match). uScale is exponential (exp(scale) cells per height).
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float uScale;
+uniform float uThickness;
+uniform float uSeed;
+uniform float uSpeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float hash11(float p) {
+    p = fract(p * 0.1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return fract(p);
+}
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float4 mixColors(float4 a, float4 b, float t) {
+    float wA = a.a * (1.0 - t);
+    float wB = b.a * t;
+    float sum = wA + wB;
+    return float4((a.rgb * wA + b.rgb * wB) / max(sum, 0.001), sum);
+}
+
+// One streak per lattice cell: a rotated, sine-bent line fading along its length, flickering.
+float scratchOne(float2 uv, float f, float time, float thickness) {
+    const float PI = 3.14159265;
+    float2 seed0 = floor(uv);
+    float2 lo = uv - seed0;
+    // upstream: floor(sin(cell * 51024) * 3104) and floor(sin(cell * 1324) * 554)
+    float sx = floor((hash11(seed0.x + 17.0) * 2.0 - 1.0) * 3104.0);
+    float sy = floor((hash11(seed0.y * 1.37 + 401.0) * 2.0 - 1.0) * 554.0);
+    float ss = sx + sy;
+    float2 u2 = lo * 2.0 - 1.0;
+    u2 = u2 * cos(ss) + float2(-u2.y, u2.x) * sin(ss);
+    u2 += sin(sx - sy);
+    u2 = u2 * 0.5 + 0.5;
+    float sVal = (sin(sx + u2.y * PI) + sin(sy + u2.y * PI)) * 0.2;
+    float x = abs(u2.x - 0.5 + sVal);
+    x = 0.5 - x * (f / thickness);
+    // fwidth(x) ~ 1/thickness (x is in pixels / thickness)
+    x = smoothstep(-2.0, 1.5 / thickness + 16.0, x) * 12.0;
+    float pulse = sin(time + hash12(seed0) * 6.2831853) * 0.5 + 0.5;
+    return x * u2.y * pulse;
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float time = iTime * uSpeed;
+    float zoom = exp(uScale);
+    float2 p = float2(uv.x * aspect, uv.y) * zoom + uSeed;
+    // f = 1 / length(fwidth(p)): pixels per pattern unit, divided by sqrt 2.
+    float f = iResolution.y / (1.41421356 * zoom);
+
+    float s = 0.0;
+    for (int i = 0; i < 8; i++) {
+        s = max(s, scratchOne(p, f, time, uThickness));
+        p = float2(p.x + p.y * 0.7, p.x * -0.7 + p.y) - 12.31;
+    }
+
+    // noiseTone (identity contrast/balance) clamps, inverts; the ramp runs colorA -> colorB.
+    float k = clamp(s, 0.0, 1.0);
+    float4 c = mixColors(float4(lin(uColorA.rgb), uColorA.a), float4(lin(uColorB.rgb), uColorB.a), 1.0 - k);
+    float3 rgb = toSrgb(c.rgb);
+    return half4(half3(rgb * c.a), half(c.a));
+}

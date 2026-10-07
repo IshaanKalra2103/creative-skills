@@ -1,0 +1,89 @@
+// fx: SimplexNoise
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/SimplexNoise (MIT)
+// about: soft cloudy two-color noise (3D MaterialX gradient noise walked along z) that morphs in place; a calm textured backdrop, smoke, or a matte for dissolves.
+// uniform: uColorA color #ffffff
+// uniform: uColorB color #000000
+// uniform: uScale float 2
+// uniform: uBalance float 0
+// uniform: uContrast float 0
+// uniform: uSeed float 0
+// uniform: uSpeed float 1
+// note: colorSpace fixed to the default `linear`; the `stops` multi-stop ramp is not ported
+//       (two colors only). Despite the name, upstream is MaterialX 3D perlin noise; its integer
+//       Bob Jenkins lattice hash is replaced by a float hash (same 16-gradient set and quintic
+//       fade, different random pattern). uScale is exponential (exp(scale) cells per height).
+//       The upstream cover reads darker and more diagonal than the current code renders: its
+//       brightness matches about uBalance -0.4, uScale 1.6, and a z-slice of this gradient set
+//       is boxier (axis-aligned blobs) than the cover's zigzag.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float uScale;
+uniform float uBalance;
+uniform float uContrast;
+uniform float uSeed;
+uniform float uSpeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float hash13(float3 p3) {
+    p3 = fract(p3 * float3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yxz + 33.33);
+    p3 = fract((p3.xxy + p3.yxx) * p3.zyx);
+    p3 += dot(p3, p3.zxy + 19.19);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// mx_gradient_float (3D) with the hash reduced to 0..15.
+float mxGrad3(float3 i, float3 f) {
+    float h = floor(hash13(i) * 16.0);
+    float u = h < 8.0 ? f.x : f.y;
+    float inner = (h == 12.0 || h == 14.0) ? f.x : f.z;
+    float v = h < 4.0 ? f.y : inner;
+    float uu = mod(h, 2.0) >= 1.0 ? -u : u;
+    float vv = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return uu + vv;
+}
+
+// mx_perlin_noise_float (3D): signed, roughly -1..1.
+float mxPerlin3(float3 p) {
+    float3 i = floor(p);
+    float3 f = p - i;
+    float3 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float v0 = mxGrad3(i, f);
+    float v1 = mxGrad3(i + float3(1, 0, 0), f - float3(1, 0, 0));
+    float v2 = mxGrad3(i + float3(0, 1, 0), f - float3(0, 1, 0));
+    float v3 = mxGrad3(i + float3(1, 1, 0), f - float3(1, 1, 0));
+    float v4 = mxGrad3(i + float3(0, 0, 1), f - float3(0, 0, 1));
+    float v5 = mxGrad3(i + float3(1, 0, 1), f - float3(1, 0, 1));
+    float v6 = mxGrad3(i + float3(0, 1, 1), f - float3(0, 1, 1));
+    float v7 = mxGrad3(i + float3(1, 1, 1), f - float3(1, 1, 1));
+    float a = mix(mix(v0, v1, w.x), mix(v2, v3, w.x), w.y);
+    float b = mix(mix(v4, v5, w.x), mix(v6, v7, w.x), w.y);
+    return 0.982 * mix(a, b, w.z);
+}
+
+// mixColorsLinear: alpha-weighted mix, output alpha is the weighted sum.
+float4 mixColors(float4 a, float4 b, float t) {
+    float wA = a.a * (1.0 - t);
+    float wB = b.a * t;
+    float sum = wA + wB;
+    return float4((a.rgb * wA + b.rgb * wB) / max(sum, 0.001), sum);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float t = iTime * uSpeed;
+    // seededPlane: aspect-correct, zoom by exp(scale), slide by seed; evolving: z = t * 0.5.
+    float2 pos = float2(uv.x * aspect, uv.y) * exp(uScale) + uSeed;
+    float n = mxPerlin3(float3(pos, t * 0.5));
+    // signedTone: contrast/balance on the raw signed value, squash, invert.
+    float k = clamp((n * (uContrast + 1.0) + uBalance) * 0.5 + 0.5, 0.0, 1.0);
+    float4 c = mixColors(float4(lin(uColorA.rgb), uColorA.a), float4(lin(uColorB.rgb), uColorB.a), 1.0 - k);
+    float3 rgb = toSrgb(c.rgb);
+    return half4(half3(rgb * c.a), half(c.a));
+}

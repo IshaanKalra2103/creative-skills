@@ -1,0 +1,45 @@
+// fx: RadialWipe
+// kind: mask
+// from: shader-effects-inc/shaders packages/core/src/shaders/RadialWipe (MIT)
+// about: a clock hand sweeps around uCenter from uStartAngle and wipes the layer away behind it
+//        (alpha = 1 where the outgoing layer still shows). Animate uProgress 0 -> 1.
+// uniform: uProgress float 0.5
+// uniform: uStartAngle float 0
+// uniform: uDirection float 0
+// uniform: uCenter float2 0.5 0.5
+// uniform: uFeather float 0.1
+// uniform: uInvert float 0
+// note: exact chain: reveal.angularCoord (UV-delta aspect scaling, as RadialWipe was written;
+//       0 deg = 3 o'clock, clockwise on screen) -> revealMask. uDirection is the compile-time
+//       `direction` select as its mode literal: 0 cw (default), 1 ccw, 2 both. The hard edge at
+//       the start angle is upstream's too (the coverage wraps 1 -> 0 there). White premultiplied
+//       output; uInvert > 0 = upstream invert:true.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uProgress;
+uniform float uStartAngle;
+uniform float uDirection;
+uniform float2 uCenter;
+uniform float uFeather;
+uniform float uInvert;
+
+float revealMask(float c, float progress, float feather, float invert) {
+    c = invert > 0.0 ? 1.0 - c : c;
+    float f = max(feather, 0.0001);
+    float front = progress * (1.0 + 2.0 * f) - f;
+    return smoothstep(front - f, front + f, c);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float2 rel = float2((uv.x - uCenter.x) * aspect, uv.y - uCenter.y);
+    float ang = atan(rel.y, rel.x);
+    float frac = (ang - radians(uStartAngle)) / 6.28318530718;
+    frac = frac - floor(frac);
+    float c = frac;
+    if (uDirection > 1.5) { c = min(frac, 1.0 - frac) * 2.0; }
+    else if (uDirection > 0.5) { c = 1.0 - frac; }
+    float a = revealMask(c, uProgress, uFeather, uInvert);
+    return half4(half(a));
+}

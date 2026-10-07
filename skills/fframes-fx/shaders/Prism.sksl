@@ -1,0 +1,84 @@
+// fx: Prism
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Prism (MIT)
+// about: a white beam that fans out past a split point into a slowly rotating rainbow; transparent, composite over a dark layer.
+// uniform: uPosition float2 0.18 0.18
+// uniform: uSplitPosition float2 0.5 0.42
+// uniform: uBeamWidth float 0.04
+// uniform: uSpread float 0.7
+// uniform: uSoftness float 0.12
+// uniform: uStartFalloff float 0.15
+// uniform: uEndFalloff float 0.6
+// uniform: uIntensity float 1.6
+// uniform: uBeamColor color #ffffff
+// uniform: uSaturation float 0.95
+// uniform: uSpeed float 0.1
+// note: exact port. Positions are 0..1 with 0,0 at the top-left.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float2 uPosition;
+uniform float2 uSplitPosition;
+uniform float uBeamWidth;
+uniform float uSpread;
+uniform float uSoftness;
+uniform float uStartFalloff;
+uniform float uEndFalloff;
+uniform float uIntensity;
+uniform float4 uBeamColor;
+uniform float uSaturation;
+uniform float uSpeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float3 hueWheel(float h) {
+    float x = fract(h) * 6.0;
+    return float3(clamp(abs(x - 3.0) - 1.0, 0.0, 1.0),
+                  clamp(2.0 - abs(x - 2.0), 0.0, 1.0),
+                  clamp(2.0 - abs(x - 4.0), 0.0, 1.0));
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+
+    // Segment frame from the source to the split point (canvas-height units).
+    float2 from = float2(uPosition.x * aspect, uPosition.y);
+    float2 rel = float2(uv.x * aspect, uv.y) - from;
+    float2 toRel = float2(uSplitPosition.x * aspect, uSplitPosition.y) - from;
+    float len = max(length(toRel), 0.0001);
+    float2 dir = toRel / len;
+    float along = dot(rel, dir);
+    float across = rel.x * -dir.y + rel.y * dir.x;
+
+    // Soft elbow past the split point.
+    float soft = max(uSoftness, 0.001);
+    float sp = along - len;
+    float k = soft * 0.6;
+    float past = (sp + sqrt(sp * sp + k * k)) * 0.5;
+
+    float fadeIn = smoothstep(0.0, max(uStartFalloff, 0.001), along);
+    float fadeOut = exp(-(past / max(uEndFalloff, 0.001)));
+    float longEnv = fadeIn * fadeOut;
+
+    float fanWidth = max(uBeamWidth + past * uSpread, 0.001);
+    float an = across / fanWidth;
+    float profile = exp(-(an * an * 2.5));
+
+    // White core -> rotating rainbow past the split.
+    float splitSat = smoothstep(len, len + soft, along);
+    float hue = an * 0.42 + iTime * uSpeed;
+    float3 col = mix(srgbToP3(lin(uBeamColor.rgb)), hueWheel(hue), float3(splitSat * uSaturation));
+    float amt = profile * longEnv;
+    float3 rgb = clamp(col * amt * uIntensity, 0.0, 1.0);
+    float a = clamp(amt, 0.0, 1.0);
+    return half4(half3(toSrgb(rgb) * a), half(a));
+}

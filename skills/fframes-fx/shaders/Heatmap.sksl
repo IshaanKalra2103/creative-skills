@@ -1,0 +1,279 @@
+// fx: Heatmap
+// kind: filter
+// src: shape.png
+// from: shader-effects-inc/shaders packages/core/src/shaders/Heatmap (MIT; heat model adapted
+//       there from paper-design/shaders "heatmap", MIT)
+// about: thermal-camera look for any silhouette: the shape's alpha (uSrc) becomes an edge-hot
+//        body crossed by drifting cold fronts, a hot contour and a soft outer glow, mapped
+//        through the "iron" ramp. Feed it an SVG silhouette rendered to an image.
+// uniform: uCenter float2 0.5 0.5
+// uniform: uScale float 1
+// uniform: uInnerGlow float 0.4
+// uniform: uOuterGlow float 0.2
+// uniform: uContour float 0.5
+// uniform: uAngle float 90
+// uniform: uSpeed float 1
+// uniform: uDepth float 0.35
+// uniform: uGlowOpacity float 3
+// uniform: uStop0 color #02010f
+// uniform: uStop1 color #2a0a8a
+// uniform: uStop2 color #a41c9b
+// uniform: uStop3 color #e8632b
+// uniform: uStop4 color #f9e25f
+// uniform: uStop5 color #ffffff
+// uniform: uStopPosA float3 0 0.2 0.45
+// uniform: uStopPosB float3 0.7 0.9 1
+// note: upstream is a Shape Effect over a signed distance field; here the field is estimated
+//       from uSrc ALPHA (units of image height = the upstream field unit at scale 1): a 20-tap
+//       disk (r 0.025) inverted through the circle-segment area near the edge, then two 20-tap
+//       gaussian coverages (sigma 0.045, 0.13) inverted through the normal CDF, per-pixel
+//       rotated so sampling steps become faint grain instead of facets. Deep inside small
+//       shapes the estimate reads a little short (like the paper original's blurred channels).
+//       Two knobs that are NOT upstream props, both defaulted to match the cover:
+//       uDepth - the default upstream shape is sphere3D, whose inside field is -chord/2, not a
+//       2D distance; that is what makes the cover's rim hair-thin. Inside, f = -sqrt(d(2D - d))
+//       with D = uDepth emulates a sphere-like blob; 0 = flat 2D SDF (what upstream gives a flat
+//       SVG: a much wider white-hot rim).
+//       uGlowOpacity - the definition's halo coverage equals its heat (~0.2), far fainter than
+//       the cover's halo; 3 matches the cover, 1 is the definition's math.
+//       Exact after the field: three value-noise-wobbled cold fronts, contour, inner fill,
+//       travelling outer band, pow 1.2, 6 stops mixed in OKLab (default colorSpace). Dropped:
+//       the field-frame fade (only for the clamped SVG sampler), rotation (use uAngle), the
+//       colorA/colorB two-stop fallback. uCenter/uScale place the cold-front frame (fronts
+//       sweep +-0.6 x uScale of height around uCenter); uScale also scales every falloff.
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float2 uCenter;
+uniform float uScale;
+uniform float uInnerGlow;
+uniform float uOuterGlow;
+uniform float uContour;
+uniform float uAngle;
+uniform float uSpeed;
+uniform float uDepth;
+uniform float uGlowOpacity;
+uniform float4 uStop0;
+uniform float4 uStop1;
+uniform float4 uStop2;
+uniform float4 uStop3;
+uniform float4 uStop4;
+uniform float4 uStop5;
+uniform float3 uStopPosA;
+uniform float3 uStopPosB;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float value12(float2 p) {
+    float2 i = floor(p);
+    float2 f = p - i;
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash12(i), hash12(i + float2(1.0, 0.0)), f.x),
+               mix(hash12(i + float2(0.0, 1.0)), hash12(i + float2(1.0, 1.0)), f.x), f.y);
+}
+
+float cbrtS(float x) { return sign(x) * pow(abs(x), 1.0 / 3.0); }
+
+float3 toOklab(float3 rgb) {
+    float l = cbrtS(rgb.r * 0.4122214708 + rgb.g * 0.5363325363 + rgb.b * 0.0514459929);
+    float m = cbrtS(rgb.r * 0.2119034982 + rgb.g * 0.6806995451 + rgb.b * 0.1073969566);
+    float s = cbrtS(rgb.r * 0.0883024619 + rgb.g * 0.2817188376 + rgb.b * 0.6299787005);
+    return float3(l * 0.2104542553 + m * 0.7936177850 - s * 0.0040720468,
+                  l * 1.9779984951 - m * 2.4285922050 + s * 0.4505937099,
+                  l * 0.0259040371 + m * 0.7827717662 - s * 0.8086757660);
+}
+
+float3 fromOklab(float3 lab) {
+    float l = lab.x + lab.y * 0.3963377774 + lab.z * 0.2158037573;
+    float m = lab.x - lab.y * 0.1055613458 - lab.z * 0.0638541728;
+    float s = lab.x - lab.y * 0.0894841775 - lab.z * 1.2914855480;
+    l = l * l * l; m = m * m * m; s = s * s * s;
+    return float3(l * 4.0767416621 - m * 3.3077115913 + s * 0.2309699292,
+                  l * -1.2684380046 + m * 2.6097574011 - s * 0.3413193965,
+                  l * -0.0041960863 - m * 0.7034186147 + s * 1.7076147010);
+}
+
+// One stop step of colorStops.gradientStopsInSpace (alpha-weighted lerp in the working space).
+void stopStep(inout float3 conv, inout float alpha, float4 stop, float posA, float posB, float t) {
+    float seg = clamp((t - posA) / max(posB - posA, 1e-6), 0.0, 1.0);
+    float wA = alpha * (1.0 - seg);
+    float wB = stop.a * seg;
+    float total = wA + wB;
+    conv = (conv * wA + toOklab(lin(stop.rgb)) * wB) / max(total, 0.001);
+    alpha = total;
+}
+
+float4 ironRamp(float t) {
+    t = clamp(t, 0.0, 1.0);
+    float3 conv = toOklab(lin(uStop0.rgb));
+    float alpha = uStop0.a;
+    stopStep(conv, alpha, uStop1, uStopPosA.x, uStopPosA.y, t);
+    stopStep(conv, alpha, uStop2, uStopPosA.y, uStopPosA.z, t);
+    stopStep(conv, alpha, uStop3, uStopPosA.z, uStopPosB.x, t);
+    stopStep(conv, alpha, uStop4, uStopPosB.x, uStopPosB.y, t);
+    stopStep(conv, alpha, uStop5, uStopPosB.y, uStopPosB.z, t);
+    return float4(fromOklab(conv), alpha);
+}
+
+float alphaAt(float2 uv, float2 offH, float aspect) {
+    return float(uSrc.eval((uv + float2(offH.x / aspect, offH.y)) * uSrcSize).a);
+}
+
+// Disk coverage m of a straight edge at signed distance x*r: m = (acos x - x sqrt(1-x^2)) / pi.
+// With phi = 2 acos x this is phi - sin(phi) = 2 pi m; solve by bisection, return x.
+float invDiskCoverage(float m) {
+    float target = 6.28318530718 * clamp(m, 0.0, 1.0);
+    float lo = 0.0;
+    float hi = 6.28318530718;
+    for (int i = 0; i < 14; i++) {
+        float mid = 0.5 * (lo + hi);
+        if (mid - sin(mid) < target) { lo = mid; } else { hi = mid; }
+    }
+    return cos(0.25 * (lo + hi));
+}
+
+// Inverse normal CDF via Giles' single-precision erfinv.
+float invPhi(float p) {
+    float x = 2.0 * p - 1.0;
+    float w = -log((1.0 - x) * (1.0 + x));
+    float r;
+    if (w < 5.0) {
+        w -= 2.5;
+        r = 2.81022636e-08;
+        r = 3.43273939e-07 + r * w;
+        r = -3.5233877e-06 + r * w;
+        r = -4.39150654e-06 + r * w;
+        r = 0.00021858087 + r * w;
+        r = -0.00125372503 + r * w;
+        r = -0.00417768164 + r * w;
+        r = 0.246640727 + r * w;
+        r = 1.50140941 + r * w;
+    } else {
+        w = sqrt(w) - 3.0;
+        r = -0.000200214257;
+        r = 0.000100950558 + r * w;
+        r = 0.00134934322 + r * w;
+        r = -0.00367342844 + r * w;
+        r = 0.00573950773 + r * w;
+        r = -0.0076224613 + r * w;
+        r = 0.00943887047 + r * w;
+        r = 1.00167406 + r * w;
+        r = 2.83297682 + r * w;
+    }
+    return 1.41421356 * r * x;
+}
+
+// Gaussian-weighted alpha coverage (20 taps, golden spiral rotated by `rot`) -> signed
+// distance of a straight edge with that blurred coverage: d = -sigma * Phi^-1(B).
+float gaussField(float2 uv, float aspect, float sigma, float rot) {
+    const float GOLDEN = 2.39996323;
+    float R = 2.6 * sigma;
+    float sw = 0.0;
+    float sb = 0.0;
+    for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float rr = R * sqrt((fi + 0.5) / 20.0);
+        float th = fi * GOLDEN + rot;
+        float w = exp(-0.5 * rr * rr / (sigma * sigma));
+        sb += w * alphaAt(uv, rr * float2(cos(th), sin(th)), aspect);
+        sw += w;
+    }
+    return -sigma * invPhi(clamp(sb / sw, 1e-4, 1.0 - 1e-4));
+}
+
+// Signed distance to the alpha silhouette in image-height units (negative inside). Three scales,
+// each taking over where the finer one saturates; never closer to the edge than the finer one
+// already proved. The sample spiral is rotated per pixel so sampling steps become fine grain
+// instead of facets.
+float fieldFromAlpha(float2 uv, float2 coord, float aspect, float scl) {
+    const float GOLDEN = 2.39996323;
+    float rot = 6.28318530718 * fract(52.9829189 * fract(dot(floor(coord), float2(0.06711056, 0.00583715))));
+    // near: uniform disk, coverage inverted through the circle-segment area
+    float r1 = 0.025 * scl;
+    float m1 = 0.0;
+    for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float rr = r1 * sqrt((fi + 0.5) / 20.0);
+        float th = fi * GOLDEN;
+        m1 += alphaAt(uv, rr * float2(cos(th), sin(th)), aspect);
+    }
+    float x1 = invDiskCoverage(m1 / 20.0);
+    float d = x1 * r1;
+    float sgn = d < 0.0 ? -1.0 : 1.0;
+    float sMid = 0.045 * scl;
+    float dMid = gaussField(uv, aspect, sMid, rot + 1.1);
+    dMid = sgn * max(abs(d), abs(dMid));
+    float wMid = smoothstep(0.55, 0.9, abs(x1));
+    d = mix(d, dMid, wMid);
+    float dFar = gaussField(uv, aspect, 0.13 * scl, rot + 2.3);
+    dFar = sgn * max(abs(d), abs(dFar));
+    d = mix(d, dFar, wMid * smoothstep(1.9, 2.5, abs(dMid) / sMid));
+    return d;
+}
+
+// One travelling cold front (heatmapShadow).
+float coldFront(float a, float b, float tk, float phase) {
+    float posS = mix(-0.6, 0.6, tk);
+    float wob = value12(float2(b * 4.0 + phase * 13.7, tk * 3.0 + phase * 7.1)) - 0.5;
+    float aEff = a - posS + wob * 0.12;
+    float band = exp(-aEff * aEff / 0.0256);
+    float gate = smoothstep(0.0, 0.15, tk) * (1.0 - smoothstep(0.85, 1.0, tk));
+    return clamp(band * gate, 0.0, 1.0);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float scl = max(uScale, 0.001);
+    float t = iTime * uSpeed;
+
+    float inside = float(uSrc.eval(uv * uSrcSize).a);
+    float f = fieldFromAlpha(uv, coord, aspect, scl) / scl;
+    // Inside, the default sphere3D field is -chord/2 of the solid, not a 2D distance: emulate a
+    // sphere-like blob of radius uDepth (0 = flat 2D distance, as upstream gives a flat SVG).
+    if (uDepth > 0.0 && f < 0.0) {
+        float dIn = min(-f, uDepth);
+        f = -sqrt(dIn * (2.0 * uDepth - dIn));
+    }
+
+    float ang = radians(uAngle);
+    float2 tangent = float2(cos(ang), sin(ang));
+    float2 perp = float2(-tangent.y, tangent.x);
+    float2 rel = (uv - uCenter) * float2(aspect, 1.0) / scl;
+    float a = dot(rel, tangent);
+    float b = -dot(rel, perp);
+
+    float tBase = 0.1 * t - 0.3;
+    float innerBlur = exp(-max(-f, 0.0) / 0.12);
+    float inner = 0.8 + 0.8 * innerBlur;
+    inner = mix(inner, 0.0, coldFront(a, b, fract(tBase), 1.0));
+    inner = mix(inner, 0.0, coldFront(a, b, fract(tBase + 1.0 / 3.0), 2.0));
+    inner = mix(inner, 0.0, coldFront(a, b, fract(tBase + 2.0 / 3.0), 3.0));
+    inner *= 2.0 * uInnerGlow;
+    inner += uContour * 2.0 * exp(-abs(f) / 0.03);
+    inner = min(inner, 1.0) * inside;
+    inner = pow(max(inner, 0.0), 1.2);
+
+    float outerBlur = exp(-max(f, 0.0) / (0.05 + 0.15 * uOuterGlow));
+    float t3 = fract(tBase * 3.0 - 0.1);
+    float yy = fract(a * 1.2 - t3);
+    float animatedMask = 0.5 + smoothstep(0.3, 0.65, yy) * (1.0 - smoothstep(0.65, 1.0, yy));
+    float outer = 0.9 * pow(outerBlur, 0.8) * animatedMask * 5.0 * uOuterGlow * uOuterGlow * (1.0 - inside);
+
+    float heat = clamp(inner + outer, 0.0, 1.0);
+    heat += 0.005 * (hash12(floor(coord)) - 0.5);
+    heat = clamp(heat, 0.0, 1.0);
+    float coverage = clamp(inside + outer * uGlowOpacity, 0.0, 1.0);
+
+    float4 ramp = ironRamp(heat);
+    float outA = ramp.a * coverage;
+    return half4(half3(toSrgb(clamp(ramp.rgb, 0.0, 1.0)) * outA), half(outA));
+}

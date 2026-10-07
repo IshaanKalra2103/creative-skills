@@ -1,0 +1,117 @@
+// fx: LightLeakOverlay
+// kind: overlay
+// blend: screen
+// from: shader-effects-inc/shaders packages/core/src/shaders/LightLeak (MIT), overlay variant
+// about: LightLeak for SVG scenes: the leak light alone on black, composited with
+//        mix-blend-mode:screen over the scene.
+// uniform: uPosition float2 0.95 0.4
+// uniform: uSpread float 0.55
+// uniform: uIntensity float 0.15
+// uniform: uStreaks float 0.6
+// uniform: uColorHot color #fff3c4
+// uniform: uColorMid color #ff7a2f
+// uniform: uColorFringe color #a63d8f
+// uniform: uFlicker float 0.35
+// uniform: uSpeed float 1
+// uniform: uSeed float 0
+// note: same light as LightLeak.sksl. Upstream screens in LINEAR light and adds 0.16 x the light
+//       (screenGlowComposite); this layer is srgb(1.16 x light), so over black it is exact and over
+//       white both give white; mid-tones get more lift than upstream (about +0.1 sRGB on a 50%
+//       grey under a 0.2 light) because CSS screen works on sRGB-encoded values. Upstream also
+//       raises alpha over transparent areas, which an overlay over an opaque scene does not need.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float2 uPosition;
+uniform float uSpread;
+uniform float uIntensity;
+uniform float uStreaks;
+uniform float4 uColorHot;
+uniform float4 uColorMid;
+uniform float4 uColorFringe;
+uniform float uFlicker;
+uniform float uSpeed;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float value12(float2 p) {
+    float2 i = floor(p);
+    float2 f = p - i;
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash12(i), hash12(i + float2(1.0, 0.0)), f.x),
+               mix(hash12(i + float2(0.0, 1.0)), hash12(i + float2(1.0, 1.0)), f.x), f.y);
+}
+
+float3 heatRamp3(float heat, float3 hot, float3 mid, float3 fringe) {
+    float toMid = smoothstep(0.0, 0.5, heat);
+    float toHot = smoothstep(0.55, 1.15, heat);
+    float3 rgb = mix(mix(fringe, mid, toMid), hot, toHot);
+    return rgb * clamp(heat, 0.0, 1.6);
+}
+
+float3 leakRgb(float2 uv, float2 coord, float aspect) {
+    float t = iTime * uSpeed * 0.6 + uSeed * 7.9;
+
+    // beamLocalFrame: u along the beam (anchor -> canvas centre), v lateral, aspect-corrected.
+    float2 pA = float2(uv.x * aspect, uv.y);
+    float2 anchor = float2(uPosition.x * aspect, uPosition.y);
+    float2 toCenter = float2(aspect * 0.5, 0.5) - anchor;
+    float cLen = length(toCenter);
+    float2 dir = cLen < 0.02 ? float2(1.0, 0.0) : toCenter / max(cLen, 0.001);
+    float2 rel = pA - anchor;
+    float u = rel.x * dir.x + rel.y * dir.y;
+    float v = rel.y * dir.x - rel.x * dir.y;
+
+    // leakDrift: (flickerMod, streak drift, elongation drift, width drift)
+    float nA = value12(float2(t * 0.9, uSeed * 0.53 + 11.7));
+    float nB = value12(float2(t * 2.7 + 41.3, uSeed * 0.29 + 5.1));
+    float breathe = nA * 0.65 + nB * 0.35;
+    float flickerMod = mix(1.0, 0.25 + 1.5 * breathe, uFlicker);
+    float evo1 = value12(float2(t * 0.13 + 3.1, uSeed * 0.41 + 27.0));
+    float evo2 = value12(float2(t * 0.09 + 17.7, uSeed * 0.61 + 8.4));
+    float evo3 = value12(float2(t * 0.17 + 51.2, uSeed * 0.23 + 2.9));
+
+    // leakBloom: anisotropic gaussian main (1.9) + shoulder (0.45 x 0.22)
+    float sp = max(uSpread, 0.05);
+    float elong = sp * (1.5 + 0.7 * evo2);
+    float du = u / sp;
+    float dv = v / elong;
+    float r2 = du * du + dv * dv;
+    float bloomMain = exp(-r2 * 1.9);
+    float bloomShoulder = exp(-r2 * 0.45) * 0.22;
+
+    // leakStreaks: two bands across the beam, drifting along it
+    float alongFade = exp(dv * dv * -0.55);
+    float s1c = sp * (0.42 + 0.22 * evo1);
+    float s1w = max(sp * (0.07 + 0.07 * evo3), 0.008);
+    float streak1 = exp(-(u - s1c) * (u - s1c) / (s1w * s1w)) * alongFade;
+    float s2c = sp * (0.8 + 0.3 * evo1);
+    float s2w = max(sp * (0.16 + 0.12 * evo3), 0.015);
+    float streak2 = exp(-(u - s2c) * (u - s2c) / (s2w * s2w)) * alongFade * 0.45;
+    float streaks = (streak1 + streak2) * uStreaks;
+
+    float heat = (bloomMain * 1.25 + bloomShoulder + streaks * 0.85) * uIntensity * 2.2 * flickerMod;
+    // heatDither: hash over uv*1024 + clock, +-0.006
+    heat = max(heat + (hash12(floor(uv * 1024.0) + float2(t, t * 1.7)) - 0.5) * 0.012, 0.0);
+
+    float3 hot = lin(uColorHot.rgb);
+    float3 mid = lin(uColorMid.rgb);
+    float3 fringe = lin(uColorFringe.rgb);
+    return float3(heatRamp3(heat * 1.08, hot, mid, fringe).r,
+                  heatRamp3(heat, hot, mid, fringe).g,
+                  heatRamp3(heat * 0.88, hot, mid, fringe).b);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float3 leak = leakRgb(uv, coord, aspect);
+    return half4(half3(toSrgb(leak * 1.16)), 1.0);
+}

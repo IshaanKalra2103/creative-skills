@@ -1,0 +1,146 @@
+// fx: Strands
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Strands (MIT)
+// about: a bundle of thin glowing ribbons waving along a start->end path, colored from a scrolling cyan-violet-pink gradient; tech/AI hero backdrops, lower-third energy lines.
+// uniform: uSpeed float 0.5
+// uniform: uAmplitude float 2
+// uniform: uFrequency float 0.3
+// uniform: uLineCount float 8
+// uniform: uLineWidth float 0.05
+// uniform: uSoftness float 0.05
+// uniform: uSpread float 0.2
+// uniform: uStop0 color #00e5ff
+// uniform: uStop1 color #5b8cff
+// uniform: uStop2 color #b06bff
+// uniform: uStop3 color #ff5fa2
+// uniform: uStopPositions float4 0 0.34 0.67 1
+// uniform: uColorScale float 1
+// uniform: uColorVariance float 1
+// uniform: uColorSpeed float 1
+// uniform: uPinEdges float 0
+// uniform: uStart float2 0 0.5
+// uniform: uEnd float2 1 0.5
+// note: the `stops` prop is fixed to four color uniforms + their positions (upstream takes any
+//       count). colorSpace fixed to the default `oklab` (stops blended in OKLab, then back to
+//       linear and lifted by pow 0.85, as upstream). uPinEdges is 0/1 (gathers the strands at
+//       both ends). uLineCount caps at 16. uStart/uEnd are in uv with y down. Output is straight
+//       color with coverage alpha over transparent.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uSpeed;
+uniform float uAmplitude;
+uniform float uFrequency;
+uniform float uLineCount;
+uniform float uLineWidth;
+uniform float uSoftness;
+uniform float uSpread;
+uniform float4 uStop0;
+uniform float4 uStop1;
+uniform float4 uStop2;
+uniform float4 uStop3;
+uniform float4 uStopPositions;
+uniform float uColorScale;
+uniform float uColorVariance;
+uniform float uColorSpeed;
+uniform float uPinEdges;
+uniform float2 uStart;
+uniform float2 uEnd;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float3 rgbToOklab(float3 c) {
+    float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+    float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+    float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+    l = sign(l) * pow(abs(l), 1.0 / 3.0);
+    m = sign(m) * pow(abs(m), 1.0 / 3.0);
+    s = sign(s) * pow(abs(s), 1.0 / 3.0);
+    return float3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                  1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                  0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+
+float3 oklabToRgb(float3 lab) {
+    float l = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
+    float m = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
+    float s = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
+    l = l * l * l;
+    m = m * m * m;
+    s = s * s * s;
+    return float3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                  -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                  -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float waveT = iTime * uSpeed;
+    float colorT = iTime * uColorSpeed;
+    const float TAU = 6.2831853;
+    const float PI = 3.14159265;
+
+    // Stops pre-converted to OKLab (gradientStopsInSpace runs in the working space).
+    float3 k0 = rgbToOklab(lin(uStop0.rgb));
+    float3 k1 = rgbToOklab(lin(uStop1.rgb));
+    float3 k2 = rgbToOklab(lin(uStop2.rgb));
+    float3 k3 = rgbToOklab(lin(uStop3.rgb));
+    float4 sp = uStopPositions;
+
+    // ribbonPathFrame
+    float2 startPos = float2(uStart.x * aspect, uStart.y);
+    float2 endPos = float2(uEnd.x * aspect, uEnd.y);
+    float2 direction = endPos - startPos;
+    float len = max(length(direction), 1e-6);
+    float2 nd = direction / len;
+    float2 perp = float2(-nd.y, nd.x);
+    float2 relPos = float2(uv.x * aspect, uv.y) - startPos;
+    float progress = dot(relPos, nd) / len;
+    float perpDist = dot(relPos, perp);
+    bool pinOn = uPinEdges > 0.5;
+    float pinch = pinOn ? sin(clamp(progress, 0.0, 1.0) * PI) : 1.0;
+    float fade = smoothstep(0.0, 0.06, progress) * (1.0 - smoothstep(0.94, 1.0, progress));
+    float edgeFade = pinOn ? fade : 1.0;
+
+    float thickness = uLineWidth * 0.07;
+    float softness = uSoftness * 0.08 + 0.0008;
+    float denom = max(uLineCount - 1.0, 1.0);
+    float waveBase = progress * TAU * uFrequency;
+    float shimmerBase = progress * 8.0 + waveT * 2.0;
+    float colorBase = progress * uColorScale + colorT;
+    float n = floor(uLineCount + 0.5);
+
+    float3 accum = float3(0.0);
+    float accumW = 0.0;
+    for (int idx = 0; idx < 16; idx++) {
+        float fi = float(idx);
+        if (fi >= n) break;
+        float norm = fi / denom;
+        float phase = fi * 0.9;
+        float strandT = waveT * (norm * 0.6 + 0.7);
+        float wave = sin(waveBase + strandT + phase) + sin(waveBase * 2.1 - strandT * 0.7 + phase) * 0.5;
+        float centre = ((norm - 0.5) * uSpread + wave * uAmplitude * 0.06) * pinch;
+        float dd = abs(perpDist - centre);
+        float line = 1.0 - smoothstep(thickness, thickness + softness, dd);
+        float shimmer = sin(shimmerBase + fi) * 0.15 + 0.85;
+
+        float cc = colorBase + norm * uColorVariance;
+        float ct = clamp(1.0 - abs(fract(cc * 0.5) * 2.0 - 1.0), 0.0, 1.0);
+        float3 col = k0;
+        col = mix(col, k1, clamp((ct - sp.x) / max(sp.y - sp.x, 1e-6), 0.0, 1.0));
+        col = mix(col, k2, clamp((ct - sp.y) / max(sp.z - sp.y, 1e-6), 0.0, 1.0));
+        col = mix(col, k3, clamp((ct - sp.z) / max(sp.w - sp.z, 1e-6), 0.0, 1.0));
+
+        float w = line * shimmer;
+        accum += col * w;
+        accumW += w;
+    }
+
+    float3 working = accum / max(accumW, 1e-4);
+    float alpha = clamp(accumW * edgeFade, 0.0, 1.0);
+    // backToP3 (OKLab -> linear) then toneLift.
+    float3 rgb = pow(max(oklabToRgb(working), 0.0), float3(0.85));
+    rgb = toSrgb(rgb);
+    return half4(half3(rgb * alpha), half(alpha));
+}

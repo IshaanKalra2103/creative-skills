@@ -28,6 +28,7 @@
 | [spider-verse-look](skills/spider-verse-look) | Scenes and characters painted in the visual language of *Into the Spider-Verse*, as 2D drawings in Canvas + a small WebGL print pass: Ben-Day dots instead of gradients, misregistered plates instead of blur, characters on twos, ink that doesn't register. A reference built from reading every page of the film's art book and a making-of video (style bible, per-character and per-location rules with sampled hex, FX, 90 code recipes), a no-dependency painting kit, and a finished example of Miles swinging through a dusk Midtown canyon. |
 | [sketch-storyboarding](skills/sketch-storyboarding) | Trailers, gameplay clips, scripts and scene ideas as rough graphite storyboard sheets with shot sizes, camera moves, motion arrows and production notes. A script cuts a clip into numbered shots on contact sheets, the plan lives in one board.json that prints as a blank lettered sheet for approval, an image model draws the panels from a bundled style reference, and a second script letters and assembles the sheet so every caption is exact. Also before/after camera-fix boards and animatic timing boards. |
 | [hairline-create](skills/hairline-create) | One isometric line figure that answers the pointer, in the style and on the engine of [@lucasmarkes/hairline](https://github.com/lucasmarkes/hairline): rounded solids in a single stroke, springs instead of timers, a slider that drives one number. You pick a concept, it writes one figure file against a fixed kernel, then builds, validates and screenshots it into a single self-contained HTML page. By Lucas Marques. |
+| [fframes-fx](skills/fframes-fx) | Videos rendered in code with [fframes](https://github.com/dmtrKovalenko/fframes) (Rust, SVG scenes, Skia GPU, ffmpeg) plus 44 GPU shader effects ported to SkSL from [shader-effects-inc/shaders](https://github.com/shader-effects-inc/shaders): aurora, mesh gradients, god rays, lens flare, film grain, light leaks, halftone, dither, VHS, CRT, glitch, a thermal heatmap, wipes and dissolves. A loader that applies each effect's documented defaults, a gallery that renders every effect next to its upstream cover, a porting guide for the rest, and the lessons from making a 21 s film with it. |
 
 ## Install
 
@@ -57,6 +58,7 @@ ln -s ~/src/claude-skills/skills/motion-replica ~/.claude/skills/motion-replica
 ln -s ~/src/claude-skills/skills/spider-verse-look ~/.claude/skills/spider-verse-look
 ln -s ~/src/claude-skills/skills/sketch-storyboarding ~/.claude/skills/sketch-storyboarding
 ln -s ~/src/claude-skills/skills/hairline-create ~/.claude/skills/hairline-create
+ln -s ~/src/claude-skills/skills/fframes-fx ~/.claude/skills/fframes-fx
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -403,3 +405,21 @@ Drawing the panels needs an image model (the skill uses the Meshy tools when the
 **Use:** `/hairline-create a mailbox whose flag rises as the pointer gets close`, or just ask for a new Hairline figure.
 
 Copied unchanged from [lucasmarkes/hairline](https://github.com/lucasmarkes/hairline/tree/main/skills/hairline-create) (`c3692e0`) by Lucas Marques. MIT: see the skill's `LICENSE`. The preview is upstream's `assets/hero.gif`. Live figures: [hairline.lucasmarkes.com](https://hairline.lucasmarkes.com).
+
+## fframes-fx
+
+![Frames from pulse, a 21 s film made with fframes-fx](skills/fframes-fx/assets/pulse-frames.jpg)
+
+*Frames from `pulse`, the 21 s test film: paper grain, a glow-star shader, a thermal figure made with SVG filters, original pixel icons, word cards and an italic wordmark, with a synthesized score.*
+
+![All 44 ported effects in the gallery](skills/fframes-fx/assets/gallery.jpg)
+
+- `SKILL.md`: setting up an fframes video, how each kind of effect composites (generators, overlays with `mix-blend-mode`, filters on images and video, masks for transitions), what fframes can't do (no SVG-to-texture, no shader chaining) and the workarounds, a thermal-camera recipe in pure SVG filters, every gotcha hit while making the film, and the review loop.
+- `shaders/`: 44 effects as `.sksl` files. Each header declares its kind, blend mode and every uniform with its upstream default.
+- `templates/fx.rs`: drop-in loader. `Fx::parse` reads the header, `draw(frame, overrides)` / `filter(frame, image, ..)` apply defaults with overrides by name.
+- `gallery/`: an fframes project that turns every effect into a 2 s scene named after it, with `--check` (Skia compile of all 44). `scripts/compare.sh` puts the upstream cover next to the port; `scripts/catalog.py` rebuilds `references/effects.md` from the headers.
+- `references/`: `effects.md` (the catalog), `porting.md` (upstream conventions, TypeGPU → SkSL, color and alpha, shape effects, traps from the first 44 ports), `fframes/` (upstream fframes API, design and audio docs).
+
+**Use:** ask for a video made with fframes, or for a shaders.com look inside one; `/fframes-fx` to port another effect.
+
+Effects ported from [shader-effects-inc/shaders](https://github.com/shader-effects-inc/shaders) (`935f71a`, MIT, © 2026 Shader Effects Inc.); fframes and its docs by Dmitriy Kovalenko ([dmtrKovalenko/fframes](https://github.com/dmtrKovalenko/fframes) `30b48f3`, MIT). Both licences are in the skill. About 30 upstream effects (simulations, cursor and compute effects) don't fit a one-pass SkSL layer and are not ported. The film's copy, icons, figures and score are original.

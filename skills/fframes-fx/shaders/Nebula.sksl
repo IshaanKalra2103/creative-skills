@@ -1,0 +1,335 @@
+// fx: Nebula
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Nebula (MIT)
+// about: a volumetric gas nebula sealed in a polished glass sphere: billowing emission clouds, dust lanes, parallax star planes, studio reflections; a hero object or space-themed title.
+// uniform: uCenter float2 0.5 0.5
+// uniform: uScale float 1
+// uniform: uRotation float 0
+// uniform: uCoreColor color #ffd9b0
+// uniform: uGasColor color #ff5e7a
+// uniform: uVeilColor color #3a5bdb
+// uniform: uDensity float 1
+// uniform: uCavity float 0
+// uniform: uDust float 0.55
+// uniform: uGasScale float 0.4
+// uniform: uBillow float 0.6
+// uniform: uGlow float 0
+// uniform: uSeed float 0
+// uniform: uStars float 0.07
+// uniform: uStarScale float 1
+// uniform: uTwinkle float 0.35
+// uniform: uRefraction float 0.5
+// uniform: uEnvironment float 0.7
+// uniform: uHighlight float 1.15
+// uniform: uHighlightSoftness float 0.5
+// uniform: uLightAngle float 315
+// uniform: uEdgeSoftness float 0.05
+// uniform: uSpeed float 0.3
+// note: upstream is a shape effect over any 2D/3D shape (default `sphere3D` r 0.35, raymarched
+//       into a field texture by a compute pass). This port renders that default sphere
+//       analytically (same chord, entry depth and forward-difference normal), so `shape`,
+//       `shapeSdfUrl`, `shapeType` and `origin` are not ported and uRotation only spins the
+//       placement frame. colorSpace fixed to the default `oklab`; desktop 6-step march.
+//       Float hashes stand in for the integer ones (MaterialX perlin, worley, jitter).
+uniform float3 iResolution;
+uniform float iTime;
+uniform float2 uCenter;
+uniform float uScale;
+uniform float uRotation;
+uniform float4 uCoreColor;
+uniform float4 uGasColor;
+uniform float4 uVeilColor;
+uniform float uDensity;
+uniform float uCavity;
+uniform float uDust;
+uniform float uGasScale;
+uniform float uBillow;
+uniform float uGlow;
+uniform float uSeed;
+uniform float uStars;
+uniform float uStarScale;
+uniform float uTwinkle;
+uniform float uRefraction;
+uniform float uEnvironment;
+uniform float uHighlight;
+uniform float uHighlightSoftness;
+uniform float uLightAngle;
+uniform float uEdgeSoftness;
+uniform float uSpeed;
+
+const float RADIUS = 0.35;   // sphere3D default radius, in placement (canvas-height) units
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float3 rgbToOklab(float3 c) {
+    float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+    float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+    float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+    l = sign(l) * pow(abs(l), 1.0 / 3.0);
+    m = sign(m) * pow(abs(m), 1.0 / 3.0);
+    s = sign(s) * pow(abs(s), 1.0 / 3.0);
+    return float3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                  1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                  0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+float3 oklabToRgb(float3 lab) {
+    float l = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
+    float m = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
+    float s = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
+    l = l * l * l; m = m * m * m; s = s * s * s;
+    return float3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                  -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                  -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float2 hash22(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.xx + p3.yz) * p3.zy);
+}
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float hash13(float3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// MaterialX perlin (3D): mx_gradient_float over a float lattice hash, quintic fade, 0.982 scale.
+float mxGrad3(float3 i, float3 f) {
+    float h = floor(hash13(i) * 16.0);
+    float u = h < 8.0 ? f.x : f.y;
+    float inner = (h == 12.0 || h == 14.0) ? f.x : f.z;
+    float v = h < 4.0 ? f.y : inner;
+    float uu = mod(h, 2.0) >= 1.0 ? -u : u;
+    float vv = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return uu + vv;
+}
+float mxPerlin3(float3 p) {
+    float3 i = floor(p);
+    float3 f = p - i;
+    float3 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float v0 = mxGrad3(i, f);
+    float v1 = mxGrad3(i + float3(1, 0, 0), f - float3(1, 0, 0));
+    float v2 = mxGrad3(i + float3(0, 1, 0), f - float3(0, 1, 0));
+    float v3 = mxGrad3(i + float3(1, 1, 0), f - float3(1, 1, 0));
+    float v4 = mxGrad3(i + float3(0, 0, 1), f - float3(0, 0, 1));
+    float v5 = mxGrad3(i + float3(1, 0, 1), f - float3(1, 0, 1));
+    float v6 = mxGrad3(i + float3(0, 1, 1), f - float3(0, 1, 1));
+    float v7 = mxGrad3(i + float3(1, 1, 1), f - float3(1, 1, 1));
+    return 0.982 * mix(mix(mix(v0, v1, w.x), mix(v2, v3, w.x), w.y),
+                       mix(mix(v4, v5, w.x), mix(v6, v7, w.x), w.y), w.z);
+}
+
+// mx_gradient_float (2D) with the hash reduced to 0..7.
+float mxGrad2(float2 i, float2 f) {
+    float h = floor(hash12(i) * 8.0);
+    float u = h < 4.0 ? f.x : f.y;
+    float v = 2.0 * (h < 4.0 ? f.y : f.x);
+    float uu = mod(h, 2.0) >= 1.0 ? -u : u;
+    float vv = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return uu + vv;
+}
+// mx_perlin_noise_float (2D): signed, roughly -1..1.
+float mxPerlin2(float2 p) {
+    float2 i = floor(p);
+    float2 f = p - i;
+    float2 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float r = mix(mix(mxGrad2(i, f), mxGrad2(i + float2(1, 0), f - float2(1, 0)), w.x),
+                  mix(mxGrad2(i + float2(0, 1), f - float2(0, 1)), mxGrad2(i + float2(1, 1), f - float2(1, 1)), w.x), w.y);
+    return 0.6616 * r;
+}
+
+// mx_worley_noise_float (2D), jitter 1, squared-euclidean F1.
+float worley2(float2 p) {
+    float2 X = floor(p);
+    float2 lp = p - X;
+    float best = 1e6;
+    for (int yy = -1; yy <= 1; yy++) {
+        for (int xx = -1; xx <= 1; xx++) {
+            float2 c = float2(float(xx), float(yy));
+            float2 diff = c + hash22(X + c + 0.5) - lp;
+            best = min(best, dot(diff, diff));
+        }
+    }
+    return best;
+}
+
+// The sphere's raymarched field, analytically: .x = -chord/2 inside (distance outside),
+// .w = entry depth along the orthographic view ray (a miss reads as "far behind").
+float4 sphereField(float2 fuv) {
+    float2 d = fuv - 0.5;
+    float r = length(d);
+    if (r < RADIUS) {
+        float h = sqrt(RADIUS * RADIUS - r * r);
+        return float4(-h, d.x - 0.7 * h, -d.y - 0.5 * h, 1.2 - h);
+    }
+    return float4(r - RADIUS, 0.0, 0.0, 1.2 + 0.01 + 0.4);
+}
+
+float3 oklabMixToP3(float3 a, float3 b, float t) { return srgbToP3(oklabToRgb(mix(a, b, t))); }
+
+float3 pointStars(float2 p, float t, float variationFreq, float r0, float r1, float k0, float k1,
+                  float b0, float b1, float rate, float spread, float3 tintFrom, float3 tintTo, float tintGain) {
+    float v = mxPerlin2(p * variationFreq) * 0.5 + 0.5;
+    float amt = uTwinkle * 0.5;
+    float shimmer = 1.0 - amt + sin(t * rate + v * spread) * amt;
+    float glint = (1.0 - smoothstep(0.0005, r0 + v * r1, worley2(p))) * smoothstep(k0, k1, v)
+                * (b0 + v * v * b1) * shimmer * uStars;
+    return mix(tintFrom, tintTo, v) * (glint * tintGain);
+}
+
+float3 neutralTone(float3 color) {
+    float x = min(color.x, min(color.y, color.z));
+    float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    float3 c = color - offset;
+    float peak = max(c.x, max(c.y, c.z));
+    const float startC = 0.8 - 0.04;
+    if (peak < startC) { return c; }
+    float dd = 1.0 - startC;
+    float newPeak = 1.0 - dd * dd / (peak + dd - startC);
+    c *= newPeak / peak;
+    float g = 1.0 - 1.0 / (0.15 * (peak - newPeak) + 1.0);
+    return mix(c, float3(newPeak), g);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float pxH = 1.0 / iResolution.y;
+    float t = iTime * uSpeed;
+
+    // Placement (sdf) space: aspect-corrected, rotated, scaled, centred on 0.5.
+    float rotRad = radians(uRotation);
+    float dxAc = (uv.x - uCenter.x) * aspect;
+    float dyP = uv.y - uCenter.y;
+    float2 sdfUV = float2(dxAc * cos(rotRad) + dyP * sin(rotRad), dyP * cos(rotRad) - dxAc * sin(rotRad)) / uScale + 0.5;
+
+    float4 s0 = sphereField(sdfUV);
+    float sdf = s0.x / uScale;
+    if (sdf > pxH * 2.0) { return half4(0.0); }
+
+    // Geometric normal from forward taps of the entry depth (volumetricNormal, eps 0.01, clamp 5).
+    float4 sX = sphereField(sdfUV + float2(0.01, 0.0));
+    float4 sY = sphereField(sdfUV + float2(0.0, 0.01));
+    float3 n = normalize(float3(clamp((sX.w - s0.w) / 0.01, -5.0, 5.0), clamp((sY.w - s0.w) / 0.01, -5.0, 5.0), -1.0));
+    float3 view = normalize(float3((uv.x - 0.5) * aspect * 0.6, (uv.y - 0.5) * 0.6, 1.0));
+
+    // Interior frame: placement coords bent at the walls, the rotation sensor, the interior ray.
+    float bend = uRefraction * 0.16;
+    float sx = sdfUV.x - 0.5;
+    float sy = sdfUV.y - 0.5;
+    float2 origin = float2(sx + n.x * bend, sy + n.y * bend);
+    float4 s0C = sphereField(float2(0.5));
+    float2 sensor = float2(-s0C.y, -s0C.z);
+    float entry = s0.w;
+    float pathLen = clamp(-sdf * 2.0, 0.0, 1.2) * 0.9;
+    float2 shear = view.xy * 0.55;
+
+    // Gas domain.
+    float freq = uGasScale * 3.1;
+    float drift = t * 0.14;
+    float seedOff = uSeed * 7.31;
+    float jit = hash12(float2(origin.x * 311.7, origin.y * 173.3)) * (0.15 / 6.0);
+    float macro = mxPerlin2(float2(sx * 1.3 + drift * 0.6 + seedOff * 0.37, sy * 1.3 + seedOff * 0.61)) * 0.5;
+    float cav = mix(-0.35, 0.5, uCavity);
+    float billowAmt = uBillow * 0.55;
+    float3 core = srgbToP3(lin(uCoreColor.rgb));
+    float3 veil = srgbToP3(lin(uVeilColor.rgb));
+    float3 labVeil = rgbToOklab(lin(uVeilColor.rgb));
+    float3 labGas = rgbToOklab(lin(uGasColor.rgb));
+    float3 labCore = rgbToOklab(lin(uCoreColor.rgb));
+    float eGain = (0.3 + pathLen * 0.9) * (6.0 / 6.0);
+    float aGain = (0.5 + pathLen * 2.2) * uDensity * (3.0 / 6.0);
+
+    // Front-to-back emission/absorption march, per-channel transmittance.
+    float3 transmit = float3(1.0);
+    float3 acc = float3(0.0);
+    for (int i = 0; i < 6; i++) {
+        float fi = (float(i) + 0.5) / 6.0;
+        float z = entry + pathLen * (fi + jit);
+        float2 pos = origin + shear * z;
+
+        // turbulentMedium: one-octave warp over a 3-octave fbm.
+        float3 q = float3(pos.x * freq + drift + seedOff,
+                          pos.y * freq + drift * -0.7 + seedOff * 0.53,
+                          z * (freq * 1.25) + drift * 1.3 + seedOff * 0.79);
+        float warp = mxPerlin3(q * 0.5 + float3(drift * 1.4, 0.0, drift * -0.9));
+        float3 qw = q + float3(warp, warp * -0.73, warp * 0.41) * billowAmt;
+        float mid = mxPerlin3(qw * 2.13 + float3(5.2, 1.3, 8.4));
+        float fine = mxPerlin3(qw * 4.31 + float3(9.1, 3.7, 1.2));
+        float density = (mxPerlin3(qw) + mid * 0.5 + fine * 0.27) * 0.57;
+
+        float wall = smoothstep(0.0, 0.11, pathLen * min(fi, 1.0 - fi));
+        float ridge = 1.0 - clamp(abs(fine) * 1.6, 0.0, 1.0);
+        float dens = smoothstep(0.0, 0.5, density + macro - cav) * wall * (0.65 + ridge * 0.7);
+        float dustD = smoothstep(0.45, 0.75, mid) * wall * uDust;
+
+        float3 ab = mix(labVeil, labGas, smoothstep(0.05, 0.75, dens));
+        float3 cB = oklabMixToP3(ab, labCore, smoothstep(0.68, 1.0, dens));
+        float dim = 1.0 - fi * 0.45;
+        float haze = smoothstep(-0.7, 0.3, density) * (0.05 * wall);
+        float3 emit = cB * (dens * dim) + core * (dens * dens * dens * (uGlow * 1.2 * dim)) + veil * (haze * dim);
+        float3 absorb = float3(dens * aGain) + float3(1.5, 1.0, 0.55) * (dustD * (aGain * 2.2));
+        acc += emit * transmit * eGain;
+        transmit *= exp(-absorb);
+    }
+
+    // Two parallax star planes behind and inside the gas.
+    float starFreq = uStarScale * 34.0;
+    float zFar = entry + pathLen * 1.1;
+    float2 farP = (origin + shear * zFar + sensor * 1.3) * starFreq;
+    float3 far = pointStars(farP, t, 0.13, 0.004, 0.013, 0.35, 0.75, 0.3, 1.2, 1.7, 40.0,
+                            float3(0.72, 0.82, 1.0), float3(1.0, 0.92, 0.82), 1.6);
+    float zNear = entry + pathLen * 0.25;
+    float nearFreq = starFreq * 0.56;
+    float2 nearP = (origin + shear * zNear + sensor * 0.55) * nearFreq + float2(7.3, 2.9);
+    float3 near = pointStars(nearP, t, 0.11, 0.003, 0.01, 0.45, 0.8, 0.35, 1.3, 2.3, 34.0,
+                             float3(0.75, 0.85, 1.0), float3(1.0, 0.95, 0.88), 1.8);
+
+    // Glass shell: studio softbox reflection + dual-lobe key glint.
+    float lrad = radians(uLightAngle);
+    float2 lightDir = float2(cos(lrad), sin(lrad));
+    float3 L = normalize(float3(lightDir, -0.7));
+    float3 H = normalize(L + float3(0.0, 0.0, -1.0));
+    float ndh = clamp(dot(n, H), 0.0, 1.0);
+    float3 R = reflect(view, n);
+    float ex = R.x * lightDir.x - R.y * lightDir.y;
+    float ey = R.x * lightDir.y + R.y * lightDir.x;
+    float2 ep = float2(ex, ey);
+    float sky = smoothstep(-0.7, 0.85, ey);
+    float kr = 0.2;
+    float envLum = sky * sky * 0.32
+        + smoothstep(kr, kr * 0.2, length(ep - float2(0.0, 0.55))) * 1.7 * uEnvironment
+        + smoothstep(kr * 1.15, kr * 1.15 * 0.2, length(ep - float2(-0.55, 0.18))) * 1.05 * uEnvironment
+        + smoothstep(kr, kr * 0.2, length(ep - float2(0.55, 0.1))) * 1.0 * uEnvironment
+        + smoothstep(kr * 1.3, kr * 1.3 * 0.2, length(ep - float2(0.2, -0.5))) * 0.7 * uEnvironment
+        + smoothstep(kr * 1.1, kr * 1.1 * 0.2, length(ep - float2(-0.35, -0.25))) * 0.85 * uEnvironment;
+    float widen = exp2(mix(2.0, -2.0, uHighlightSoftness));
+    float spec = (pow(ndh, 140.0 * widen) * 1.3 + pow(ndh, 22.0 * widen) * 0.14) * uHighlight;
+
+    // Back to front: deep-space floor, gas, stars through it, glass dressing on top.
+    float3 rgb = oklabMixToP3(labVeil, labGas, 0.25) * 0.06 * transmit
+               + acc
+               + far * transmit
+               + near * mix(transmit, float3(1.0), 0.35)
+               + float3(0.85, 0.92, 1.08) * envLum * 0.38
+               + float3(1.0, 0.98, 0.95) * spec;
+    rgb = neutralTone(rgb);
+
+    float w = max(max(uEdgeSoftness * 0.5, 0.001) * 0.03125, pxH * 1.5);
+    float a = smoothstep(0.0, 1.0, clamp(-sdf / w, 0.0, 1.0));
+    return half4(half3(toSrgb(clamp(rgb, 0.0, 1.0)) * a), half(a));
+}

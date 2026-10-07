@@ -1,0 +1,140 @@
+// fx: Aurora
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Aurora (MIT)
+// about: four stacked aurora curtains hanging from a wavy path, flickering with vertical rays; a night-sky backdrop or title-card glow.
+// uniform: uColorA color #a533f8
+// uniform: uColorB color #22ee88
+// uniform: uColorC color #1694e8
+// uniform: uBalance float 50
+// uniform: uIntensity float 80
+// uniform: uSpeed float 5
+// uniform: uWaviness float 50
+// uniform: uRayDensity float 20
+// uniform: uHeight float 120
+// uniform: uCenter float2 0.5 0
+// uniform: uSeed float 0
+// note: colorSpace fixed to the default `linear`; curtainCount fixed at 4. The MaterialX perlin
+//       noise uses a float lattice hash instead of the integer Bob Jenkins hash (same gradient
+//       set and quintic fade, different random pattern). Output is straight-over-transparent
+//       (alpha = glow * 0.5) like upstream, so put it over a dark background. Colors go through
+//       upstream's P3-linear-on-sRGB-canvas quirk (srgbToP3) so they wash out like the cover.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float4 uColorC;
+uniform float uBalance;
+uniform float uIntensity;
+uniform float uSpeed;
+uniform float uWaviness;
+uniform float uRayDensity;
+uniform float uHeight;
+uniform float2 uCenter;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+// Upstream parses hex colors into Display-P3 *linear* numbers but its canvas is plain sRGB, so
+// every color shows slightly desaturated (greens most). srgbToP3 after lin() reproduces that.
+float3 srgbToP3(float3 c) {
+    return float3(0.8224621 * c.r + 0.1775380 * c.g,
+                  0.0331941 * c.r + 0.9668058 * c.g,
+                  0.0170827 * c.r + 0.0723974 * c.g + 0.9105199 * c.b);
+}
+
+float hash13(float3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// mx_gradient_float (3D) with the hash reduced to 0..15.
+float mxGrad3(float3 i, float3 f) {
+    float h = floor(hash13(i) * 16.0);
+    float u = h < 8.0 ? f.x : f.y;
+    float inner = (h == 12.0 || h == 14.0) ? f.x : f.z;
+    float v = h < 4.0 ? f.y : inner;
+    float uu = mod(h, 2.0) >= 1.0 ? -u : u;
+    float vv = mod(floor(h * 0.5), 2.0) >= 1.0 ? -v : v;
+    return uu + vv;
+}
+
+// mx_perlin_noise_float (3D): signed, roughly -1..1.
+float mxPerlin3(float3 p) {
+    float3 i = floor(p);
+    float3 f = p - i;
+    float3 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float v0 = mxGrad3(i, f);
+    float v1 = mxGrad3(i + float3(1, 0, 0), f - float3(1, 0, 0));
+    float v2 = mxGrad3(i + float3(0, 1, 0), f - float3(0, 1, 0));
+    float v3 = mxGrad3(i + float3(1, 1, 0), f - float3(1, 1, 0));
+    float v4 = mxGrad3(i + float3(0, 0, 1), f - float3(0, 0, 1));
+    float v5 = mxGrad3(i + float3(1, 0, 1), f - float3(1, 0, 1));
+    float v6 = mxGrad3(i + float3(0, 1, 1), f - float3(0, 1, 1));
+    float v7 = mxGrad3(i + float3(1, 1, 1), f - float3(1, 1, 1));
+    float r = mix(mix(mix(v0, v1, w.x), mix(v2, v3, w.x), w.y),
+                  mix(mix(v4, v5, w.x), mix(v6, v7, w.x), w.y), w.z);
+    return 0.982 * r;
+}
+
+float hashPhase(float seed, float k, float big) {
+    return fract(sin(seed * k) * big) * 6.283185307179586;
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;              // y = 0 at the top, like upstream ctx.uv
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float t = iTime * uSpeed;
+    float centerX = uCenter.x;
+    float centerY = 1.0 - (1.0 - uCenter.y);         // position transform flips y, the field flips it back
+    float wav = uWaviness * 0.01;
+    float rayAmt = uRayDensity * 0.01;
+    float auroraHeight = uHeight * 0.01;
+    float intens = uIntensity * 0.018;
+    float balanceExp = mix(2.5, 0.4, uBalance * 0.01);
+    float wx = (uv.x - centerX) * aspect * 2.0;
+
+    float weightedSum = 0.0;
+    float total = 0.0;
+    for (int i = 0; i < 4; i++) {
+        float timeOffset = i == 0 ? 0.0 : (i == 1 ? 3.1 : (i == 2 ? 6.7 : 9.4));
+        float weight = i == 0 ? 1.0 : (i == 1 ? 0.65 : (i == 2 ? 0.45 : 0.3));
+        float tSlow = t * 0.06 + timeOffset;
+        float lSeed = uSeed + float(i) * 31.7;
+
+        float arc = 0.15 * sin(wx * 0.7 + tSlow * 0.4 + hashPhase(lSeed, 12.9, 4758.5))
+                  + 0.08 * sin(wx * 1.6 + tSlow * 0.65 + hashPhase(lSeed, 78.2, 2847.1))
+                  + 0.04 * sin(wx * 2.9 + tSlow * 0.3 + hashPhase(lSeed, 41.6, 1593.7));
+        float noiseWarp = mxPerlin3(float3(wx * 0.5, tSlow * 0.25, lSeed * 0.1));
+        float pathY = centerY + arc * wav + noiseWarp * 0.14 * wav;
+
+        float rayArg = (wx + noiseWarp * 2.5) * (mix(6.0, 20.0, rayAmt) * 0.15) + tSlow * 0.1
+                     + hashPhase(lSeed, 53.7, 3847.2);
+        float rays = pow(sin(rayArg) * 0.5 + 0.5, 1.5);
+        float localHeight = auroraHeight * mix(0.4, 1.0, rays);
+
+        float distFromPath = uv.y - pathY;
+        float topExtent = localHeight * (rays * 0.4 + 0.6);
+        float envelope = smoothstep(-0.04, 0.015, distFromPath) * (1.0 - smoothstep(0.0, topExtent, distFromPath));
+
+        float colorT = clamp(distFromPath / (topExtent + 0.001), 0.0, 1.0);
+        float sectionBright = mix(0.4, 1.0, noiseWarp * 0.5 + 0.5);
+        float coreD = colorT - 0.2;
+        float coreBright = exp(coreD * coreD * -6.0) * 0.3 + 1.0;
+        float alpha = envelope * rays * sectionBright * coreBright * weight;
+
+        weightedSum += colorT * alpha;
+        total += alpha;
+    }
+
+    float avgT = pow(weightedSum / (total + 0.001), balanceExp);
+    float3 a = srgbToP3(lin(uColorA.rgb));
+    float3 b = srgbToP3(lin(uColorB.rgb));
+    float3 c = srgbToP3(lin(uColorC.rgb));
+    float3 color = mix(mix(a, b, smoothstep(0.0, 0.2, avgT)), c, smoothstep(0.4, 0.85, avgT));
+
+    float brightness = total * intens;
+    float3 rgb = clamp(color * brightness, 0.0, 1.0);
+    float outA = clamp(brightness * 0.5, 0.0, 1.0);
+    return half4(half3(toSrgb(rgb) * outA), half(outA));
+}

@@ -1,0 +1,37 @@
+// fx: IrisWipe
+// kind: mask
+// from: shader-effects-inc/shaders packages/core/src/shaders/IrisWipe (MIT)
+// about: a circle grows from uCenter and wipes the layer away inside it (alpha = 1 where the
+//        outgoing layer still shows). Animate uProgress 0 -> 1; use as SVG <mask> content.
+// uniform: uProgress float 0.5
+// uniform: uCenter float2 0.5 0.5
+// uniform: uFeather float 0.1
+// uniform: uInvert float 0
+// note: exact chain: reveal.radialCornerNormCoord (distance from the centre over the distance to
+//       the farthest corner, aspect-corrected) -> revealMask (front remapped by +-feather so 0 and
+//       1 are fully on/off). Output is white, premultiplied, alpha = the reveal factor that
+//       upstream multiplies into the child's alpha. uInvert > 0 = upstream invert:true.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uProgress;
+uniform float2 uCenter;
+uniform float uFeather;
+uniform float uInvert;
+
+float revealMask(float c, float progress, float feather, float invert) {
+    c = invert > 0.0 ? 1.0 - c : c;
+    float f = max(feather, 0.0001);
+    float front = progress * (1.0 + 2.0 * f) - f;
+    return smoothstep(front - f, front + f, c);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float cx = uCenter.x * aspect;
+    float cy = uCenter.y;
+    float dist = length(float2(uv.x * aspect - cx, uv.y - cy));
+    float maxDist = length(float2(max(cx, aspect - cx), max(cy, 1.0 - cy)));
+    float a = revealMask(dist / max(maxDist, 0.0001), uProgress, uFeather, uInvert);
+    return half4(half(a));
+}

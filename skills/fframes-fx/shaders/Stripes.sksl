@@ -1,0 +1,66 @@
+// fx: Stripes
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Stripes (MIT)
+// about: crisp scrolling diagonal stripes in two colors (Quilez box-filtered, alias-free); hazard tape, retro backdrops, barber-pole motion.
+// uniform: uColorA color #000000
+// uniform: uColorB color #ffffff
+// uniform: uAngle float 45
+// uniform: uDensity float 5
+// uniform: uBalance float 0.5
+// uniform: uSoftness float 0
+// uniform: uSpeed float 0.2
+// uniform: uOffset float 0
+// note: colorSpace fixed to the default `linear`. uAngle in degrees. The dpdx/dpdy footprint
+//       is the analytic pixel derivative of the stripe coordinate.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float uAngle;
+uniform float uDensity;
+uniform float uBalance;
+uniform float uSoftness;
+uniform float uSpeed;
+uniform float uOffset;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float4 mixColors(float4 a, float4 b, float t) {
+    float wA = a.a * (1.0 - t);
+    float wB = b.a * t;
+    float sum = wA + wB;
+    return float4((a.rgb * wA + b.rgb * wB) / max(sum, 0.001), sum);
+}
+
+// Box-filtered step train: 0 below `threshold` in each period, 1 above, averaged over width w.
+float quilezStepFilter(float p, float w, float threshold) {
+    float a = p + w * 0.5;
+    float b = p - w * 0.5;
+    float k = 1.0 - threshold;
+    float Fa = floor(a) * k + max(fract(a) - threshold, 0.0);
+    float Fb = floor(b) * k + max(fract(b) - threshold, 0.0);
+    return clamp((Fa - Fb) / w, 0.0, 1.0);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+    float animTime = iTime * uSpeed;
+
+    // stripeCoordP: project the canvas-centred position onto the stripe direction.
+    float a = radians(uAngle);
+    float ca = cos(a);
+    float sa = sin(a);
+    float2 cd = float2(uv.x * aspect - aspect * 0.5, uv.y - 0.5);
+    float p = ((cd.x * ca + cd.y * sa) + aspect * 0.5) * uDensity + animTime + uOffset;
+
+    // footprint1: max(|dpdx|, |dpdy|) + softness.
+    float baseW = uDensity * max(abs(ca), abs(sa)) / iResolution.y;
+    float w = max(baseW + uSoftness, 0.00001);
+    float mask = quilezStepFilter(p, w, uBalance);
+
+    float4 c = mixColors(float4(lin(uColorA.rgb), uColorA.a), float4(lin(uColorB.rgb), uColorB.a), mask);
+    float3 rgb = toSrgb(c.rgb);
+    return half4(half3(rgb * c.a), half(c.a));
+}

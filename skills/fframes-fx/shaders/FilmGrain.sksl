@@ -1,0 +1,34 @@
+// fx: FilmGrain
+// kind: filter
+// from: shader-effects-inc/shaders packages/core/src/shaders/FilmGrain (MIT)
+// about: signed grain added to an image, weighted toward its dark areas.
+// uniform: uStrength float 0.5
+// uniform: uBias float 2.0
+// uniform: uAnimated float 1.0
+// note: the kit hashes pixels with an integer bitcast hash; SkSL (GLSL ES 2) has no bitwise
+//       ops, so this uses the sine-free Hoskins hash12, which stays stable at large coords.
+uniform float3 iResolution;
+uniform float iTime;
+uniform shader uSrc;
+uniform float2 uSrcSize;
+uniform float uStrength;
+uniform float uBias;
+uniform float uAnimated;
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+half4 main(float2 coord) {
+    half4 src = uSrc.eval(coord / iResolution.xy * uSrcSize);
+    float3 color = src.a > 0.0 ? float3(src.rgb) / float(src.a) : float3(0.0);
+    // The upstream clock advances 10 units per second while `animated` is on.
+    float animTime = floor(iTime * 24.0) / 24.0 * 10.0 * uAnimated;
+    float grain = hash12(floor(coord) + float2(animTime, animTime * 1.6180339)) * 2.0 - 1.0;
+    float brightness = clamp(dot(color, float3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+    float darkFactor = pow(1.0 - brightness + 1e-6, uBias);
+    color += grain * darkFactor * (uStrength * 0.1);
+    return half4(half3(color * float(src.a)), src.a);
+}

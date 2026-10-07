@@ -1,0 +1,39 @@
+// fx: VignetteOverlay
+// kind: overlay
+// blend: normal
+// from: shader-effects-inc/shaders packages/core/src/shaders/Vignette (MIT), overlay variant
+// about: Vignette for SVG scenes: a uColor layer whose alpha is the vignette mask, drawn on top
+//        with plain source-over (mix-blend-mode:normal, or no blend at all).
+// uniform: uColor color #000000
+// uniform: uCenter float2 0.5 0.5
+// uniform: uRadius float 0.5
+// uniform: uFalloff float 0.5
+// uniform: uIntensity float 1
+// note: upstream mixes toward uColor in LINEAR light, but SVG compositing mixes sRGB-encoded
+//       values. The alpha is corrected so the result matches upstream exactly for a black (or
+//       white) uColor on any background: black needs a' = 1 - srgb(1 - a), white a' = srgb(a);
+//       other colors interpolate between the two by their luminance (close, not exact).
+//       For a pure darkening vignette, mix-blend-mode:multiply with srgb(1 - a) is equivalent.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uColor;
+uniform float2 uCenter;
+uniform float uRadius;
+uniform float uFalloff;
+uniform float uIntensity;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float toSrgb1(float c) { c = clamp(c, 0.0, 1.0); return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / iResolution.y;
+    float dist = length((uv - uCenter) * float2(aspect, 1.0));
+    float amount = clamp(smoothstep(uRadius, uRadius + uFalloff, dist) * uIntensity, 0.0, 1.0);
+
+    float y = dot(lin(uColor.rgb), float3(0.2126, 0.7152, 0.0722));
+    float aDark = 1.0 - toSrgb1(1.0 - amount);
+    float aLight = toSrgb1(amount);
+    float alpha = mix(aDark, aLight, y);
+    return half4(half3(uColor.rgb * alpha), half(alpha));
+}

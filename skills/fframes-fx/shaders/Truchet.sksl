@@ -1,0 +1,73 @@
+// fx: Truchet
+// kind: generator
+// from: shader-effects-inc/shaders packages/core/src/shaders/Truchet (MIT)
+// about: quarter-circle arc tiles that join into a meandering maze of hairline curves; techy/organic backdrops, pattern fills, line-art textures.
+// uniform: uColorA color #000000
+// uniform: uColorB color #ffffff
+// uniform: uCells float 10
+// uniform: uThickness float 2
+// uniform: uRotation float 0
+// uniform: uSoftness float 0
+// uniform: uSeed float 0
+// note: colorSpace fixed to the default `linear`. uRotation in degrees. The tile hash is
+//       upstream's sin-fract hash, but sin() of ~4000-radian arguments differs between GPUs,
+//       so the maze layout differs from the cover (same tile rule). fwidth() is replaced by
+//       the analytic pixel derivative of the lattice coordinate. Static (no animation). The
+//       upstream cover is shot at about uThickness 4 (bolder lines than the default 2).
+uniform float3 iResolution;
+uniform float4 uColorA;
+uniform float4 uColorB;
+uniform float uCells;
+uniform float uThickness;
+uniform float uRotation;
+uniform float uSoftness;
+uniform float uSeed;
+
+float3 lin(float3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(0.04045, c)); }
+float3 toSrgb(float3 c) { c = clamp(c, 0.0, 1.0); return mix(c * 12.92, 1.055 * pow(c, float3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+
+float4 mixColors(float4 a, float4 b, float t) {
+    float wA = a.a * (1.0 - t);
+    float wB = b.a * t;
+    float sum = wA + wB;
+    return float4((a.rgb * wA + b.rgb * wB) / max(sum, 0.001), sum);
+}
+
+float truchetHash(float2 p) {
+    return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+}
+
+half4 main(float2 coord) {
+    float2 uv = coord / iResolution.xy;
+    float aspect = iResolution.x / max(iResolution.y, 1e-6);
+
+    // latticeFrameCW: aspect-correct, rotate clockwise about the canvas centre, scale to cells.
+    float ang = -radians(uRotation);
+    float cr = cos(ang);
+    float sr = sin(ang);
+    float2 c = float2(uv.x * aspect - aspect * 0.5, uv.y - 0.5);
+    float2 p = float2(c.x * cr - c.y * sr + aspect * 0.5, c.x * sr + c.y * cr + 0.5) * uCells;
+
+    // truchetField
+    float2 cell = floor(p);
+    float2 local = fract(p);
+    bool flip = truchetHash(cell + uSeed) > 0.5;
+    float c1x = flip ? 1.0 : 0.0;
+    float c2x = flip ? 0.0 : 1.0;
+    float d1 = abs(length(float2(local.x - c1x, local.y)) - 0.5);
+    float d2 = abs(length(float2(local.x - c2x, local.y - 1.0)) - 0.5);
+    float arcDist = min(d1, d2);
+    float lineWidth = uThickness * 0.005;
+    // fwidth(p.x) * 0.5 = cells * (|cos| + |sin|) / H * 0.5
+    float pixel = uCells * (abs(cr) + abs(sr)) / iResolution.y * 0.5;
+
+    // strokeBandFloored
+    float soft = uSoftness * 0.5;
+    float lo = max(lineWidth - soft, 0.0);
+    float hi = lineWidth + pixel + soft;
+    float mask = (1.0 - smoothstep(lo, hi, arcDist)) * step(0.0001, lineWidth);
+
+    float4 col = mixColors(float4(lin(uColorA.rgb), uColorA.a), float4(lin(uColorB.rgb), uColorB.a), mask);
+    float3 rgb = toSrgb(col.rgb);
+    return half4(half3(rgb * col.a), half(col.a));
+}
