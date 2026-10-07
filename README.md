@@ -29,6 +29,7 @@
 | [sketch-storyboarding](skills/sketch-storyboarding) | Trailers, gameplay clips, scripts and scene ideas as rough graphite storyboard sheets with shot sizes, camera moves, motion arrows and production notes. A script cuts a clip into numbered shots on contact sheets, the plan lives in one board.json that prints as a blank lettered sheet for approval, an image model draws the panels from a bundled style reference, and a second script letters and assembles the sheet so every caption is exact. Also before/after camera-fix boards and animatic timing boards. |
 | [hairline-create](skills/hairline-create) | One isometric line figure that answers the pointer, in the style and on the engine of [@lucasmarkes/hairline](https://github.com/lucasmarkes/hairline): rounded solids in a single stroke, springs instead of timers, a slider that drives one number. You pick a concept, it writes one figure file against a fixed kernel, then builds, validates and screenshots it into a single self-contained HTML page. By Lucas Marques. |
 | [fframes-fx](skills/fframes-fx) | Videos rendered in code with [fframes](https://github.com/dmtrKovalenko/fframes) (Rust, SVG scenes, Skia GPU, ffmpeg) plus 44 GPU shader effects ported to SkSL from [shader-effects-inc/shaders](https://github.com/shader-effects-inc/shaders): aurora, mesh gradients, god rays, lens flare, film grain, light leaks, halftone, dither, VHS, CRT, glitch, a thermal heatmap, wipes and dissolves. A loader that applies each effect's documented defaults, a gallery that renders every effect next to its upstream cover, a porting guide for the rest, and the lessons from making a 21 s film with it. |
+| [frosted-figure](skills/frosted-figure) | Any photo of a person as a figure behind frosted glass: a soft, grainy gradient-mapped silhouette on off-white, pale at the rim and deep in the core, rendered in plain JS on a canvas to PNG. The person is cut out in the browser with MediaPipe (any background), or colour-keyed off a plain backdrop. Green, gold, yellow, pink and blue palettes, plus a matching ladder built in OKLab from any hex colour. |
 
 ## Install
 
@@ -59,6 +60,7 @@ ln -s ~/src/claude-skills/skills/spider-verse-look ~/.claude/skills/spider-verse
 ln -s ~/src/claude-skills/skills/sketch-storyboarding ~/.claude/skills/sketch-storyboarding
 ln -s ~/src/claude-skills/skills/hairline-create ~/.claude/skills/hairline-create
 ln -s ~/src/claude-skills/skills/fframes-fx ~/.claude/skills/fframes-fx
+ln -s ~/src/claude-skills/skills/frosted-figure ~/.claude/skills/frosted-figure
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -423,3 +425,21 @@ Copied unchanged from [lucasmarkes/hairline](https://github.com/lucasmarkes/hair
 **Use:** ask for a video made with fframes, or for a shaders.com look inside one; `/fframes-fx` to port another effect.
 
 Effects ported from [shader-effects-inc/shaders](https://github.com/shader-effects-inc/shaders) (`935f71a`, MIT, © 2026 Shader Effects Inc.); fframes and its docs by Dmitriy Kovalenko ([dmtrKovalenko/fframes](https://github.com/dmtrKovalenko/fframes) `30b48f3`, MIT). Both licences are in the skill. About 30 upstream effects (simulations, cursor and compute effects) don't fit a one-pass SkSL layer and are not ported. The film's copy, icons, figures and score are original.
+
+## frosted-figure
+
+![Jessica Watkins in yellow, green, pink and blue](skills/frosted-figure/assets/watkins.jpg)
+
+![Kjell Lindgren in green and three palettes built from hex colours](skills/frosted-figure/assets/lindgren.jpg)
+
+*Source photo, then the renders. Above: the four named palettes. Below: green, then palettes generated from `#7b5cff`, `#ff5a1f` and `#00b3a4`.*
+
+- `SKILL.md`: how the effect is built (cutout → density from photo shadows and depth into the figure → two frosting blurs → bottom fade → gradient map and grain), the workflow, rules and limits.
+- `template/frost.js`: the effect with no dependencies. Auto-levels the shading on the person alone and sizes the blur from the head, so low-key, high-key, close-up and half-body photos work without tuning. Includes a colour-key cutout for plain or graded studio backdrops (a RANSAC backdrop fit that ignores clothing running off-frame).
+- `template/index.html`: MediaPipe person segmentation in the page, plus a by-hand mode: drop a photo, switch palettes, pick any colour, save a PNG.
+- `scripts/render.mjs <photo> [out] --palette yellow,green,pink,blue`: renders PNGs in headless Chrome (Node 22+, no npm deps) and prints the values the auto options chose. MediaPipe is cached on first run so later runs work offline. `scripts/sheet.py` builds comparison sheets.
+- `references/tuning.md`: every option, what each kind of photo needs, and the failure modes with fixes.
+
+**Use:** hand over a photo of a person and ask for it frosted / as a gradient figure / in a set of colours, or run `/frosted-figure`.
+
+Example photos are official 2021 NASA portraits of [Jessica Watkins](https://commons.wikimedia.org/wiki/File:Jessica_Watkins_Official_NASA_Portrait_in_2021_(cropped).jpg) and [Kjell Lindgren](https://commons.wikimedia.org/wiki/File:Kjell_Lindgren_Official_NASA_Portrait_in_2021.jpg) (public domain, via Wikimedia Commons). The person cutout uses [MediaPipe](https://github.com/google-ai-edge/mediapipe) `@mediapipe/tasks-vision` (Apache-2.0) and its `selfie_multiclass_256x256` model, both downloaded at runtime and not included here. The look is after a frosted-glass green figure image seen on Pinterest; the code and palettes (sampled colour values) are original.

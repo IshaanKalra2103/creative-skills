@@ -1,0 +1,140 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frosted Figure</title>
+<style>
+  :root { --paper: #f9f9f9; --ink: #1d1d1d; --line: #00000022; }
+  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); font: 13px/1.4 ui-monospace, Menlo, monospace; }
+  [hidden] { display: none !important; }
+  canvas { display: block; max-width: 100vw; max-height: 100vh; margin: auto; }
+  #drop { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px; }
+  #drop.over { background: #00000008; }
+  #bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); }
+  #bar button, #bar input { font: inherit; height: 30px; padding: 0 10px; border: 1px solid var(--line); background: #fff; border-radius: 15px; cursor: pointer; }
+  #bar input[type=color] { width: 40px; padding: 2px; }
+  #bar [aria-pressed=true] { background: var(--ink); color: var(--paper); }
+</style>
+<div id="drop">drop a photo of a person here<br><small>cutout runs in the browser (MediaPipe, first load fetches ~16 MB)</small></div>
+<canvas id="c"></canvas>
+<div id="bar" hidden></div>
+<script src="frost.js"></script>
+<script type="module">
+// Two ways in:
+//   driven  — scripts/render.mjs calls window.runFrost(cfg) and reads window.__frostOut
+//   by hand — open the page, drop a photo; or serve it and use ?src=photo.jpg&palette=pink&<frost option>=…
+const MP = '1.0.1'; // @mediapipe/tasks-vision, pinned
+const q = new URLSearchParams(location.search);
+const mp = q.get('mp') === 'local' // render.mjs serves a cached copy so repeat runs work offline
+  ? { bundle: '/mp/vision_bundle.mjs', wasm: '/mp/wasm', model: '/mp/selfie_multiclass_256x256.tflite' }
+  : { bundle: `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP}/vision_bundle.mjs`,
+      wasm: `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP}/wasm`,
+      model: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite' };
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const withTimeout = (p, ms, what) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(`${what} timed out`)), ms))]);
+
+let segmenter;
+async function personMask(cv) {
+  if (!segmenter) {
+    const { FilesetResolver, ImageSegmenter } = await import(mp.bundle);
+    const fileset = await FilesetResolver.forVisionTasks(mp.wasm);
+    segmenter = await ImageSegmenter.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: mp.model, delegate: 'CPU' },
+      runningMode: 'IMAGE', outputConfidenceMasks: true, outputCategoryMask: false,
+    });
+  }
+  const res = segmenter.segment(cv);
+  const labels = segmenter.getLabels(); // selfie_multiclass: background, hair, body-skin, face-skin, clothes, others
+  const idx = re => labels.findIndex(l => re.test(l));
+  const w = cv.width, h = cv.height;
+  // bilinear resample of one confidence mask to the canvas
+  const sample = (k) => {
+    const mk = res.confidenceMasks[k], src = mk.getAsFloat32Array(), mw = mk.width, mh = mk.height, out = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      const fy = Math.min(mh - 1, Math.max(0, (y + 0.5) * mh / h - 0.5)), y0 = Math.floor(fy), y1 = Math.min(mh - 1, y0 + 1), ty = fy - y0;
+      for (let x = 0; x < w; x++) {
+        const fx = Math.min(mw - 1, Math.max(0, (x + 0.5) * mw / w - 0.5)), x0 = Math.floor(fx), x1 = Math.min(mw - 1, x0 + 1), tx = fx - x0;
+        out[y * w + x] = (src[y0 * mw + x0] * (1 - tx) + src[y0 * mw + x1] * tx) * (1 - ty) + (src[y1 * mw + x0] * (1 - tx) + src[y1 * mw + x1] * tx) * ty;
+      }
+    }
+    return out;
+  };
+  const person = sample(Math.max(0, idx(/background/i))).map(v => 1 - v);
+  const parts = [idx(/hair/i), idx(/face/i)].filter(k => k >= 0).map(sample);
+  const head = parts.length === 2 ? parts[0].map((v, i) => v + parts[1][i]) : null;
+  res.close?.();
+  return { person, head };
+}
+
+// load + cut out + density (the slow part). size = long side in px; sigmas are relative to width.
+async function prepare({ src, size = 1600, cutout = 'auto', opts = {} }) {
+  const img = new Image();
+  img.src = src;
+  await img.decode();
+  const k = size / Math.max(img.naturalWidth, img.naturalHeight);
+  const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+  canvas.width = w; canvas.height = h;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h);
+  let seg = null, cut = 'key';
+  if (cutout !== 'key') {
+    try { seg = await withTimeout(personMask(canvas), 120000, 'MediaPipe'); cut = 'ml'; }
+    catch (e) { if (cutout === 'ml') throw e; console.warn(`ML cutout unavailable (${e.message}); falling back to the colour key`); }
+  }
+  const { D, mask, used } = frostDensity(data, opts, seg);
+  return { w, h, D, mask, cutout: cut, used, opts };
+}
+
+const paint = (s, palette) => ctx.putImageData(frostColour(s.D, s.w, s.h, { ...s.opts, palette }), 0, 0);
+
+window.runFrost = async (cfg) => {
+  const s = await prepare(cfg);
+  const images = {};
+  if (cfg.mask) { ctx.putImageData(greyImage(s.mask, s.w, s.h), 0, 0); images.mask = canvas.toDataURL('image/png'); }
+  for (const p of cfg.palettes || ['green']) { paint(s, p); images[p] = canvas.toDataURL('image/png'); }
+  window.__frostOut = images;
+  return { cutout: s.cutout, used: s.used, width: s.w, height: s.h, names: Object.keys(images) };
+};
+window.__frostReady = true;
+
+// ---------- by hand ----------
+const drop = document.getElementById('drop'), bar = document.getElementById('bar');
+if (!q.has('driven')) {
+  const opts = {};
+  for (const [k, v] of q) if (k in FROST_DEFAULTS) opts[k] = isNaN(+v) ? v : +v;
+  let state, palette = q.get('palette') || 'green';
+  const buttons = [...Object.keys(FROST_PALETTES), 'custom'];
+  const setPalette = (p) => {
+    palette = p;
+    for (const b of bar.querySelectorAll('button[data-p]')) b.setAttribute('aria-pressed', b.dataset.p === p || (b.dataset.p === 'custom' && p.startsWith('#')));
+    if (state) paint(state, p);
+  };
+  bar.innerHTML = buttons.filter(b => b !== 'custom').map(b => `<button data-p="${b}">${b}</button>`).join('') +
+    '<input type="color" value="#7b5cff" title="any colour"><button id="save">save png</button>';
+  bar.addEventListener('click', (e) => { if (e.target.dataset.p) setPalette(e.target.dataset.p); });
+  bar.querySelector('input').addEventListener('input', (e) => setPalette(e.target.value));
+  bar.querySelector('#save').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.download = `frosted-${palette.replace('#', '')}.png`; a.href = canvas.toDataURL('image/png'); a.click();
+  });
+  const load = async (src) => {
+    drop.textContent = 'cutting out…';
+    try {
+      state = await prepare({ src, cutout: q.get('cutout') || 'auto', size: +(q.get('size') || 1600), opts });
+      drop.hidden = true; bar.hidden = false; setPalette(palette);
+    } catch (e) { drop.textContent = `couldn't load that image: ${e.message}`; }
+  };
+  addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  addEventListener('dragleave', () => drop.classList.remove('over'));
+  addEventListener('drop', (e) => {
+    e.preventDefault(); drop.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f) { const r = new FileReader(); r.onload = () => load(r.result); r.readAsDataURL(f); } // data URL: no file:// canvas taint
+  });
+  if (q.get('src')) load(q.get('src'));
+} else {
+  drop.hidden = true;
+}
+</script>
