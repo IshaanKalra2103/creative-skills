@@ -7,12 +7,10 @@ description: A categorised library of the real prompts behind 231 motion videos 
 
 Every prompt from [prompt-motion.com](https://prompt-motion.com/), a gallery of motion videos made with Claude Opus 5.5 that is curated by [@p4nthera_](https://x.com/p4nthera_). Prompts are grouped by what they make. Identical prompts are merged into one entry that lists every video made with them. Each entry links the creator's original post, the video file and the gallery page.
 
-**First run:** the prompt text belongs to its creators, so it isn't committed. If `prompts/` is missing, run `uv run scripts/update.py` from this folder. It fetches the gallery, about 7 s with no browser, into `data/prompts.json` and renders `prompts/`.
-
 | path | what it is |
 |---|---|
-| `prompts/<category>.md` | Generated, not committed. The prompts in one category. Each file starts with **Reusable briefs** (templates and long, fully specified briefs) and then lists the rest, with the most-reused prompts first. |
-| `data/prompts.json` | Generated, not committed. Every entry as data: title, creator, handle, post URL, video and poster URLs, video size, prompt, skill, model, iterations, stack, effort, posted date, category and tags. |
+| `prompts/<category>.md` | The prompts in one category. Each file starts with **Reusable briefs** (templates and long, fully specified briefs) and then lists the rest, with the most-reused prompts first. |
+| `data/prompts.json` | Every entry as data: title, creator, handle, post URL, video and poster URLs, video size, prompt, skill, model, iterations, stack, effort, posted date, category and tags. |
 | `data/categories.json` | The category definitions and the slug → category assignment. Edit this file to recategorise an entry. |
 | `scripts/update.py` | Re-scrapes the site and re-renders everything. See *Refreshing*. |
 
@@ -95,4 +93,4 @@ The scraper reads the Next.js flight payload that each gallery page embeds, so i
 
 ## Credits
 
-Prompts and videos belong to their creators, and every entry credits and links the original post. That's why this repo ships the scraper, the categories and the index, but not the prompt text. The gallery is curated by [@p4nthera_](https://x.com/p4nthera_) at [prompt-motion.com](https://prompt-motion.com/).
+Prompts and videos belong to their creators, and every entry credits and links the original post. The gallery is curated by [@p4nthera_](https://x.com/p4nthera_) at [prompt-motion.com](https://prompt-motion.com/).

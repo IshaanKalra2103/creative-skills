@@ -392,7 +392,7 @@ Before considering the design finished, check:
 
 ## Reference images
 
-The following user-provided reference images sit next to this skill in `reference_images/`. They are other people's artwork collected from Pinterest, so they stay on this machine and are not committed to the repo. If the folder is missing, skip them and work from the principles in this file. Use them as visual references for the intended sticker language, typography, collage composition, iconography, and interactive-widget direction. Do not copy any specific artwork or branded character. Treat them as references for visual principles.
+The following user-provided reference images sit next to this skill in `reference_images/`. They are other people's artwork collected from Pinterest. Use them as visual references for the intended sticker language, typography, collage composition, iconography, and interactive-widget direction. Do not copy any specific artwork or branded character. Treat them as references for visual principles.
 
 ### Reference set
 
