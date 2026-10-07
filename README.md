@@ -32,6 +32,8 @@
 | [frosted-figure](skills/frosted-figure) | Any photo of a person as a figure behind frosted glass: a soft, grainy gradient-mapped silhouette on off-white, pale at the rim and deep in the core, rendered in plain JS on a canvas to PNG. The person is cut out in the browser with MediaPipe (any background), or colour-keyed off a plain backdrop. Green, gold, yellow, pink and blue palettes, plus a matching ladder built in OKLab from any hex colour. |
 | [motion-prompts](skills/motion-prompts) | The real prompts behind 231 motion videos made with Claude Opus 5.5, scraped from [prompt-motion.com](https://prompt-motion.com/) and sorted into 11 categories: showreels, product promos and launch films, product explainers, concept explainers, short films, scenes and 3D, music, UI and logo motion, portfolio reels, games, and follow-up edits. Identical prompts are merged, fill-in brief templates are pulled to the top, and every entry credits the creator and links the post, the video and the gallery page. Also lists the four skills shared on the site. The prompt text belongs to its creators and isn't committed: one `uv run` of the included script fetches it and renders the library locally. |
 | [typographic-sticker-ui](skills/typographic-sticker-ui) | Experimental editorial UI where a readable paragraph is the layout: oversized mixed typography with stickers, cutouts, arrows, highlights and small working widgets (progress, music, weather, calendar, toggles) set inline in the sentence, on a restrained base with two to four accents. Covers sticker treatment, asymmetric layout, interactions you discover inside the poster, motion and a quality checklist. For portfolios, personal sites, landing pages and expressive dashboards. |
+| [app-designer](skills/app-designer) | iPhone app design that doesn't read as AI-made: concept interview, three directions on the core screen, iOS 26 rules, screens rendered with Apple's fonts in Chrome, scanned for AI tells and scored by a critic, plus SwiftUI and App Store panels. By [Tobia Donadon](https://www.tobiadonadon.com). |
+| [web-designer](skills/web-designer) | Websites, web apps and components that read as studio work: directions, type, colour, motion craft, a slop scan, critique, and cross-platform render checks with metric-compatible stand-in fonts. By [Tobia Donadon](https://www.tobiadonadon.com). |
 
 ## Install
 
@@ -65,6 +67,8 @@ ln -s ~/src/claude-skills/skills/fframes-fx ~/.claude/skills/fframes-fx
 ln -s ~/src/claude-skills/skills/frosted-figure ~/.claude/skills/frosted-figure
 ln -s ~/src/claude-skills/skills/motion-prompts ~/.claude/skills/motion-prompts
 ln -s ~/src/claude-skills/skills/typographic-sticker-ui ~/.claude/skills/typographic-sticker-ui
+ln -s ~/src/claude-skills/skills/app-designer ~/.claude/skills/app-designer
+ln -s ~/src/claude-skills/skills/web-designer ~/.claude/skills/web-designer
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -467,3 +471,7 @@ Prompts and videos belong to their creators, and every entry credits and links t
 **Use:** ask for a portfolio, personal site, landing page or dashboard in an editorial, sticker or collage style, or name the skill.
 
 The twelve reference images the skill was written against are other people's work collected from Pinterest. They are kept locally in `reference_images/` (gitignored) and not redistributed. The skill works without them.
+
+## app-designer and web-designer
+
+Both skills are by [Tobia Donadon](https://www.tobiadonadon.com) and are copied here unchanged. They are not covered by this repo's MIT licence. Each renders through your own Chrome with `playwright-core`, so run `npm install --no-fund --no-audit` once in the skill folder. app-designer needs a Mac for Apple's fonts. web-designer runs on Mac, Windows or Linux; its stand-in fonts are open-licensed (see `assets/fonts/LICENSES.md`).

@@ -1,0 +1,9 @@
+{
+  "name": "app-designer",
+  "private": true,
+  "description": "Renders and scans App Designer mockups with your own Chrome.",
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

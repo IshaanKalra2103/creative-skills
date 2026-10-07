@@ -1,0 +1,10 @@
+{
+  "name": "web-designer",
+  "private": true,
+  "description": "Renders, scans and cross-platform-checks Web Designer pages with your own Chrome or Edge.",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

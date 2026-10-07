@@ -1,0 +1,212 @@
+/*
+ * App Designer device chrome.
+ *
+ * Link this file and device.js from a mockup. Every <section class="screen">
+ * becomes one iPhone 17 Pro screen (402 x 874 pt) with a real status bar,
+ * Dynamic Island and home indicator injected on top. You design the content;
+ * the chrome is fixed so no mockup fakes it differently.
+ *
+ *   <section class="screen" data-name="today">            dark chrome (for light grounds)
+ *   data-chrome="light"      white status bar AND home indicator (dark/photo screens)
+ *   data-chrome="none"       no chrome (App Store panel, storyboard, splash)
+ *   data-home="dark|light"   override the home indicator alone (photo top, light bottom)
+ *   data-time="18:52"        the status-bar clock (default 9:41). Match your content.
+ *   data-theme="dark"        a dark-mode screen: .glass turns dark, chrome turns light.
+ *                            Put the dark token overrides on .screen[data-theme="dark"].
+ *   data-freeze="450"        shoot.mjs pauses this screen's CSS animations at 450ms
+ *                            instead of finishing them: a frame of a motion study.
+ *   data-name="slug-name"    the PNG filename. Use a slug.
+ *   data-scrolls             on a scroll view (a list running under the tab bar, a
+ *                            horizontal chip row): text it cuts off is not a defect.
+ *   data-float               on floating chrome you drew yourself (a custom tab bar):
+ *                            content passing under it is not a collision.
+ *   data-behind              on the presenting view under a sheet: covered on purpose.
+ *
+ *   <section class="app-icon" data-name="icon">   the app icon (shot at 1032px).
+ *
+ *   Storyboard frames inside a panel (a screen with data-chrome="none"):
+ *     <div class="mini" style="--mini:.38">
+ *       <div class="mini-screen" data-chrome="light" data-time="7:12"> ...a full 402x874 layout... </div>
+ *     </div>
+ *   The mini-screen gets real chrome and is scaled down; the scan skips its
+ *   text (it is a picture of a screen), so check minis by eye.
+ *
+ * Safe areas are exposed as tokens. Content that is not deliberately
+ * full-bleed starts below --safe-top and ends above --safe-bottom.
+ */
+
+/* ---- Apple faces, loaded from macOS so mockups use the real iOS fonts ----
+ * "SF Pro" carries wght, wdth and opsz axes: font-stretch 60% = Compressed,
+ * 80% = Condensed, 125-150% = Expanded. "New York" is the native serif
+ * (SwiftUI .fontDesign(.serif)), "SF Pro Rounded" is .rounded, "SF Mono" is
+ * .monospaced. On a machine without these files, the stacks fall back.
+ */
+@font-face { font-family: "SF Pro"; src: url("file:///System/Library/Fonts/SFNS.ttf"); font-weight: 1 1000; font-stretch: 30% 150%; }
+@font-face { font-family: "SF Pro"; src: url("file:///System/Library/Fonts/SFNSItalic.ttf"); font-style: italic; font-weight: 1 1000; font-stretch: 30% 150%; }
+@font-face { font-family: "New York"; src: url("file:///System/Library/Fonts/NewYork.ttf"); font-weight: 1 1000; }
+@font-face { font-family: "New York"; src: url("file:///System/Library/Fonts/NewYorkItalic.ttf"); font-style: italic; font-weight: 1 1000; }
+@font-face { font-family: "SF Pro Rounded"; src: url("file:///System/Library/Fonts/SFNSRounded.ttf"); font-weight: 1 1000; }
+@font-face { font-family: "SF Mono"; src: url("file:///System/Library/Fonts/SFNSMono.ttf"); font-weight: 1 1000; }
+
+:root {
+  --sf: "SF Pro", -apple-system, system-ui, sans-serif;
+  --ny: "New York", ui-serif, Georgia, serif;
+  --sf-rounded: "SF Pro Rounded", "SF Pro", system-ui, sans-serif;
+  --sf-mono: "SF Mono", ui-monospace, Menlo, monospace;
+  --screen-w: 402px;
+  --screen-h: 874px;
+  --safe-top: 62px;
+  --safe-bottom: 34px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+  padding: 48px;
+  background: #d9d9d6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.screen {
+  font-family: var(--sf);
+  font-optical-sizing: auto;
+  position: relative;
+  width: var(--screen-w);
+  height: var(--screen-h);
+  overflow: hidden;
+  flex: none;
+  /* The screen owns its own ground. Set background on it, never on body. */
+  background: #fff;
+  /* Real iPhone corner, so you see what the hardware will crop. */
+  border-radius: 55px;
+  isolation: isolate;
+}
+
+/* A screen taller than the device, for showing a whole scrolling page. */
+.screen[data-scroll] { height: auto; min-height: var(--screen-h); }
+
+/* ---- Injected chrome (device.js) ---- */
+
+.ac-status {
+  position: absolute; inset: 0 0 auto 0; height: var(--safe-top);
+  z-index: 1000; pointer-events: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 34px 0 50px;
+  font: 600 17px/1 "SF Pro", -apple-system, system-ui, sans-serif;
+  letter-spacing: -0.4px;
+  color: #000;
+}
+.screen[data-chrome="light"] .ac-status,
+.mini-screen[data-chrome="light"] .ac-status,
+.screen[data-theme="dark"]:not([data-chrome]) .ac-status { color: #fff; }
+.ac-status .ac-right { display: flex; gap: 7px; align-items: center; }
+.ac-status svg { display: block; fill: currentColor; }
+
+.ac-island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 126px; height: 37px; border-radius: 20px; background: #000;
+  z-index: 1001; pointer-events: none;
+}
+
+.ac-home {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  width: 139px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.92);
+  z-index: 1000; pointer-events: none;
+}
+.screen[data-chrome="light"] .ac-home,
+.mini-screen[data-chrome="light"] .ac-home,
+.screen[data-theme="dark"]:not([data-chrome]) .ac-home,
+.screen[data-home="light"] .ac-home { background: rgba(255,255,255,.92); }
+.screen[data-home="dark"] .ac-home { background: rgba(0,0,0,.92); }
+
+/* ---- Liquid Glass (iOS 26 material) approximation for mockups ----
+ * Use for floating chrome only: tab bar, toolbar buttons, the search pill.
+ * Never on content cards. In SwiftUI this is .glassEffect(), not a blur you
+ * recreate by hand.
+ */
+.glass {
+  /* Over a saturated colour field, set --glass to a tint of the ground
+     (e.g. rgba(255,255,255,.22)) so the glass stays on palette. */
+  background: var(--glass, rgba(255,255,255,.62));
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255,255,255,.9),
+    inset 0 0 0 0.5px rgba(0,0,0,.06),
+    0 8px 24px rgba(0,0,0,.10);
+}
+.screen[data-theme="dark"] .glass,
+.glass-dark {
+  background: rgba(40,40,40,.55);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255,255,255,.18),
+    inset 0 0 0 0.5px rgba(255,255,255,.08),
+    0 8px 24px rgba(0,0,0,.35);
+}
+
+/* ---- iOS Dynamic Type, default (Large) size, as utility classes ----
+ * Size / leading / tracking straight from Apple's SF Pro tables. Use these
+ * when the direction is native; override family and weight freely when the
+ * direction is not, but keep the tracking logic: tighter as size grows
+ * through the text range, and never default tracking on display sizes.
+ */
+.t-large-title { font-size: 34px; line-height: 41px; letter-spacing: 0.40px; font-weight: 700; }
+.t-title1      { font-size: 28px; line-height: 34px; letter-spacing: 0.38px; font-weight: 700; }
+.t-title2      { font-size: 22px; line-height: 28px; letter-spacing: -0.26px; font-weight: 700; }
+.t-title3      { font-size: 20px; line-height: 25px; letter-spacing: -0.45px; font-weight: 600; }
+.t-headline    { font-size: 17px; line-height: 22px; letter-spacing: -0.43px; font-weight: 600; }
+.t-body        { font-size: 17px; line-height: 22px; letter-spacing: -0.43px; font-weight: 400; }
+.t-callout     { font-size: 16px; line-height: 21px; letter-spacing: -0.31px; font-weight: 400; }
+.t-subhead     { font-size: 15px; line-height: 20px; letter-spacing: -0.23px; font-weight: 400; }
+.t-footnote    { font-size: 13px; line-height: 18px; letter-spacing: -0.08px; font-weight: 400; }
+.t-caption1    { font-size: 12px; line-height: 16px; letter-spacing: 0px;     font-weight: 400; }
+.t-caption2    { font-size: 11px; line-height: 13px; letter-spacing: 0.06px;  font-weight: 400; }
+
+/* Numbers that change, sit in columns, or count: tabular. */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ---- Dark screens ----
+ * Light and dark versions of a screen sit side by side in one file. Define
+ * your tokens on :root, then redefine them for dark here (or in your own
+ * stylesheet) and restate `color`, because inherited colour does not follow a
+ * token redefined on a subtree:
+ *
+ *   .screen[data-theme="dark"] { --ground: #101113; --ink: #F2F1EE; ... ;
+ *                                background: var(--ground); color: var(--ink); }
+ *
+ * Tint the dark glass to your ground with --glass-dark if neutral grey fights it.
+ */
+.screen[data-theme="dark"] .glass,
+.glass-dark { background: var(--glass-dark, rgba(40,40,40,.55)); }
+
+/* ---- App icon ----
+ * 344pt squircle-ish tile, shot at 3x = 1032px. Design the icon inside it
+ * as the 1024 master; the mask radius matches iOS's continuous corner.
+ */
+.app-icon {
+  position: relative; width: 344px; height: 344px; flex: none;
+  border-radius: 77px; overflow: hidden; isolation: isolate;
+  background: #fff;
+}
+
+/* ---- Storyboard mini frames ---- */
+.mini {
+  position: relative; flex: none;
+  width: calc(402px * var(--mini, .4)); height: calc(874px * var(--mini, .4));
+  border-radius: calc(55px * var(--mini, .4)); overflow: hidden;
+}
+.mini > .mini-screen {
+  position: absolute; top: 0; left: 0; width: 402px; height: 874px;
+  transform: scale(var(--mini, .4)); transform-origin: 0 0;
+  overflow: hidden;
+}
+/* Defaults at zero specificity, so a mini-screen's own ground class wins. */
+:where(.mini > .mini-screen) { background: #fff; font-family: var(--sf); }
