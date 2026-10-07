@@ -34,6 +34,7 @@
 | [typographic-sticker-ui](skills/typographic-sticker-ui) | Experimental editorial UI where a readable paragraph is the layout: oversized mixed typography with stickers, cutouts, arrows, highlights and small working widgets (progress, music, weather, calendar, toggles) set inline in the sentence, on a restrained base with two to four accents. Covers sticker treatment, asymmetric layout, interactions you discover inside the poster, motion and a quality checklist. For portfolios, personal sites, landing pages and expressive dashboards. |
 | [app-designer](skills/app-designer) | iPhone app design that doesn't read as AI-made: concept interview, three directions on the core screen, iOS 26 rules, screens rendered with Apple's fonts in Chrome, scanned for AI tells and scored by a critic, plus SwiftUI and App Store panels. By [Tobia Donadon](https://www.tobiadonadon.com). |
 | [web-designer](skills/web-designer) | Websites, web apps and components that read as studio work: directions, type, colour, motion craft, a slop scan, critique, and cross-platform render checks with metric-compatible stand-in fonts. By [Tobia Donadon](https://www.tobiadonadon.com). |
+| [kawaii-pink](skills/kawaii-pink) | Cute hand-drawn logo stings rendered in code with fframes: one hot-pink boiling line on pale grey, puffy bubble-graffiti letters for any word (A-Z) that inflate one by one, smears that snap into stars, a faint 3x echo of the frame behind it, and an original mochi mascot that sits on the word, slurps the whole logo and hops to the centre with squash and stretch. Synthesized SFX on the same timeline, plus scripts to download and measure a reference clip and rebuild it. |
 
 ## Install
 
@@ -69,6 +70,7 @@ ln -s ~/src/claude-skills/skills/motion-prompts ~/.claude/skills/motion-prompts
 ln -s ~/src/claude-skills/skills/typographic-sticker-ui ~/.claude/skills/typographic-sticker-ui
 ln -s ~/src/claude-skills/skills/app-designer ~/.claude/skills/app-designer
 ln -s ~/src/claude-skills/skills/web-designer ~/.claude/skills/web-designer
+ln -s ~/src/claude-skills/skills/kawaii-pink ~/.claude/skills/kawaii-pink
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -474,3 +476,20 @@ The twelve reference images the skill was written against are other people's wor
 ## app-designer and web-designer
 
 Both skills are by [Tobia Donadon](https://www.tobiadonadon.com) and are copied here unchanged. They are not covered by this repo's MIT licence. Each renders through your own Chrome with `playwright-core`, so run `npm install --no-fund --no-audit` once in the skill folder. app-designer needs a Mac for Apple's fonts. web-designer runs on Mac, Windows or Linux; its stand-in fonts are open-licensed (see `assets/fonts/LICENSES.md`).
+
+## kawaii-pink
+
+![Frames from the MOCHI sting](skills/kawaii-pink/assets/frames.jpg)
+
+*The template's film: smears snap into stars, MOCHI inflates letter by letter, the mochi mascot blinks, slurps the logo, splats flat, stretches tall and settles.*
+
+![The bubble alphabet](skills/kawaii-pink/assets/alphabet.jpg)
+
+- `SKILL.md`: making a sting with any word, ink colour and mascot seat; how it works (everything is point lists, bubble letters as two strokes with seams and counter pills, the distance-delayed slurp warp, the 3.1x echo, the boil on twos, smear-to-star morphs, volume-keeping squash); retiming; recreating another reference; gotchas; review loop. Original characters only: if a reference uses a known mascot, the motion is kept and the character and word are swapped.
+- `template/`: the fframes project. `glyphs.rs` is an A-Z bubble alphabet, `mascot.rs` holds the mascot's states and drawing, `tools/gen_audio.py` synthesizes every sound, and `tests/` inspect every frame for the default word and the whole alphabet.
+- `scripts/study.sh`: downloads a reference with yt-dlp and measures it: contact sheets, palette and ink guess, ink coverage per frame (beats), frame-to-frame change (on twos?), audio envelope. `scripts/compare.sh` puts the reference next to the render.
+- `references/`: `beats.md` (the measured beat sheet and the constants that drive it), `lettering.md` (slit and counter rules, adding glyphs), `mascots.md` (designing an original mascot, face kit, squash numbers).
+
+**Use:** ask for a cute / kawaii / bubble-letter logo animation or mascot sting, or to rebuild a short 2D logo animation from a clip.
+
+Motion modeled on a logo sting by [G4K Motion](https://x.com/G4K_Motion). The mascot, lettering, code and sound are original.
