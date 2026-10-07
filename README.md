@@ -31,6 +31,7 @@
 | [fframes-fx](skills/fframes-fx) | Videos rendered in code with [fframes](https://github.com/dmtrKovalenko/fframes) (Rust, SVG scenes, Skia GPU, ffmpeg) plus 44 GPU shader effects ported to SkSL from [shader-effects-inc/shaders](https://github.com/shader-effects-inc/shaders): aurora, mesh gradients, god rays, lens flare, film grain, light leaks, halftone, dither, VHS, CRT, glitch, a thermal heatmap, wipes and dissolves. A loader that applies each effect's documented defaults, a gallery that renders every effect next to its upstream cover, a porting guide for the rest, and the lessons from making a 21 s film with it. |
 | [frosted-figure](skills/frosted-figure) | Any photo of a person as a figure behind frosted glass: a soft, grainy gradient-mapped silhouette on off-white, pale at the rim and deep in the core, rendered in plain JS on a canvas to PNG. The person is cut out in the browser with MediaPipe (any background), or colour-keyed off a plain backdrop. Green, gold, yellow, pink and blue palettes, plus a matching ladder built in OKLab from any hex colour. |
 | [motion-prompts](skills/motion-prompts) | The real prompts behind 231 motion videos made with Claude Opus 5.5, scraped from [prompt-motion.com](https://prompt-motion.com/) and sorted into 11 categories: showreels, product promos and launch films, product explainers, concept explainers, short films, scenes and 3D, music, UI and logo motion, portfolio reels, games, and follow-up edits. Identical prompts are merged, fill-in brief templates are pulled to the top, and every entry credits the creator and links the post, the video and the gallery page. Also lists the four skills shared on the site. The prompt text belongs to its creators and isn't committed: one `uv run` of the included script fetches it and renders the library locally. |
+| [typographic-sticker-ui](skills/typographic-sticker-ui) | Experimental editorial UI where a readable paragraph is the layout: oversized mixed typography with stickers, cutouts, arrows, highlights and small working widgets (progress, music, weather, calendar, toggles) set inline in the sentence, on a restrained base with two to four accents. Covers sticker treatment, asymmetric layout, interactions you discover inside the poster, motion and a quality checklist. For portfolios, personal sites, landing pages and expressive dashboards. |
 
 ## Install
 
@@ -63,6 +64,7 @@ ln -s ~/src/claude-skills/skills/hairline-create ~/.claude/skills/hairline-creat
 ln -s ~/src/claude-skills/skills/fframes-fx ~/.claude/skills/fframes-fx
 ln -s ~/src/claude-skills/skills/frosted-figure ~/.claude/skills/frosted-figure
 ln -s ~/src/claude-skills/skills/motion-prompts ~/.claude/skills/motion-prompts
+ln -s ~/src/claude-skills/skills/typographic-sticker-ui ~/.claude/skills/typographic-sticker-ui
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -457,3 +459,11 @@ Example photos are official 2021 NASA portraits of [Jessica Watkins](https://com
 **Use:** ask for a motion video, launch film, showreel or explainer and for a prompt or brief to start from, or ask what other people prompted for something similar.
 
 Prompts and videos belong to their creators, and every entry credits and links the original post. The gallery is curated by [@p4nthera_](https://x.com/p4nthera_).
+
+## typographic-sticker-ui
+
+- `SKILL.md`: typography first and UI second. It covers type pairings and how far to break convention; inline visual interruption ("I love [BUILDING sticker] things with [AI sticker]…"); Pinterest searches for sticker references; sticker treatment (cutout borders, tape, rotation, grain); widgets embedded in the sentence; asymmetric layout; colour; interaction and motion; content density; and a closing checklist.
+
+**Use:** ask for a portfolio, personal site, landing page or dashboard in an editorial, sticker or collage style, or name the skill.
+
+The twelve reference images the skill was written against are other people's work collected from Pinterest. They are kept locally in `reference_images/` (gitignored) and not redistributed. The skill works without them.
