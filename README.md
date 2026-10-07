@@ -30,6 +30,7 @@
 | [hairline-create](skills/hairline-create) | One isometric line figure that answers the pointer, in the style and on the engine of [@lucasmarkes/hairline](https://github.com/lucasmarkes/hairline): rounded solids in a single stroke, springs instead of timers, a slider that drives one number. You pick a concept, it writes one figure file against a fixed kernel, then builds, validates and screenshots it into a single self-contained HTML page. By Lucas Marques. |
 | [fframes-fx](skills/fframes-fx) | Videos rendered in code with [fframes](https://github.com/dmtrKovalenko/fframes) (Rust, SVG scenes, Skia GPU, ffmpeg) plus 44 GPU shader effects ported to SkSL from [shader-effects-inc/shaders](https://github.com/shader-effects-inc/shaders): aurora, mesh gradients, god rays, lens flare, film grain, light leaks, halftone, dither, VHS, CRT, glitch, a thermal heatmap, wipes and dissolves. A loader that applies each effect's documented defaults, a gallery that renders every effect next to its upstream cover, a porting guide for the rest, and the lessons from making a 21 s film with it. |
 | [frosted-figure](skills/frosted-figure) | Any photo of a person as a figure behind frosted glass: a soft, grainy gradient-mapped silhouette on off-white, pale at the rim and deep in the core, rendered in plain JS on a canvas to PNG. The person is cut out in the browser with MediaPipe (any background), or colour-keyed off a plain backdrop. Green, gold, yellow, pink and blue palettes, plus a matching ladder built in OKLab from any hex colour. |
+| [motion-prompts](skills/motion-prompts) | The real prompts behind 231 motion videos made with Claude Opus 5.5, scraped from [prompt-motion.com](https://prompt-motion.com/) and sorted into 11 categories: showreels, product promos and launch films, product explainers, concept explainers, short films, scenes and 3D, music, UI and logo motion, portfolio reels, games, and follow-up edits. Identical prompts are merged, fill-in brief templates are pulled to the top, and every entry credits the creator and links the post, the video and the gallery page. Also lists the four skills shared on the site. The prompt text belongs to its creators and isn't committed: one `uv run` of the included script fetches it and renders the library locally. |
 
 ## Install
 
@@ -61,6 +62,7 @@ ln -s ~/src/claude-skills/skills/sketch-storyboarding ~/.claude/skills/sketch-st
 ln -s ~/src/claude-skills/skills/hairline-create ~/.claude/skills/hairline-create
 ln -s ~/src/claude-skills/skills/fframes-fx ~/.claude/skills/fframes-fx
 ln -s ~/src/claude-skills/skills/frosted-figure ~/.claude/skills/frosted-figure
+ln -s ~/src/claude-skills/skills/motion-prompts ~/.claude/skills/motion-prompts
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -170,7 +172,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu) and hairline-create (MIT, Lucas Marques). The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu) and hairline-create (MIT, Lucas Marques). motion-prompts commits only its script, categories and index (MIT). The prompts it fetches belong to their creators and are not in this repo. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
 
 ## pixel-showcase
 
@@ -443,3 +445,15 @@ Effects ported from [shader-effects-inc/shaders](https://github.com/shader-effec
 **Use:** hand over a photo of a person and ask for it frosted / as a gradient figure / in a set of colours, or run `/frosted-figure`.
 
 Example photos are official 2021 NASA portraits of [Jessica Watkins](https://commons.wikimedia.org/wiki/File:Jessica_Watkins_Official_NASA_Portrait_in_2021_(cropped).jpg) and [Kjell Lindgren](https://commons.wikimedia.org/wiki/File:Kjell_Lindgren_Official_NASA_Portrait_in_2021.jpg) (public domain, via Wikimedia Commons). The person cutout uses [MediaPipe](https://github.com/google-ai-edge/mediapipe) `@mediapipe/tasks-vision` (Apache-2.0) and its `selfie_multiclass_256x256` model, both downloaded at runtime and not included here. The look is after a frosted-glass green figure image seen on Pinterest; the code and palettes (sampled colour values) are original.
+
+## motion-prompts
+
+- `SKILL.md`: how to pick and adapt a prompt, what the prompts that worked have in common (a length and a bar instead of a storyboard, research before design, real assets, cuts on the beat, frames as a pure function of time, the giveaways to avoid), and a generated index of categories, reusable briefs and the four shared skills.
+- First run: `cd skills/motion-prompts && uv run scripts/update.py` fetches the gallery and renders the library. It takes about 7 s and needs no browser. The prompts belong to their creators, so `prompts/` and `data/prompts.json` are generated locally and gitignored.
+- `prompts/<category>.md`: 11 files. Each starts with the reusable briefs (`<inputs>` templates, `[product]` / `{{PRODUCT}}` placeholders, long fully specified briefs), then lists the rest with the most-reused prompts first. Each entry has the creator, date, video, gallery page, and tag chips for stack, iterations, effort, aspect ratio and language.
+- `data/prompts.json`: all 231 entries as data. `data/categories.json` (committed): the categories and the slug → category assignment.
+- `scripts/update.py`: `uv run scripts/update.py --fetch` re-scrapes the site from the Next.js payload each page embeds, so no browser is needed. New entries go to `prompts/uncategorized.md` until they get a category.
+
+**Use:** ask for a motion video, launch film, showreel or explainer and for a prompt or brief to start from, or ask what other people prompted for something similar.
+
+Prompts and videos belong to their creators, and every entry credits and links the original post. The gallery is curated by [@p4nthera_](https://x.com/p4nthera_).
