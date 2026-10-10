@@ -35,6 +35,7 @@
 | [app-designer](skills/app-designer) | iPhone app design that doesn't read as AI-made: concept interview, three directions on the core screen, iOS 26 rules, screens rendered with Apple's fonts in Chrome, scanned for AI tells and scored by a critic, plus SwiftUI and App Store panels. By [Tobia Donadon](https://www.tobiadonadon.com). |
 | [web-designer](skills/web-designer) | Websites, web apps and components that read as studio work: directions, type, colour, motion craft, a slop scan, critique, and cross-platform render checks with metric-compatible stand-in fonts. By [Tobia Donadon](https://www.tobiadonadon.com). |
 | [kawaii-pink](skills/kawaii-pink) | Cute hand-drawn logo stings rendered in code with fframes: one hot-pink boiling line on pale grey, puffy bubble-graffiti letters for any word (A-Z) that inflate one by one, smears that snap into stars, a faint 3x echo of the frame behind it, and an original mochi mascot that sits on the word, slurps the whole logo and hops to the centre with squash and stretch. Synthesized SFX on the same timeline, plus scripts to download and measure a reference clip and rebuild it. |
+| [anatomy](skills/anatomy) | A technical idea explained as a real, working machine: crafted interactive isometric SVG figures (a dial gauge, a test rig, a desk computer, an arcade cabinet, a rocket engine in a test stand) with many small precise parts, four-tone shading, correct painter's order, a framed card with title and live readout, and calm eased motion. A zero-dependency kit (lathe, tubes, depth sort, an audit that proves nothing intersects), WebGL shaders that live in the same isometric camera (exhaust, water, caustics, lamp light) and an optional true-3D mode. Framework-free or React/Next.js. By [Ryan](https://github.com/wheresryan22/anatomy). |
 
 ## Install
 
@@ -71,6 +72,7 @@ ln -s ~/src/claude-skills/skills/typographic-sticker-ui ~/.claude/skills/typogra
 ln -s ~/src/claude-skills/skills/app-designer ~/.claude/skills/app-designer
 ln -s ~/src/claude-skills/skills/web-designer ~/.claude/skills/web-designer
 ln -s ~/src/claude-skills/skills/kawaii-pink ~/.claude/skills/kawaii-pink
+ln -s ~/src/claude-skills/skills/anatomy ~/.claude/skills/anatomy
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -180,7 +182,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu) and hairline-create (MIT, Lucas Marques). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques) and anatomy (MIT, Ryan). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
 
 ## pixel-showcase
 
@@ -493,3 +495,18 @@ Both skills are by [Tobia Donadon](https://www.tobiadonadon.com) and are copied 
 **Use:** ask for a cute / kawaii / bubble-letter logo animation or mascot sting, or to rebuild a short 2D logo animation from a clip.
 
 Motion modeled on a logo sting by [G4K Motion](https://x.com/G4K_Motion). The mascot, lettering, code and sound are original.
+
+## anatomy
+
+![A Raptor 2 rocket engine firing in an isometric test stand, drawn with anatomy](skills/anatomy/.github/assets/raptor-engine-firing.webp)
+
+*`examples/raptor-engine`, light theme, firing. The engine and stand are SVG; the plume is a WebGL shader in the same isometric camera.*
+
+- `SKILL.md`: the one idea (the object is the explanation: invent a real machine whose working *is* the concept) and the workflow: size it as a Figure, Hero or Epic, collect the true numbers, invent the object, write a parts list of 40+, build geometry once, paint back to front, frame it in a card, make it live, then verify like a critic (audit, line check, 4× close-ups in both themes).
+- `kit/`: zero-dependency modules for isometric solids, lathed round parts, tubes and cables, depth sorting, shaders and an audit (`kit/audit.mjs`) that proves nothing passes through anything at rest, apart and in every frame of an explode.
+- `examples/`: eight complete figures (dial indicator, desk computer, arcade cabinet, Raptor engine, ripple tank, test rig, spot plate, turning dial). Test rig and spot plate are React/Next production figures and turning dial is the 3D mode; the framework-free ones build with `node examples/<name>/build.mjs` (`--light` for the light theme).
+- `references/`, `scripts/`, `evals/`: the deeper guides, capture and check scripts, and the skill's eval set.
+
+**Use:** ask for an isometric illustration, a technical figure for docs or a post, or an interactive explainer of how something works. Needs Node 20.10 or later.
+
+Copied unchanged from [wheresryan22/anatomy](https://github.com/wheresryan22/anatomy) (`dbf697a`), with its MIT `LICENSE`. By Ryan; see [skills.wheresryan.sh/anatomy](https://skills.wheresryan.sh/anatomy).
