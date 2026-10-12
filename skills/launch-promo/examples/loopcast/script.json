@@ -1,0 +1,86 @@
+{
+ "voice": "EXAVITQu4vr4xnSDxMaL",
+ "model": "eleven_multilingual_v2",
+ "settings": {
+  "stability": 0.4,
+  "similarity_boost": 0.8,
+  "style": 0.25,
+  "use_speaker_boost": true,
+  "speed": 1.15
+ },
+ "end": 57.5,
+ "lines": [
+  [
+   0.1,
+   "Your rival's reel just went viral."
+  ],
+  [
+   2.06,
+   "What format? Can we copy it? By Friday?"
+  ],
+  [
+   4.25,
+   "It's 1 AM and you're still pasting links in a doc."
+  ],
+  [
+   7.48,
+   "Every trend you miss is reach you lose."
+  ],
+  [
+   10.36,
+   "Meet Loopcast, your content loop on autopilot."
+  ],
+  [
+   13.62,
+   "Text it your brand and a niche, and boom,"
+  ],
+  [
+   16.74,
+   "a sourced, scripted reel lands in your texts."
+  ],
+  [
+   19.44,
+   "Even better, it grades its own drafts, then waits for your yes."
+  ],
+  [
+   23.7,
+   "Behind it, four TinyFish primitives."
+  ],
+  [
+   26.26,
+   "Search finds this week's reels and threads."
+  ],
+  [
+   29.8,
+   "Fetch reads them. Agent clicks through YouTube."
+  ],
+  [
+   32.64,
+   "Browser grabs the pixels. From TikTok to TechCrunch,"
+  ],
+  [
+   36.34,
+   "yes, even Reddit."
+  ],
+  [
+   37.7,
+   "Watch it all from iMessage or the dashboard."
+  ],
+  [
+   41.04,
+   "Or just run one command."
+  ],
+  [
+   43.94,
+   "Research, script, render, review, right from your terminal."
+  ],
+  [
+   48.24,
+   "Twenty-seven cents a run. Free to fork."
+  ],
+  [
+   50.74,
+   "Loopcast. Every trend, turned into a reel."
+  ]
+ ]
+}

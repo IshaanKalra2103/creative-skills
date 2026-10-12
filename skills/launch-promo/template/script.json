@@ -1,0 +1,15 @@
+{
+  "voice": "EXAVITQu4vr4xnSDxMaL",
+  "model": "eleven_multilingual_v2",
+  "settings": {"stability": 0.4, "similarity_boost": 0.8, "style": 0.25, "use_speaker_boost": true, "speed": 1.15},
+  "end": 20,
+  "lines": [
+    [0.15, "Your launch post got a thousand replies."],
+    [2.75, "And nobody's answering them."],
+    [5.45, "Meet Orbit, your replies on autopilot."],
+    [8.95, "It reads every reply, drafts the answer,"],
+    [11.9, "and waits for your okay."],
+    [15.45, "Orbit. Every reply, answered."],
+    [17.75, "Start free today."]
+  ]
+}

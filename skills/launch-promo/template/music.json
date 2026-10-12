@@ -1,0 +1,13 @@
+{
+  "model": "music_v2_5",
+  "base": ["upbeat playful tech product launch music", "modern funky electro-pop", "120 BPM", "C major", "instrumental",
+           "tight punchy drums", "handclaps", "bouncy syncopated synth bass", "plucky marimba-like synth",
+           "bright staccato synth chords", "clean polished wide mix", "advert music bed that sits under a voiceover"],
+  "negative": ["vocals", "singing", "choir", "spoken word", "rap", "lo-fi", "cinematic orchestra", "dubstep", "trap", "heavy distortion", "chiptune"],
+  "sections": [
+    {"name": "Problem", "until": 5.3, "styles": ["darker minor feel", "low-pass filtered groove", "ticking hi-hats like a clock", "muted", "riser into a drop on the final beat"], "negative": ["full bright chords"]},
+    {"name": "Main", "until": 15.4, "styles": ["drop on the first beat", "full bright groove", "confident and fun", "four-on-the-floor kick", "funky synth bass", "claps on 2 and 4", "plucky lead hook", "steady energy, no breakdowns"], "negative": ["breakdown", "silence"]},
+    {"name": "Breakdown", "until": 18.4, "styles": ["drums and bass drop out", "only soft warm synth chords and plucks", "airy", "building anticipation"], "negative": ["kick drum", "bass groove", "snare"]},
+    {"name": "Outro", "until": 21.9, "styles": ["one big final hit with kick, bass and full chord on the first beat", "then the chord rings out and decays to silence"], "negative": ["groove continues", "new melody", "fade in"], "text": "[Outro]\n{one final hit, then ring out}"}
+  ]
+}

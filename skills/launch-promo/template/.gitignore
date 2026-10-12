@@ -1,0 +1,4 @@
+build/*
+!build/vo_take_*.mp3
+!build/vo_take_*.json
+!build/music_*.mp3

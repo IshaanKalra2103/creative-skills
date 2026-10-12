@@ -36,6 +36,7 @@
 | [web-designer](skills/web-designer) | Websites, web apps and components that read as studio work: directions, type, colour, motion craft, a slop scan, critique, and cross-platform render checks with metric-compatible stand-in fonts. By [Tobia Donadon](https://www.tobiadonadon.com). |
 | [kawaii-pink](skills/kawaii-pink) | Cute hand-drawn logo stings rendered in code with fframes: one hot-pink boiling line on pale grey, puffy bubble-graffiti letters for any word (A-Z) that inflate one by one, smears that snap into stars, a faint 3x echo of the frame behind it, and an original mochi mascot that sits on the word, slurps the whole logo and hops to the centre with squash and stretch. Synthesized SFX on the same timeline, plus scripts to download and measure a reference clip and rebuild it. |
 | [anatomy](skills/anatomy) | A technical idea explained as a real, working machine: crafted interactive isometric SVG figures (a dial gauge, a test rig, a desk computer, an arcade cabinet, a rocket engine in a test stand) with many small precise parts, four-tone shading, correct painter's order, a framed card with title and live readout, and calm eased motion. A zero-dependency kit (lathe, tubes, depth sort, an audit that proves nothing intersects), WebGL shaders that live in the same isometric camera (exhaust, water, caustics, lamp light) and an optional true-3D mode. Framework-free or React/Next.js. By [Ryan](https://github.com/wheresryan22/anatomy). |
+| [launch-promo](skills/launch-promo) | Kinetic product-launch films rendered in code: paper-and-ink sticker cards with hard shadows, one acid accent and a brand field colour, heavy Inter headlines rising word by word on the voiceover, a mascot that carries the cuts, tilted 3D phones, dark feature cards that light up one by one, ring/circle/panel wipes, stamps, counters, toggles and a CTA click. One pure `seek(t)` HTML page rendered by parallel headless Chromium with motion blur, an ElevenLabs voiceover laid line by line on target beats, an ElevenLabs Music score cut to the scenes, and synthesised SFX. A 20 s template for any product, a full 57.5 s worked example, scripts to study a reference, and references for the aesthetic, motion, text, structure and audio. |
 
 ## Install
 
@@ -73,6 +74,7 @@ ln -s ~/src/claude-skills/skills/app-designer ~/.claude/skills/app-designer
 ln -s ~/src/claude-skills/skills/web-designer ~/.claude/skills/web-designer
 ln -s ~/src/claude-skills/skills/kawaii-pink ~/.claude/skills/kawaii-pink
 ln -s ~/src/claude-skills/skills/anatomy ~/.claude/skills/anatomy
+ln -s ~/src/claude-skills/skills/launch-promo ~/.claude/skills/launch-promo
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
