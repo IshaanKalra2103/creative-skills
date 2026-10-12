@@ -8,6 +8,8 @@ uv run render.py sheet A B [fps] [cols]    labelled contact sheet of [A, B] -> b
 uv run render.py cues                      SFX cue list + film settings -> build/sfx_cues.json, build/film.json (audio.py reads both)
 uv run render.py full [--workers 8] [--sub 4] [--a 0 --b DUR]   motion-blurred frames -> build/video.mp4 (big, near-lossless)
 uv run render.py mux                       build/video.mp4 + build/mix.wav -> build/final.mp4 (x264 crf 20, -14 LUFS)
+                                           (assumes a full render from t=0; a --a/--b window would get audio from 0)
+--sub: 1 for drafts (no blur), 4+ for finals. Never 2: fast moves show as two ghost copies instead of a smear.
 Add --hud to draw the corner HUD.
 """
 import argparse, base64, functools, http.server, io, json, multiprocessing as mp, os, pathlib, socketserver, subprocess, sys, threading

@@ -22,7 +22,14 @@
 
 - **Output size.** Grain at CRF 13 makes the intermediate about 15 MB/s (875 MB for 57.5 s). `render.py mux` re-encodes at CRF 20, slow. Never hand over the intermediate.
 - **Motion blur cost.** With `--sub 4`, still frames cost 2 screenshots and moving frames 4. A 57.5 s, 60 fps film on 6–8 CPU workers takes about 25 min (`--sub 1`: about 7 min). Use `sheet` and `at` while iterating; render `full` only when the stills are right.
-- **Killing a full render orphans the headless Chromium workers.** Run `pkill -f "render.py full"`, then `pkill -f ms-playwright/chromium_headless_shell`, and delete `build/seg_*.mp4` before restarting.
+- **Killing a full render orphans its workers** (Python, headless Chromium, ffmpeg).
+  - Kill the render's own process tree, not every Chromium on the machine, because other sessions may be using Playwright too.
+  - In zsh, `kill $PIDS` passes one unsplit string and silently fails. Pipe the PID list through `xargs kill -9`.
+  - Delete `build/seg_*.mp4` before restarting.
+- **`--sub 2` ghosts:** a fast move shows as two distinct copies instead of a smear. Use `--sub 1` (no blur) for drafts and 4 or more for finals.
+- **`mux` pairs the video with audio from t=0.** Mux full renders only, not `--a/--b` windows.
+- **A loaded machine** (a VM, another render, a malware scan) can slow `full` 10× without failing. If segments stop growing, check `uptime` and `ps` before blaming the code.
+- **Don't write these notes through an unquoted shell heredoc.** The backticks run as commands.
 - **macOS:** QuickTime can't open files under the session's `/private/tmp` scratch folder (it opens nothing, silently). Copy them somewhere under `~` first.
 
 ## Process
