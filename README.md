@@ -37,6 +37,7 @@
 | [kawaii-pink](skills/kawaii-pink) | Cute hand-drawn logo stings rendered in code with fframes: one hot-pink boiling line on pale grey, puffy bubble-graffiti letters for any word (A-Z) that inflate one by one, smears that snap into stars, a faint 3x echo of the frame behind it, and an original mochi mascot that sits on the word, slurps the whole logo and hops to the centre with squash and stretch. Synthesized SFX on the same timeline, plus scripts to download and measure a reference clip and rebuild it. |
 | [anatomy](skills/anatomy) | A technical idea explained as a real, working machine: crafted interactive isometric SVG figures (a dial gauge, a test rig, a desk computer, an arcade cabinet, a rocket engine in a test stand) with many small precise parts, four-tone shading, correct painter's order, a framed card with title and live readout, and calm eased motion. A zero-dependency kit (lathe, tubes, depth sort, an audit that proves nothing intersects), WebGL shaders that live in the same isometric camera (exhaust, water, caustics, lamp light) and an optional true-3D mode. Framework-free or React/Next.js. By [Ryan](https://github.com/wheresryan22/anatomy). |
 | [launch-promo](skills/launch-promo) | Kinetic product-launch films rendered in code: paper-and-ink sticker cards with hard shadows, one acid accent and a brand field colour, heavy Inter headlines rising word by word on the voiceover, a mascot that carries the cuts, tilted 3D phones, dark feature cards that light up one by one, ring/circle/panel wipes, stamps, counters, toggles and a CTA click. One pure `seek(t)` HTML page rendered by parallel headless Chromium with motion blur, an ElevenLabs voiceover laid line by line on target beats, an ElevenLabs Music score cut to the scenes, and synthesised SFX. A 20 s template for any product, a full 57.5 s worked example, scripts to study a reference, and references for the aesthetic, motion, text, structure and audio. |
+| [3d-deep-explainer](skills/3d-deep-explainer) | A cinematic, interactive 3D "machine" in three.js that explains how something works: data flows along a workbench through 6–10 stations (glass lenses for matrices, drawer cabinets for lookup tables, beams sized by weight, gauges, histograms, an exploded view for depth), with eased fly-throughs, what-if toggles that re-run the computation, a guided Tour and a frame-stepped tour video. A tiny real implementation runs live, so every number on screen is genuine. Comes with a generic engine and 3-station starter, a 13-part station cookbook, a train-a-tiny-real-model pipeline, screenshot and recording scripts, and the full Next-Word Machine (a real 2-layer Transformer with a MoE twin) as the worked example. |
 
 ## Install
 
@@ -75,6 +76,7 @@ ln -s ~/src/claude-skills/skills/web-designer ~/.claude/skills/web-designer
 ln -s ~/src/claude-skills/skills/kawaii-pink ~/.claude/skills/kawaii-pink
 ln -s ~/src/claude-skills/skills/anatomy ~/.claude/skills/anatomy
 ln -s ~/src/claude-skills/skills/launch-promo ~/.claude/skills/launch-promo
+ln -s ~/src/claude-skills/skills/3d-deep-explainer ~/.claude/skills/3d-deep-explainer
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -512,3 +514,19 @@ Motion modeled on a logo sting by [G4K Motion](https://x.com/G4K_Motion). The ma
 **Use:** ask for an isometric illustration, a technical figure for docs or a post, or an interactive explainer of how something works. Needs Node 20.10 or later.
 
 Copied unchanged from [wheresryan22/anatomy](https://github.com/wheresryan22/anatomy) (`dbf697a`), with its MIT `LICENSE`. By Ryan; see [skills.wheresryan.sh/anatomy](https://skills.wheresryan.sh/anatomy).
+
+## 3d-deep-explainer
+
+![The attention plane of the Next-Word Machine: a masked, softmaxed 5×5 score grid above the bench, with beams from the query word to every key sized by attention weight](skills/3d-deep-explainer/.github/assets/attention-plane.jpg)
+
+*`examples/next-word-machine`, the attention station: q·k/√d, the causal mask, then softmax across each row, with beams sized by weight. Every number comes from the live model.*
+
+![The MoE station: a router dial picks the top 2 of 4 experts, the other two are labelled "never run"](skills/3d-deep-explainer/.github/assets/moe-router.jpg)
+
+- `SKILL.md`: the workflow and why each step matters: find the true computation (a tiny real implementation, verified against a reference), design the machine (data flow → 6–10 stations, a table mapping concepts to physical objects), scaffold from the template, wire what-if toggles that re-run the real thing, write tight per-station explanations whose numbers match the screen, verify in a real GPU browser, record the tour. Ends with a checklist.
+- `templates/`: a generic, runnable starter that opens from `file://` (three.js from a pinned CDN, no build step): the engine (renderer, studio lighting, bloom, camera rig and tour, labels, control panel, filmstrip, URL presets, deterministic `?record` mode) and a 3-station example (a soft lookup: dot-product scores → softmax with temperature → a weighted blend), plus `tools/` to check the JS numbers against a Python reference.
+- `references/`: `design-language.md` (lighting, materials, palette and colour coding, type, overlay layout, camera moves), `engine-api.md`, `station-cookbook.md` (13 reusable parts with code: value-coloured vector bars, matrix planes, beams, Σ assembly, histogram, gauge, drawer cabinet, lens, router dial, growing shelf, residual arch, exploded stacks), `real-model.md` (training a tiny model with uv + torch so the numbers are readable, exporting weights, a JS forward pass that returns every intermediate, verifying it), `gotchas.md`.
+- `scripts/`: `new_explainer.sh` (scaffold a new explainer), `shoot.py` (screenshots of every station at several widths, console errors, fps), `record.py` (frame-stepped tour → mp4 with ffmpeg).
+- `examples/next-word-machine/`: a 2-layer, 2-head Transformer trained on a 40-sentence toy corpus, run live in the browser through 10 stations (tokenizer gate, embedding cabinet, positions, Q/K/V lenses, attention plane, W_z or MoE router, stacked layers, output lens, loss and perplexity gauges, decoder with a growing KV-cache shelf), with mask, dense/MoE, decoding and exploded-view toggles; plus its training, sweep, export and verify scripts. Built as an exam-review explainer for a graduate NLP course.
+
+**Use:** ask for a 3D, interactive or fly-through explanation of how something works (an ML model, an algorithm, a data structure, a protocol, a physical or biological process), or share a 3D viz you want to emulate. Needs Chrome, `uv` and `ffmpeg`; `torch` only for the train-a-real-model path. three.js is MIT, loaded from a CDN.
