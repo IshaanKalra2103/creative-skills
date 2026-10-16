@@ -1,0 +1,14 @@
+# Board: Larry and Sergey with the Mondrian Google board. The reel's full-length frame is
+# outpainted, so the plate is a mosaic of reference ticks; it drifts 108 px right and settles.
+# `move` is [t, x, y, zoom] of mosaic point (480, 640), fitted per tick. No caption.
+[[shot]]
+at = 18.0
+kind = "photo"
+image = "board_mosaic.jpg"
+focus = [480, 640]
+scale = 1.0
+bg = "#3a3530"
+move = [[0.0, 360.0, 640.0, 1.0], [0.1, 402.1, 640.0, 0.9998], [0.2, 424.3, 639.8, 0.9999],
+        [0.3, 437.9, 639.7, 0.9995], [0.4, 446.4, 639.9, 0.9994], [0.5, 453.5, 640.5, 0.9989],
+        [0.6, 458.6, 640.5, 0.9991], [0.7, 461.9, 641.3, 0.9991], [0.8, 464.4, 641.2, 0.9990],
+        [0.9, 466.6, 639.3, 0.9992], [1.0, 467.6, 639.3, 0.9990], [1.1, 468.1, 639.3, 0.9988]]

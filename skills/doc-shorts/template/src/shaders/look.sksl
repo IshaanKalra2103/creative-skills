@@ -1,0 +1,21 @@
+// The reference's print/screen texture as one multiply layer:
+// horizontal scanlines, a halftone dot screen rotated 30 degrees, and a soft vignette.
+uniform float3 iResolution;
+uniform float uScanDepth;
+uniform float uScanPeriod;
+uniform float uDotDepth;
+uniform float uDotPeriod;
+uniform float uVignette;
+
+half4 main(float2 p) {
+    float scan = 1.0 - uScanDepth * (0.5 + 0.5 * cos(6.2831853 * p.y / uScanPeriod));
+    float c = 0.8660254;
+    float s = 0.5;
+    float2 q = float2(c * p.x - s * p.y, s * p.x + c * p.y) / uDotPeriod;
+    float d = length(fract(q) - 0.5);
+    float dots = 1.0 - uDotDepth * smoothstep(0.30, 0.48, d);
+    float2 uv = p / iResolution.xy - 0.5;
+    float r = length(uv * float2(1.0, 0.72));
+    float vig = 1.0 - uVignette * smoothstep(0.30, 0.78, r);
+    return half4(half3(scan * dots * vig), 1.0);
+}

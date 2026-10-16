@@ -1,0 +1,10 @@
+# The question typed on beige paper with a caret; the page pulls back over the last ticks.
+[[shot]]
+at = 13.5
+kind = "card"
+bg = "paper"
+enter = "cursor"
+text = "What if websites were ranked?"
+# characters per tick, read off the reference (two a tick, the "?" alone)
+reveal = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 29]
+zoom_out = true

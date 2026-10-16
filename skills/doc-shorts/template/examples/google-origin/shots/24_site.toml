@@ -1,0 +1,27 @@
+# Call to action: the blurred earnedits.com landing page slides in and a sharp search pill
+# types the domain. The *_w widths squeeze each line to the reference's measured extent.
+[[shot]]
+at = 25.3
+kind = "site"
+brand = "EARNEDITS"
+brand_w = 200
+headline = ["The #1 Marketplace for After", "Effects Project Files"]
+headline_w = [584, 412]
+kicker = "BUILT BY EDITORS  ·  FOR EDITORS"
+kicker_w = 332
+body = [
+  "Premium After Effects project files for Creators, Agencies, and",
+  "Freelancers. Titles, Overlays, Transitions, Kinetic type and more — all",
+  "editable. New projects every week, crafted by working editors and",
+  "motion designers. Download, drop in your footage and render in",
+  "minutes.",
+]
+body_w = [640, 676, 676, 664, 98]
+buttons = ["Browse Projects", "Become Creator"]
+buttons_w = [130, 132]
+features = ["Edit Text & Colors", "Drop Your Assets", "Render & Export"]
+features_w = [176, 160, 164]
+phone = "google"                       # the reference's screen recording shows Drive/Gmail icons
+query = "earnedits.com"
+reveal = [0, 1, 3, 4, 6, 8, 9, 11, 12, 13]                  # characters per tick
+caret = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0]  # caret on/off per tick

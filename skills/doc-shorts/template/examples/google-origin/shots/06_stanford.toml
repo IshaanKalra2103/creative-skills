@@ -1,0 +1,11 @@
+# Stanford: the reel's composite (people AI-extended onto a Hoover Tower backdrop) animates
+# its layers independently, so the picture is a flipbook: one full-frame plate per tick, cut
+# from the reference with the caption inpainted. The red two-line title rises from below
+# the frame and shrinks onto the chests with the kind's default (measured) rise.
+[[shot]]
+at = 5.6
+kind = "photo"
+frames = ["stanford_t00.jpg", "stanford_t01.jpg", "stanford_t02.jpg", "stanford_t03.jpg", "stanford_t04.jpg",
+          "stanford_t05.jpg", "stanford_t06.jpg", "stanford_t07.jpg", "stanford_t08.jpg", "stanford_t09.jpg"]
+push = 0.0
+caption = { style = "title", text = "Stanford", sub = "University", cx = 362.5, y = 695 }

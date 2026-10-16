@@ -1,0 +1,14 @@
+# 1.1 s  "changed the internet": the XP Bliss hill with an Internet Explorer window and a
+# spinning blue wireframe globe; the camera pulls back while CHANGE / THE / INTERNET build up.
+# bg_rect is the measured rest placement of bliss.jpg (the reel stretches it ~2.2x vertically),
+# grade = "bliss" is the reel's colour grade (blue sky -> teal), and title_stretch pins the
+# measured line widths exactly.
+[[shot]]
+at = 1.1
+kind = "browser"
+image = "bliss.jpg"
+bg_rect = [-398.0, -1271.8, 2020.0, 2541.0]
+grade = "bliss"
+window_title = "Cool Music - Microsoft Internet Explorer"
+title = ["CHANGE THE", "INTERNET"]
+title_stretch = [1.214, 1.142]

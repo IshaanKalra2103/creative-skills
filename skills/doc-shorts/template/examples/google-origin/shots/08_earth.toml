@@ -1,0 +1,14 @@
+# 7.4 s  "The internet is exploding": a cyan network Earth over North America (stock footage
+# in the reel), rebuilt as a baked plate:
+#   uv run --with numpy --with scipy --with pillow python tools/earth_bake.py \
+#       --preset google-na --out <this spec>/assets/earth_plate.png
+# Motion (roll/scale/zoom blur per tick) is the kind's default, measured on the footage.
+# The caption types "Exploding" at the reel's uneven pace (letters, entering-letter opacity,
+# first-letter opacity per tick) from the reel's left edge.
+[[shot]]
+at = 7.4
+kind = "earth"
+plate = "earth_plate.png"
+caption = "Exploding"
+caption_x = 251.0
+reveal = [[1, 0.0, 0.45], [2, 0.0, 1.0], [3, 0.3, 1.0], [4, 0.7, 1.0], [6, 0.0, 1.0], [7, 0.6, 1.0], [9, 0.0, 1.0]]

@@ -1,0 +1,7 @@
+# "Better way" enters from the right edge with a smear and decelerates into the centre.
+[[shot]]
+at = 20.7
+kind = "card"
+bg = "black"
+enter = "slide"
+text = "Better way"

@@ -1,0 +1,10 @@
+# The Google-origin reel (Pinterest pin 1086986060090796381, by EarnEdits.com) rebuilt shot for
+# shot with the generic engine. It doubles as the engine's regression test: with this spec every
+# tick matches the reel (study it with scripts/study.py reference/pin.mp4 <dir>, then
+# REF=<dir>/f10 tools/cmp.sh examples/google-origin/video.toml out.png <ticks>).
+# Shots use exact `at` times and measured keyframes; a new film would use `cue` words and defaults.
+# Credits: assets/SOURCES.md. The audio is the reel's own narration and music.
+[video]
+end = 27.07
+audio = "ref.wav"
+shots_dir = "shots"

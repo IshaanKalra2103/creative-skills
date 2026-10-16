@@ -1,0 +1,26 @@
+# Garage: the 1998 office photo as the reel shows it (outpainted top and bottom: a 2x mosaic
+# of reference ticks, so scale 0.5). It pulls out from 2x with a blur on the first two
+# ticks, holds, then pans right. `move` is [t, x, y, zoom] of mosaic point (720, 1280);
+# the caption types word by word ("small" fades in) and its left edge follows the pan.
+[[shot]]
+at = 16.7
+kind = "photo"
+image = "garage_mosaic.jpg"
+focus = [720, 1280]
+scale = 0.5
+bg = "#1a1410"
+blur = [4, 2]
+move = [[0.0, 232.2, 638.7, 1.9960], [0.1, 258.1, 638.7, 1.5882], [0.2, 272.1, 639.4, 1.3623],
+        [0.3, 281.9, 639.3, 1.2151], [0.4, 288.2, 639.2, 1.1186], [0.5, 292.3, 638.3, 1.0542],
+        [0.6, 294.6, 638.3, 1.0165], [0.7, 296.5, 640.1, 1.0009], [0.8, 297.2, 639.3, 1.0004],
+        [0.9, 301.3, 639.1, 1.0005], [1.0, 309.7, 639.4, 1.0004], [1.1, 326.3, 639.4, 1.0],
+        [1.2, 360.0, 640.0, 1.0]]
+
+[shot.caption]
+text = "small college experiment"
+size = 38
+y = 653
+reveal = "words"
+word_ticks = [2, 4, 6]
+keys = [[0.2, 138.0], [0.3, 140.0], [0.4, 155.0], [0.5, 165.0], [0.6, 172.0], [0.7, 177.0],
+        [0.8, 177.7], [0.9, 181.8], [1.0, 190.2], [1.1, 206.8], [1.2, 240.5]]

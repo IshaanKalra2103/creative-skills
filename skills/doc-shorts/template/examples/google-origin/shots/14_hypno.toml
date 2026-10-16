@@ -1,0 +1,9 @@
+# "Then Larry has an idea": burst, spiral, brain cone, close-up, then the blue collage head
+# (cut out of the reference with tools/cutout.py) settles on red/yellow rings. "an" and
+# "Idea" fade in after the lead words.
+[[shot]]
+at = 12.0
+kind = "hypno"
+image = "hypno_face.png"
+caption = "Larry has an Idea"
+caption_x = 203

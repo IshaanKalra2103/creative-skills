@@ -1,0 +1,35 @@
+// file_icon: stacked dark paper ribbons. Contours of a warped smooth field; each layer is lit
+// just above its edge and falls off to black, and some edges carry a thin bright rim.
+uniform float3 iResolution;
+uniform float iTime;
+uniform float2 uOff;       // world position of the image's top-left corner
+uniform float uDensity;    // layers per field unit
+
+float hash1(float n) { return fract(sin(n * 91.345) * 47453.5453); }
+
+float field(float2 p) {
+    float2 q = p / 820.0;
+    float t = iTime * 0.12;
+    q += 0.32 * float2(sin(q.y * 2.3 + 1.1 + t), sin(q.x * 1.9 - 0.6 - t * 0.8));
+    return q.y * 1.25 + 0.85 * sin(q.x * 2.4 + 0.4) + 0.42 * sin(q.x * 1.2 - q.y * 2.1 + 2.2) - 0.25 * q.x;
+}
+
+half4 main(float2 c) {
+    float2 p = c + uOff;
+    float f = field(p) * uDensity;
+    float fx = (field(p + float2(1.0, 0.0)) - field(p - float2(1.0, 0.0))) * 0.5 * uDensity;
+    float fy = (field(p + float2(0.0, 1.0)) - field(p - float2(0.0, 1.0))) * 0.5 * uDensity;
+    float g = length(float2(fx, fy)) + 1e-5;
+    float idx = floor(f);
+    float fr = f - idx;
+    float dist = fr / g;                       // px above this layer's edge
+    // the reference's rims are crisp, bright and slightly haloed
+    float rim = 1.0 - smoothstep(0.7, 2.6, dist);
+    float halo = exp(-dist / 7.0) * 0.22;
+    float bright = hash1(idx) > 0.35 ? 0.7 + 0.3 * hash1(idx + 3.0) : 0.14;
+    float shade = 0.02 + 0.2 * exp(-dist / 150.0) * (0.35 + 0.65 * hash1(idx + 7.0));
+    float v = shade + (rim * 1.05 + halo) * bright;
+    // a little cool tint on the rims, like the reference's halation
+    half3 col = half3(v * 0.97, v * 0.98, v * 1.04);
+    return half4(col, 1.0);
+}

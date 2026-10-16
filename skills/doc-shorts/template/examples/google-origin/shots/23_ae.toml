@@ -1,0 +1,6 @@
+# An After Effects project-file icon on dark ribbons; a hand cursor climbs to it, the camera pulls back.
+[[shot]]
+at = 23.4
+kind = "file_icon"
+label = "Ae"
+ext = "AEP"

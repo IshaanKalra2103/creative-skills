@@ -1,0 +1,14 @@
+# Larry: the 2003 server-room photo (servers.jpg, Kim Kulish/Corbis), graded and padded by
+# 200 px into larry_servers.jpg. The reel tilts it -11.2 deg and whips it in from the right.
+# `move` holds the screen position of Larry's face (plate px 1582, 753) on every tick,
+# tracked on the reference; the caption rides the photo horizontally.
+[[shot]]
+at = 4.0
+kind = "photo"
+image = "larry_servers.jpg"
+focus = [1582, 753]
+scale = 0.91
+rotate = -11.2
+move = [[0.0, 705, 462], [0.1, 566, 462], [0.2, 498, 462], [0.3, 457, 462],
+        [0.4, 430, 462], [0.5, 411, 461], [0.6, 399, 461], [0.7, 392, 460]]
+caption = { text = "Larry Page", x = 240, y = 734.5, ride = "x" }

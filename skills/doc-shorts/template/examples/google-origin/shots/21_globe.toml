@@ -1,0 +1,7 @@
+# 21.5 s  "...found a better way": a green scribbly wireframe globe rises from the bottom,
+# then the camera pulls back over a grid of copies into a field of green dots.
+# All motion is the kind's default (measured on this reel).
+[[shot]]
+at = 21.5
+kind = "globe_grid"
+color = "#57cc1c"

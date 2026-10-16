@@ -1,0 +1,14 @@
+# "1995" typed on the flat grey card, digits appearing without the pop.
+[[shot]]
+at = 2.8
+kind = "card"
+bg = "grey"
+enter = "type"
+text = "1995"
+pop = false
+size = 64
+bold = 1.6
+track = 0
+left = 318
+y = 661
+reveal = [0, 1, 1, 2, 2, 3, 3, 3, 4]   # digits per tick (1 at 2.9 s, 19 at 3.1, 199 at 3.3, 1995 at 3.6)

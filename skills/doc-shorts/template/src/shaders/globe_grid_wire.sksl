@@ -1,0 +1,61 @@
+// globe_wire: the reel's "scribbly" wireframe globe. An orthographic sphere whose meridians
+// are thick bands, drawn for the front and (thinner) back hemispheres since it is
+// see-through, plus three latitude lines and an outline ring. Band edges are broken up
+// like crayon. Draw it into a square <image>; output is premultiplied ink.
+uniform float3 iResolution;
+uniform float uRot;      // spin about the vertical axis, radians
+uniform float4 uInk;     // ink colour
+uniform float uBand;     // front meridian band half-width, fraction of the meridian spacing
+uniform float uBack;     // back meridian band half-width
+uniform float uN;        // meridian count
+uniform float uLat;      // latitude line half-thickness, in radii
+uniform float uSpeck;    // 0..1 strength of the dark crayon flecks
+uniform float uSeed;
+uniform float uSoft;     // edge softness in radii
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// distance to the nearest meridian, in spacing units (0..0.5)
+float mdist(float lon, float n) {
+    return abs(fract(lon * n / 6.2831853 + 0.5) - 0.5);
+}
+
+half4 main(float2 c) {
+    float2 p = c / iResolution.xy * 2.0 - 1.0;
+    float r = length(p);
+    float px = 2.0 / iResolution.x;
+    float soft = max(uSoft, px);
+    if (r > 1.0 + soft) { return half4(0.0); }
+    float rr = min(r, 0.9999);
+    float z = sqrt(1.0 - rr * rr);
+    float2 cs = c + float2(uSeed * 37.0, uSeed * 91.0);
+    // hand-drawn wobble: band edges drift a little with height
+    float wob = (hash12(float2(floor(cs.y / 3.0), 3.0)) - 0.5) * 0.07;
+    float s = soft * 3.0;
+    float dF = mdist(atan(p.x, z) + uRot, uN);
+    float dB = mdist(atan(p.x, -z) + uRot, uN);
+    float wf = uBand + wob;
+    float front = 1.0 - smoothstep(wf - s, wf + s, dF);
+    float back = 1.0 - smoothstep(uBack - s, uBack + s, dB);
+    // dark scribbles hug the band edges
+    float edge = smoothstep(0.45, 1.0, dF / max(wf, 0.01)) * front;
+    float lat = 0.0;
+    lat = max(lat, 1.0 - smoothstep(uLat - soft, uLat + soft, abs(p.y + 0.59)));
+    lat = max(lat, 1.0 - smoothstep(uLat * 0.8 - soft, uLat * 0.8 + soft, abs(p.y + 0.30)));
+    lat = max(lat, 1.0 - smoothstep(uLat * 1.3 - soft, uLat * 1.3 + soft, abs(p.y - 0.03)));
+    lat = max(lat, 1.0 - smoothstep(uLat - soft, uLat + soft, abs(p.y - 0.37)));
+    lat = max(lat, 1.0 - smoothstep(uLat * 0.8 - soft, uLat * 0.8 + soft, abs(p.y - 0.70)));
+    float ink = max(max(front, back), lat);
+    ink = max(ink, 1.0 - smoothstep(0.03 - soft, 0.03 + soft, abs(r - 0.985)));
+    float fleck = hash12(float2(floor(cs.x / 1.4), floor(cs.y / 3.5)));
+    float fine = hash12(floor(cs / 1.2));
+    float dark = uSpeck * (step(0.45, fleck) * edge * 1.2 + step(0.93, fine) * 0.5);
+    ink *= 1.0 - clamp(dark, 0.0, 1.0);
+    ink *= 1.0 - smoothstep(1.0 - soft, 1.0 + soft, r);
+    float a = clamp(ink, 0.0, 1.0) * uInk.a;
+    return half4(half3(uInk.rgb) * a, a);
+}

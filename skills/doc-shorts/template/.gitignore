@@ -1,0 +1,7 @@
+target/
+review/
+frames/
+**/build/*
+!**/build/words.json
+*.mp4
+!examples/*/reference/*.mp4

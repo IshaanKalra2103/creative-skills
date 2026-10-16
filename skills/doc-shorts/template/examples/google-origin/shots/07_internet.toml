@@ -1,0 +1,7 @@
+# "The Internet" slides in small from the right, jumps to double size with a blur, settles centre.
+[[shot]]
+at = 6.6
+kind = "card"
+bg = "black"
+enter = "zoom"
+text = "The Internet"

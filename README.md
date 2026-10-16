@@ -38,6 +38,7 @@
 | [anatomy](skills/anatomy) | A technical idea explained as a real, working machine: crafted interactive isometric SVG figures (a dial gauge, a test rig, a desk computer, an arcade cabinet, a rocket engine in a test stand) with many small precise parts, four-tone shading, correct painter's order, a framed card with title and live readout, and calm eased motion. A zero-dependency kit (lathe, tubes, depth sort, an audit that proves nothing intersects), WebGL shaders that live in the same isometric camera (exhaust, water, caustics, lamp light) and an optional true-3D mode. Framework-free or React/Next.js. By [Ryan](https://github.com/wheresryan22/anatomy). |
 | [launch-promo](skills/launch-promo) | Kinetic product-launch films rendered in code: paper-and-ink sticker cards with hard shadows, one acid accent and a brand field colour, heavy Inter headlines rising word by word on the voiceover, a mascot that carries the cuts, tilted 3D phones, dark feature cards that light up one by one, ring/circle/panel wipes, stamps, counters, toggles and a CTA click. One pure `seek(t)` HTML page rendered by parallel headless Chromium with motion blur, an ElevenLabs voiceover laid line by line on target beats, an ElevenLabs Music score cut to the scenes, and synthesised SFX. A 20 s template for any product, a full 57.5 s worked example, scripts to study a reference, and references for the aesthetic, motion, text, structure and audio. |
 | [3d-deep-explainer](skills/3d-deep-explainer) | A cinematic, interactive 3D "machine" in three.js that explains how something works: data flows along a workbench through 6–10 stations (glass lenses for matrices, drawer cabinets for lookup tables, beams sized by weight, gauges, histograms, an exploded view for depth), with eased fly-throughs, what-if toggles that re-run the computation, a guided Tour and a frame-stepped tour video. A tiny real implementation runs live, so every number on screen is genuine. Comes with a generic engine and 3-station starter, a 13-part station cookbook, a train-a-tiny-real-model pipeline, screenshot and recording scripts, and the full Next-Word Machine (a real 2-layer Transformer with a MoE twin) as the worked example. |
+| [doc-shorts](skills/doc-shorts) | Vertical documentary and infographic shorts rendered in code with fframes, in a retro "archive under glass" look: scanlines, a 30° halftone screen and low grain over real archival photos, small Instrument Serif captions with a chromatic fringe, flat grey, paper and black type cards, and graphic beats (a network Earth, a wireframe globe grid, a thumbnail tunnel, a magnifier, a typed search pill, charts). Everything animates on threes and cuts on narration words. One `video.toml` per film: an ElevenLabs voiceover with word timings, an optional ElevenLabs Music bed, and one shot per cut cued on a word. 15 shot kinds, tools for voice, music, Whisper timings, cut-outs and side-by-side review, a script that studies a reference reel tick by tick, and a 27 s reel about Google's origin at Stanford rebuilt tick for tick as the worked example. |
 
 ## Install
 
@@ -77,6 +78,7 @@ ln -s ~/src/claude-skills/skills/kawaii-pink ~/.claude/skills/kawaii-pink
 ln -s ~/src/claude-skills/skills/anatomy ~/.claude/skills/anatomy
 ln -s ~/src/claude-skills/skills/launch-promo ~/.claude/skills/launch-promo
 ln -s ~/src/claude-skills/skills/3d-deep-explainer ~/.claude/skills/3d-deep-explainer
+ln -s ~/src/claude-skills/skills/doc-shorts ~/.claude/skills/doc-shorts
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -530,3 +532,19 @@ Copied unchanged from [wheresryan22/anatomy](https://github.com/wheresryan22/ana
 - `examples/next-word-machine/`: a 2-layer, 2-head Transformer trained on a 40-sentence toy corpus, run live in the browser through 10 stations (tokenizer gate, embedding cabinet, positions, Q/K/V lenses, attention plane, W_z or MoE router, stacked layers, output lens, loss and perplexity gauges, decoder with a growing KV-cache shelf), with mask, dense/MoE, decoding and exploded-view toggles; plus its training, sweep, export and verify scripts. Built as an exam-review explainer for a graduate NLP course.
 
 **Use:** ask for a 3D, interactive or fly-through explanation of how something works (an ML model, an algorithm, a data structure, a protocol, a physical or biological process), or share a 3D viz you want to emulate. Needs Chrome, `uv` and `ffmpeg`; `torch` only for the train-a-real-model path. three.js is MIT, loaded from a CDN.
+
+## doc-shorts
+
+![Frames from the Google-origin example: a handwritten note on a dot grid, an XP window with a globe, a typed year, Sergey Brin at the servers, "The Internet", a thumbnail tunnel, a framed meme, typing on paper, PageRank, the Google board, a green globe grid](skills/doc-shorts/assets/preview.jpg)
+
+*`template/examples/google-origin`: a 27 s doc reel about how Google started at Stanford, rebuilt tick for tick through the generic engine.*
+
+- `SKILL.md`: the workflow (facts and script → voice and word timings → a shot plan that picks a literal picture per phrase before picking a kind → archival pictures → render and review on contact sheets), studying a reference, and running the example.
+- `template/`: the fframes crate (spec reader, shared look, 15 shot kinds, SkSL texture shaders) and `tools/` for ElevenLabs voice and music, Whisper word timings, rembg cut-outs, an Earth-plate baker and a reference-vs-ours comparison.
+- `template/examples/google-origin/`: one spec file per shot, the plates, the reel's audio and reference video, and the scripts that built the plates; it doubles as the engine's regression test.
+- `scripts/study.py`: downloads a reference reel and splits it into a frame per tick, contact sheets, cuts, word timings and the cadence.
+- `references/`: `aesthetic.md` (what makes the look, and the rules for making a film your own instead of a copy), `pipeline.md`, `spec.md`, `shots.md` with a page per kind, `look.md` (the measured texture, type, palette and motion), `case-study.md`.
+
+**Use:** ask for a short documentary or explainer reel about a topic, person, company or event, or share a doc reel whose look you want for your own film. Needs Rust, `ffmpeg` and `uv`; an ElevenLabs key for voice and music.
+
+The example rebuilds a reel by EarnEdits.com ([Pinterest pin 1086986060090796381](https://in.pinterest.com/pin/1086986060090796381/)); its audio, reference video and photo plates belong to their owners and are credited in `examples/google-origin/assets/SOURCES.md`. The engine, kinds and tools are original.

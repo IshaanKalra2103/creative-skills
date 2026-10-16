@@ -1,0 +1,10 @@
+# A dot lights up in a dark dot grid; "Simple" then "idea" are handwritten above it and an
+# arrow draws down to the dot. Camera motion, glow and grid are the kind's measured defaults.
+[[shot]]
+at = 0.0
+kind = "note"
+text = "Simple idea"
+word_at = [3, 5]            # tick each word lands
+word_x = [-215, 51]         # left edge of each word, relative to the dot (default: centred line)
+stretch = [1.15, 1.245]     # horizontal stretch of each word (default 1.18)
+clip_swash = true           # trim the font's "S" swash, which the reference lettering lacks

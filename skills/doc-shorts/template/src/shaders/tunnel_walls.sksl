@@ -1,0 +1,106 @@
+// tunnel_walls: thumbnails ("millions of websites") rushing at the camera. Two ray-cast layers:
+//  - a swarm of website thumbnails on depth slices (starfield planes) that drift toward the
+//    camera as it moves, leaving a narrow dark band down the vanishing line;
+//  - a near wall of thumbnails on the right, upper half, which gives the reference's big
+//    ordered tiles in the top right.
+uniform float3 iResolution;
+uniform float uCamZ;     // camera travel (world units)
+uniform float uBlur;     // zoom-blur spread along Z (0 = sharp)
+uniform float2 uVP;      // vanishing point, element units
+uniform float uFocal;    // focal length, element units
+uniform float uWallR;    // distance to the right wall
+uniform float uBand;     // half-width of the empty slab around the vanishing line (world)
+uniform float uDensity;  // share of swarm cells holding a thumbnail
+uniform float uGain;
+uniform float uWall;     // 0..1 strength of the near wall
+uniform float uGrey;     // share of thumbnails drawn as plain grey/white pages
+uniform float3 uC1;      // accent colours of the remaining thumbnails
+uniform float3 uC2;
+uniform float3 uC3;
+uniform float3 uC4;
+uniform float3 uC5;
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// accent bands keep the reference's proportions (13/7/7/8/10 % of the non-grey share)
+float band(float b) { return uGrey + (b - 0.55) / 0.45 * (1.0 - uGrey); }
+
+float3 palette(float h) {
+    if (h < uGrey) { return float3(0.72 + 0.26 * fract(h * 7.0)); }
+    if (h < band(0.68)) { return uC1; }
+    if (h < band(0.75)) { return uC2; }
+    if (h < band(0.82)) { return uC3; }
+    if (h < band(0.90)) { return uC4; }
+    return uC5;
+}
+
+// a thumbnail filling cell-local coords f (0..1): page, header strip, text lines
+float3 thumb(float2 f, float2 id) {
+    float h = hash12(id + 17.0);
+    float3 tile = palette(h);
+    float header = step(f.y, 0.22);
+    float lines = step(0.5, fract(f.y * 6.0)) * step(f.x, 0.3 + 0.6 * hash12(id + floor(f.y * 6.0)));
+    float3 page = mix(tile, float3(0.9), 0.3);
+    return mix(page * (0.8 + 0.2 * lines), tile * 0.9, header) * (0.7 + 0.5 * hash12(id + 3.3));
+}
+
+float3 swarm(float2 q, float cz) {
+    float3 col = float3(0.0);
+    for (int i = 0; i < 10; i++) {
+        // slice depth cycles toward the camera as it travels
+        float ph = fract(float(i) / 10.0 - cz * 0.021);
+        float z = 5.0 + ph * 70.0;
+        float fade = smoothstep(0.0, 0.12, ph) * exp(-z / 48.0);
+        float2 P = q * z;
+        float G = 1.25;
+        float2 id = floor(P / G) + float2(float(i) * 131.0, 0.0);
+        float2 f = fract(P / G);
+        float on = step(1.0 - uDensity, hash12(id * 1.31 + 2.7));
+        // thumbnail occupies a random sub-rect of its cell (landscape)
+        float2 o = float2(hash12(id + 5.1), hash12(id + 9.3)) * 0.35;
+        float2 g = (f - o) / float2(0.62, 0.48);
+        float inside = step(0.0, g.x) * step(g.x, 1.0) * step(0.0, g.y) * step(g.y, 1.0);
+        // sparser close to the vanishing line, and only tiny far thumbnails there
+        float gate = smoothstep(uBand, uBand * 4.0, abs(q.x));
+        // close slices only populate the top right (the near wall side)
+        float nearOk = mix(smoothstep(0.1, 0.6, q.x) * smoothstep(0.5, -0.9, q.y), 1.0, smoothstep(14.0, 24.0, z));
+        gate *= nearOk;
+        col = max(col, thumb(g, id) * inside * on * fade * gate);
+    }
+    return col;
+}
+
+float3 wall(float2 q, float cz) {
+    float3 d = normalize(float3(q.x, -q.y, 1.0));
+    if (d.x <= 0.02) { return float3(0.0); }
+    float t = uWallR / d.x;
+    float Y = t * d.y;
+    float Z = cz + t * d.z;
+    float depth = t * d.z;
+    float2 cell = float2(Z / 0.8, Y / 0.55);
+    float2 id = floor(cell);
+    float2 f = fract(cell);
+    float inside = step(0.08, f.x) * step(f.x, 0.92) * step(0.1, f.y) * step(f.y, 0.9);
+    float on = step(0.55, hash12(id * 1.7 + 0.3));
+    float upper = smoothstep(-6.0, 9.0, Y);
+    float fade = exp(-depth / 34.0) * upper;
+    return thumb((f - float2(0.08, 0.1)) / float2(0.84, 0.8), id + 50.0) * inside * on * fade;
+}
+
+half4 main(float2 p) {
+    float2 q = (p - uVP) / uFocal;
+    float3 col = float3(0.0);
+    for (int k = 0; k < 5; k++) {
+        float cz = uCamZ - uBlur * float(k) / 4.0;
+        // brighter toward the right, as on the reference
+        float side = 0.55 + 0.45 * smoothstep(-0.4, 0.7, q.x);
+        col += max(swarm(q, cz) * side, wall(q, cz) * uWall);
+    }
+    // zoom blur: streaks stay bright (sum, not a plain average)
+    col *= uBlur > 0.0 ? 0.24 : 0.2;
+    return half4(half3(col * uGain), 1.0);
+}

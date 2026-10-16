@@ -1,0 +1,12 @@
+# Sergey: the same tilted server photo, now whipped in from the left onto Sergey's face
+# (plate px 2030, 1030); positions per tick tracked on the reference.
+[[shot]]
+at = 4.8
+kind = "photo"
+image = "larry_servers.jpg"
+focus = [2030, 1030]
+scale = 0.91
+rotate = -11.2
+move = [[0.0, -15, 360], [0.1, 135, 362], [0.2, 201, 361], [0.3, 241, 362],
+        [0.4, 270, 362], [0.5, 289, 363], [0.6, 303, 363], [0.7, 313, 364]]
+caption = { text = "Sergey Brin", x = 233, y = 734.5, ride = "x" }

@@ -1,0 +1,19 @@
+// Mid-grey noise for mix-blend-mode:overlay; a new pattern every tick (on threes).
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uStrength;
+uniform float uSize;
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+half4 main(float2 coord) {
+    float tick = floor(iTime * 10.0);
+    float2 cell = floor(coord / max(uSize, 1.0));
+    float g = hash12(cell + float2(tick * 17.0, tick * 29.0)) * 2.0 - 1.0;
+    float v = clamp(0.5 + g * uStrength * 0.5, 0.0, 1.0);
+    return half4(half3(v), 1.0);
+}

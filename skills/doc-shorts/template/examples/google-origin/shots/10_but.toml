@@ -1,0 +1,8 @@
+# One black tick, then "But" pops in (74% -> 93% -> 100%).
+[[shot]]
+at = 9.5
+kind = "card"
+bg = "black"
+enter = "pop"
+text = "But"
+x = 359

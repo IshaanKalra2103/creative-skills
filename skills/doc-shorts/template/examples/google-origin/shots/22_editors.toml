@@ -1,0 +1,21 @@
+# Editors: the editing-desk photo (a panorama stitched from the reference) slides in from
+# the left and settles while "Editors" types in letter by letter, each letter rising from
+# below. `move` is [t, x, y] of the plate's top-left corner; `counts` = letters per tick.
+[[shot]]
+at = 22.8
+kind = "photo"
+image = "editors_desk.png"
+focus = [0, 0]
+scale = 1.0
+bg = "#0a0a0a"
+move = [[0.0, -283.7, -2.2], [0.1, -116.1, -2.0], [0.2, -53.3, -1.4], [0.3, -21.1, -1.7], [0.4, -5.9, 0.1], [0.5, 0.0, 0.0]]
+
+[shot.caption]
+style = "plain"
+text = "Editors"
+x = 308
+y = 657
+size = 41.7
+color = "#dad7d0"
+reveal = "letters"
+counts = [1.5, 3.4, 5.0, 6.0, 6.6, 7.0]

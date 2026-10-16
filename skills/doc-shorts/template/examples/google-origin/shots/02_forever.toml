@@ -1,0 +1,10 @@
+# "Forever" typed on black, each letter popping in small and soft for one tick.
+[[shot]]
+at = 2.1
+kind = "card"
+bg = "black"
+enter = "type"
+text = "Forever"
+# letters shown per tick, read off the reference (a half "F", then "Fo" + a dot of "r", ...)
+reveal = [0.35, 2.1, 4.0, 5.85, 7.0]
+left = 280          # left edge of the word (ref px); omit to centre it

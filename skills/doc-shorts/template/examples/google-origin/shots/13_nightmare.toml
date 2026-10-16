@@ -1,0 +1,11 @@
+# Nightmare: the "sweaty gamer" webcam meme as a framed card on light grey. The meme is
+# video, so each tick has its own plate (cropped from the reference, caption inpainted,
+# padded to the full card by tools/plates_frame_card.py; the border is baked in). The card
+# motion is the kind's default: slide in from the right, settle, grow.
+[[shot]]
+at = 11.1
+kind = "frame_card"
+frames = ["frame_card_t00.jpg", "frame_card_t01.jpg", "frame_card_t02.jpg", "frame_card_t03.jpg", "frame_card_t04.jpg",
+          "frame_card_t05.jpg", "frame_card_t06.jpg", "frame_card_t07.jpg", "frame_card_t08.jpg"]
+border = 0
+caption = "Nightmare"

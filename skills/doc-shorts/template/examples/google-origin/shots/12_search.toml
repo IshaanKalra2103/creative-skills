@@ -1,0 +1,6 @@
+# A Google-style search pill slides in from the right while the domain is typed.
+[[shot]]
+at = 10.4
+kind = "search"
+query = "earnedits.com"
+reveal = [0, 2, 4, 6, 8, 10, 13]   # characters per tick, read off the reference
