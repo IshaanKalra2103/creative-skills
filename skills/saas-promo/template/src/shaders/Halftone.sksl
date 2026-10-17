@@ -1,0 +1,49 @@
+// Intro transition: a grid of small "↗" arrows (21.3 px pitch) lit by a ring that expands from
+// the frame center (an ellipse, wider than tall). Behind the ring front the arrows fade; far
+// from the center they go out of focus into soft squares.
+//
+// uRing  = (front radius px, inner radius px, amplitude, vertical squash); radii are in px
+//          with y scaled by the squash
+// uCenter = ring center (px)
+uniform float3 iResolution;
+uniform float4 uRing;
+uniform float2 uCenter;
+
+float seg(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+half4 main(float2 coord) {
+    float pitch = 21.3;
+    float2 cell = floor(coord / pitch);
+    float2 cc = (cell + 0.5) * pitch;
+    float2 l = coord / pitch - cell - 0.5;           // -0.5..0.5 inside the cell
+
+    float2 dv = (cc - uCenter) * float2(1.0, uRing.w);
+    float d = length(dv);
+    float front = uRing.x;
+    float inner = uRing.y;
+    // lit between the inner edge (soft, fading toward the center) and the front
+    float ring = smoothstep(inner - 90.0, inner + 110.0, d) * (1.0 - smoothstep(front - 30.0, front + 30.0, d));
+    float inten = ring * uRing.z;
+    if (inten <= 0.001) { return half4(0.0); }
+
+    // defocus grows with distance from the center
+    float blur = clamp((d - 640.0) / 240.0, 0.0, 1.0);
+    float soft = 0.03 + blur * 0.22;
+
+    // the arrow: a diagonal shaft and a corner head pointing up-right
+    float2 tip = float2(0.24, -0.24);
+    float dist = seg(l, float2(-0.24, 0.24), tip);
+    dist = min(dist, seg(l, tip, float2(0.0, -0.24)));
+    dist = min(dist, seg(l, tip, float2(0.24, 0.0)));
+    float w = 0.06;
+    float arrow = 1.0 - smoothstep(w, w + soft, dist);
+    float sq = (1.0 - smoothstep(0.22, 0.48, max(abs(l.x), abs(l.y)))) * 0.55;
+    float a = clamp(inten * mix(arrow, sq, blur), 0.0, 1.0);
+    float3 col = float3(0.88, 0.89, 1.0);
+    return half4(half3(col * a), half(a));
+}

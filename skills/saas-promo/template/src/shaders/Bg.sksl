@@ -1,0 +1,64 @@
+// The backdrop: a curved edge y = b(x) splits a deep top (navy at the very top, a dark blob)
+// from a lit region below, whose colour ramps white -> cyan -> periwinkle with distance from
+// a light near the bottom left; a soft glow runs along the edge. Seen through a monitor's dot
+// screen (a lattice of 4.45 px pitch). The geometry was fitted to a reference film frame by
+// frame (presets in kit.rs); the six colours come from the spec's [palette].
+//
+// uView   = (center x, center y, zoom, rotation): a camera over the gradient; zoom > 1 zooms in.
+// uEdge   = edge polynomial b0..b3 over x in 0..1 (y in 0..1, down)
+// uEdge2  = (edge softness, edge glow, top extent, top gamma)
+// uLight  = (light x, light y, ramp scale, white->cyan stop); x in aspect units (0..16/9)
+// uLight2 = (cyan->periwinkle stop, blob strength, blob x, blob y)
+// uBlobR  = blob radius^2
+// uDots   = dot screen amplitude
+uniform float3 iResolution;
+uniform float iTime;
+uniform float4 uView;
+uniform float4 uEdge;
+uniform float4 uEdge2;
+uniform float4 uLight;
+uniform float4 uLight2;
+uniform float uBlobR;
+uniform float uDots;
+uniform float3 uWhite;
+uniform float3 uCyan;
+uniform float3 uPeri;
+uniform float3 uDeep;
+uniform float3 uNavy;
+uniform float3 uGlow;
+
+half4 main(float2 coord) {
+    float aspect = iResolution.x / iResolution.y;
+    float2 uv = coord / iResolution.xy;
+    float2 d0 = (uv - 0.5) * float2(aspect, 1.0);
+    float cv = cos(uView.w); float sv = sin(uView.w);
+    d0 = float2(cv * d0.x - sv * d0.y, sv * d0.x + cv * d0.y) / uView.z;
+    float2 q = d0 / float2(aspect, 1.0) + uView.xy;
+    float2 p = float2(q.x * aspect, q.y);
+
+    // a slow wobble keeps the edge alive on holds
+    float xn = q.x;
+    float wob = 0.012 * sin(iTime * 0.55 + xn * 2.3) + 0.008 * sin(iTime * 0.31 - xn * 4.1);
+    float b = uEdge.x + uEdge.y * xn + uEdge.z * xn * xn + uEdge.w * xn * xn * xn + wob;
+    float e = p.y - b;
+    float ew = uEdge2.x;
+    float s = smoothstep(-ew, ew, e);
+
+    float d = length(p - uLight.xy) / uLight.z;
+    float3 lit = uWhite;
+    lit = mix(lit, uCyan, smoothstep(uLight.w * 0.5, uLight.w, d));
+    lit = mix(lit, uPeri, smoothstep(uLight.w, uLight2.x, d));
+
+    float t = 1.0 - pow(smoothstep(0.0, max(uEdge2.z, 0.02), p.y), max(uEdge2.w, 0.2));
+    float3 dark = mix(uDeep, uNavy, t);
+    float2 bd = p - uLight2.zw;
+    dark *= 1.0 - uLight2.y * exp(-dot(bd, bd) / max(uBlobR, 0.003));
+
+    float3 col = mix(dark, lit, s);
+    float gw = (e - ew) / (2.5 * ew + 0.02);
+    col = mix(col, uGlow, clamp(exp(-gw * gw) * uEdge2.y, 0.0, 1.0) * 0.5);
+
+    float a = 6.2831853 * 0.2247;
+    col *= 1.0 + uDots * cos(a * coord.x) * cos(a * coord.y);
+    return half4(half3(clamp(col, 0.0, 1.0)), 1.0);
+}

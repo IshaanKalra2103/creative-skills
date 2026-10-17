@@ -1,0 +1,172 @@
+# bolt-weekend: the worked example. A rebuild of bolt.new's "Bolt is free this weekend" promo
+# (27.7 s) with the generic scene kinds. Scene starts match the reference's cuts; reference.jpg
+# shows frames from the original, render.jpg ours at the same times.
+#
+#   tools/promo.sh examples/bolt-weekend/video.toml render -o bolt.mp4
+#
+# audio/bgm.mp3 is an original track from tools/bgm.py (120 bpm, whooshes on the cuts, an impact
+# on the end card). To hear it with the promo's own music, put that track in audio/ and name it
+# below; with the original video, REF=original.mp4 tools/cmp.sh compares frame by frame.
+
+[video]
+title = "Bolt is free this weekend"
+audio = { file = "bgm.mp3", gain = 0.0 }   # wav, mp3, flac or ogg (fframes cannot read m4a)
+# bpm = 120          # durations in beats + cuts snapped to the grid (or run tools/beats.py)
+
+[palette]
+preset = "blue"
+
+[look]
+font = "Inter Display"
+ui_font = "Inter Text"
+weight = 400
+dots = 0.035
+pace = 1.0
+
+[[scene]]
+kind = "title"
+dur = 1.88
+bg = ["sky", "dawn"]
+words = ["Calling", "all", "builders"]
+size = 105.5
+halftone = true
+pill = true
+sheet = ["#dcb6f4", "#a8a6f2", "#5a86f0"]
+cool = ["#5b8cf2", "#9cc0f6", "#eef5ff"]
+
+[[scene]]
+kind = "window"
+dur = 2.12
+bg = "window"
+backtitle = ["Calling", "all", "builders"]
+prompt_layer = "window_prompt.png"
+prompt_rect = [354, 325, 826, 433]
+window_size = [994, 602]
+layer_size = [994, 585]
+page = "#efecf3"
+sheet = ["#e9b4f2", "#a99ef1", "#4f78ef"]
+cool = ["#5b8cf2", "#9cc0f6", "#eef5ff"]
+tint = ["#3159e8", "#4f78ef"]
+layers = [
+  { image = "window_hero.png", at = 0.32, fade = 0.2 },
+  { image = "window_side.png", at = 0.22, fade = 0.06 },
+  { image = "window_nav.png", at = 0.36, fade = 0.1 },
+  { image = "window_h1.png", at = 0.46, fade = 0.06, rise = 7 },
+  { image = "window_h2.png", at = 0.544, fade = 0.056, rise = 7 },
+  { image = "window_sub.png", at = 0.64, fade = 0.064, rise = 7 },
+  { image = "window_icons.png", at = 0.568, fade = 0.072, rise = 8, cols = { n = 4, x = 482, w = 54, y = 440, h = 90, step = 0.044 } },
+  { image = "window_start.png", at = 0.532, fade = 0.052, rise = 7, wipe = { x = 440, y = 530, w = 360, h = 40, from = 20, dur = 0.1 } },
+]
+
+[[scene]]
+kind = "tiles"
+dur = 1.88
+bg = "free"
+headline = "Bolt is [free this weekend]"
+head = { gaps = [[1, 13.0]] }
+dates = { from = "2026-10-14", to = "2026-10-22", on = ["2026-10-17", "2026-10-18"] }
+
+[[scene]]
+kind = "caption"
+dur = 1.36
+bg = "sweep"
+move = "settle"
+ink_weight = 300
+lines = ["We're having a best", "[build competition]"]
+at = [-0.02, 0.04, 0.12, 0.18, 0.26, 0.28]
+box_at = [0.30]
+gaps = [[1, 18.0], [5, 32.0]]
+
+[[scene]]
+kind = "caption"
+dur = 1.84
+bg = "turn"
+move = "push"
+ink_weight = 300
+lines = ["Turn your [idea]", "into [a product]"]
+at = [-0.02, 0.06, 0.14, 0.22, 0.30, 0.304]
+box_at = [0.116, 0.30]
+
+[[scene]]
+kind = "caption"
+dur = 1.80
+bg = "low"
+move = "drop"
+ink_weight = 300
+lines = ["and you could", "win [$ 10,000]"]
+at = [-0.02, 0.06, 0.14, 0.22, 0.30, 0.304]
+gaps = [[5, 11.0]]
+ls = [[5, -1.8]]
+
+[[scene]]
+kind = "prompt"
+dur = 3.88
+bg = ["prompt", "prompt2"]
+text = "Build a cool sneaker store"
+
+[[scene]]
+kind = "screen"
+dur = 3.24
+bg = "prompt2"
+chrome = "screen_editor_chrome.png"
+size = [1128, 676]
+viewport = [335, 40, 780, 630]
+content = "screen_site.png"
+content_h = 1255
+content_bg = "#edfe32"
+content_layers = [{ image = "screen_site_move.png", at = 0.18, fade = 0.22 }]
+scroll = { to = 625, down_at = 0.72, back_at = 1.32 }
+layers = [
+  { image = "screen_editor_card.png", at = 0.92, fade = 0.12 },
+  { image = "screen_editor_text.png", stream = [
+    [20, 136, 296, 22, 0.28, 0.32], [14, 173, 270, 16, 0.36, 0.44], [14, 197, 60, 16, 0.44, 0.16],
+    [18, 221, 140, 16, 0.46, 0.48], [18, 242, 160, 16, 0.50, 0.48], [18, 263, 120, 16, 0.54, 0.48],
+    [18, 284, 190, 16, 0.58, 0.52], [18, 305, 170, 16, 0.62, 0.52], [18, 326, 150, 16, 0.66, 0.52],
+    [18, 346, 120, 16, 0.70, 0.52], [18, 367, 140, 16, 0.74, 0.52], [14, 391, 245, 16, 0.82, 0.48],
+    [14, 424, 60, 16, 1.04, 0.12], [22, 464, 290, 16, 1.12, 0.32], [22, 482, 160, 14, 1.32, 0.28],
+  ] },
+]
+sprite = { float = 3.0, dissolve = [0.16, 0.40], shadow = [452, 452, 150, 16], frames = [
+  [0.00, "screen_hero_olive.png", 410, 285, 240, -10],
+  [0.54, "screen_hero_02.png", 420, 270, 240, -10],
+  [0.62, "screen_hero_05.png", 430, 260, 300, -6],
+  [0.70, "screen_hero_09.png", 436, 250, 360, -2],
+  [0.78, "screen_hero_08.png", 436, 250, 360, -4],
+  [0.86, "screen_hero_07.png", 436, 250, 372, -17, -8],
+] }
+
+[[scene]]
+kind = "caption"
+dur = 1.68
+bg = "wide"
+dots = 0.0
+move = "glide"
+ink_weight = 300
+lines = ["[New] and [improved]", "builds welcome"]
+at = [0.08, 0.10, 0.132, 0.22, 0.30]
+box_at = [0.16, 0.36]
+
+[[scene]]
+kind = "wall"
+dur = 2.80
+bg = "wide"
+dots = 0.0
+letterbox = true
+cards = ["card_planet.png", "card_wave.png", "card_coffee.png", "card_arch.png", "card_analytics.png", "card_plants.png", "card_move.png", "card_travel.png"]
+center = [
+  { word = "OFFGRID", bg = "#ebe6d9", ink = "#1c1c1c", font = "Anton" },
+  { poster = true, lines = ["MAKE", "SOME", "NOISE"], nav = "OFFGRID", dates = ["APR 12", "APR 13", "APR 14"], color = "#e2232b", sky = "card_sky.jpg", paper = "card_paper.png" },
+]
+wipe = ["#ecd52c", "#1b33c9"]
+button = ["Submit", "Submitted"]
+
+[[scene]]
+kind = "end"
+dur = 5.20
+bg = ["logo", "end", "end2"]
+dots = 0.0
+logo = "logo.svg"
+logo_h = 66.5
+tagline = "Good luck, builders!"
+pill = "Submit by Oct 20"
+

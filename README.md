@@ -39,6 +39,7 @@
 | [launch-promo](skills/launch-promo) | Kinetic product-launch films rendered in code: paper-and-ink sticker cards with hard shadows, one acid accent and a brand field colour, heavy Inter headlines rising word by word on the voiceover, a mascot that carries the cuts, tilted 3D phones, dark feature cards that light up one by one, ring/circle/panel wipes, stamps, counters, toggles and a CTA click. One pure `seek(t)` HTML page rendered by parallel headless Chromium with motion blur, an ElevenLabs voiceover laid line by line on target beats, an ElevenLabs Music score cut to the scenes, and synthesised SFX. A 20 s template for any product, a full 57.5 s worked example, scripts to study a reference, and references for the aesthetic, motion, text, structure and audio. |
 | [3d-deep-explainer](skills/3d-deep-explainer) | A cinematic, interactive 3D "machine" in three.js that explains how something works: data flows along a workbench through 6–10 stations (glass lenses for matrices, drawer cabinets for lookup tables, beams sized by weight, gauges, histograms, an exploded view for depth), with eased fly-throughs, what-if toggles that re-run the computation, a guided Tour and a frame-stepped tour video. A tiny real implementation runs live, so every number on screen is genuine. Comes with a generic engine and 3-station starter, a 13-part station cookbook, a train-a-tiny-real-model pipeline, screenshot and recording scripts, and the full Next-Word Machine (a real 2-layer Transformer with a MoE twin) as the worked example. |
 | [doc-shorts](skills/doc-shorts) | Vertical documentary and infographic shorts rendered in code with fframes, in a retro "archive under glass" look: scanlines, a 30° halftone screen and low grain over real archival photos, small Instrument Serif captions with a chromatic fringe, flat grey, paper and black type cards, and graphic beats (a network Earth, a wireframe globe grid, a thumbnail tunnel, a magnifier, a typed search pill, charts). Everything animates on threes and cuts on narration words. One `video.toml` per film: an ElevenLabs voiceover with word timings, an optional ElevenLabs Music bed, and one shot per cut cued on a word. 15 shot kinds, tools for voice, music, Whisper timings, cut-outs and side-by-side review, a script that studies a reference reel tick by tick, and a 27 s reel about Google's origin at Stanford rebuilt tick for tick as the worked example. |
+| [saas-promo](skills/saas-promo) | Snappy SaaS and product promo films rendered in code with fframes, in the "glass on a screen gradient" look of the bolt.new weekend promo: a deep gradient behind a monitor dot screen, words that blur in as frosted glass and settle, highlight boxes that pop, caption groups that tilt in and settle, a frosted pill that grows into an app window, a prompt typed with a cursor click, an editor whose site scrolls, a card wall with depth of field and a button click, and a logo end card. One `video.toml` sets the palette (presets or one brand colour), fonts, the flow (8 scene kinds in any order), durations in seconds or beats snapped to the music's beat grid, and the music. Tools for beat detection, an original synthesized bed, palettes, HTML-to-PNG screens and backdrop fitting; the bolt.new promo rebuilt shot for shot (with reference frames) and an original second film. |
 
 ## Install
 
@@ -79,6 +80,7 @@ ln -s ~/src/claude-skills/skills/anatomy ~/.claude/skills/anatomy
 ln -s ~/src/claude-skills/skills/launch-promo ~/.claude/skills/launch-promo
 ln -s ~/src/claude-skills/skills/3d-deep-explainer ~/.claude/skills/3d-deep-explainer
 ln -s ~/src/claude-skills/skills/doc-shorts ~/.claude/skills/doc-shorts
+ln -s ~/src/claude-skills/skills/saas-promo ~/.claude/skills/saas-promo
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -568,3 +570,20 @@ Structure and timing studied from the DMflo launch promo (motion by [@that.produ
 **Use:** ask for a short documentary or explainer reel about a topic, person, company or event, or share a doc reel whose look you want for your own film. Needs Rust, `ffmpeg` and `uv`; an ElevenLabs key for voice and music.
 
 The example rebuilds a reel by EarnEdits.com ([Pinterest pin 1086986060090796381](https://in.pinterest.com/pin/1086986060090796381/)); its audio, reference video and photo plates belong to their owners and are credited in `examples/google-origin/assets/SOURCES.md`. The engine, kinds and tools are original.
+
+## saas-promo
+
+![Frames from both examples: the bolt.new weekend promo rebuilt on the engine (glowing "Calling all builders", the Bolt window, date tiles, highlighted captions, the prompt box, the sneaker store, the card wall, the end card) and the original Lumen film in violet](skills/saas-promo/assets/preview.jpg)
+
+*Top: `examples/bolt-weekend`, bolt.new's 27.7 s "Bolt is free this weekend" promo rebuilt on the generic scene kinds. Bottom: `examples/lumen`, an original film for a fictional notes app with another palette, flow, beat grid and synthesized music.*
+
+- `SKILL.md`: the workflow (story beats → HTML screens rendered to PNG → palette → music, beat grid and snapped cuts → render and review on contact sheets), the scene kinds, how to make a film your own instead of a re-skin, gotchas.
+- `template/`: the fframes crate (spec reader with seconds/beats and beat snapping, a palette-driven backdrop shader with 14 fitted framings, glass type, highlight boxes, a fake-3D camera, cursor and letterbox, 8 scene kinds) and `tools/` (`promo.sh`, `beats.py`, `bgm.py`, `palette.py`, `screens/render.py`, `bgfit/fit.py`, `cmp.sh`, contact sheets).
+- `template/examples/bolt-weekend/`: the worked example, with `reference.jpg` (frames from the original) and `render.jpg` (ours at the same times), over an original synthesized track.
+- `template/examples/lumen/`: the original example, its HTML screens and its synthesized track.
+- `references/`: `spec.md`, `kinds/*.md` (params, defaults and measured timing per kind), `look.md` (every measured number and the rules of the style), `case-study.md`.
+
+**Use:** ask for a product launch, feature or pricing promo, a SaaS ad or an app reveal with kinetic type, or share a promo in this style and say "make one for my product". Needs Rust, `ffmpeg`, `uv` and Playwright's Chromium.
+
+The look and timings were measured on bolt.new's "Bolt is free for everyone, all weekend long" promo by StackBlitz; the original video and music are not included. Sources of the example's assets (the bolt.new wordmark, product photos and clip art inside the rebuilt screens) are in `examples/bolt-weekend/SOURCES.md`. The engine, the Lumen film and its music are original.
+

@@ -1,0 +1,71 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@1,9..144,400&display=swap');
+  :root { --ink:#16131f; --mute:#6f6a80; --line:#ece9f3; --acc:#8b5cf6; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: transparent; font-family: Inter, sans-serif; color: var(--ink); }
+  #win { width: 994px; height: 585px; border-radius: 14px; overflow: hidden; background: transparent; display: grid; grid-template-columns: 178px 1fr; position: relative; }
+  .side { border-right: 1px solid var(--line); padding: 14px 12px; font-size: 11px; color: var(--mute); background:#fbfaff; }
+  .logo { font: italic 800 17px Inter; color: var(--ink); letter-spacing: -0.5px; margin-bottom: 14px; }
+  .logo b { color: var(--acc); }
+  .item { padding: 6px 8px; border-radius: 7px; margin: 2px 0; display:flex; gap:8px; align-items:center; }
+  .item.on { background: #efe9ff; color: var(--ink); font-weight: 500; }
+  .dot { width: 9px; height: 9px; border-radius: 3px; background: #d9d3ea; }
+  .item.on .dot { background: var(--acc); }
+  .sec { margin: 16px 8px 6px; font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color:#a39db4; }
+  .main { position: relative; }
+  .nav { height: 40px; display:flex; justify-content:flex-end; gap: 22px; align-items:center; padding: 0 22px; font-size: 11px; color: var(--mute); }
+  .hero { position:absolute; left: 0; right: 0; top: 40px; height: 300px; background: radial-gradient(120% 90% at 30% 0%, #2a0aa8 0%, #6b3cf0 45%, #c9b6ff 78%, #fbfaff 100%); }
+  .h { position:absolute; left:0; right:0; text-align:center; color:#fff; }
+  .h1 { top: 112px; font: italic 400 34px Fraunces, serif; }
+  .h2 { top: 150px; font: 700 33px Inter; letter-spacing: -1px; }
+  .sub { top: 200px; font-size: 12px; color: #efe9ff; }
+  .prompt { position:absolute; left: 160px; right: 160px; top: 252px; height: 92px; background:#fff; border-radius: 14px; box-shadow: 0 10px 30px rgba(60,20,140,.18), 0 0 0 1px #ebe5fb; padding: 14px 16px; font-size: 12px; color: #a39db4; }
+  .prompt .row { position:absolute; bottom: 12px; left: 16px; right: 16px; display:flex; gap: 12px; align-items:center; font-size: 11px; color: var(--mute); }
+  .send { margin-left:auto; width: 24px; height: 24px; border-radius: 50%; background: var(--acc); }
+  .chips { position:absolute; top: 372px; left: 0; right: 0; display:flex; justify-content:center; gap: 10px; }
+  .chip { width: 120px; height: 86px; border-radius: 12px; background:#fff; box-shadow: 0 0 0 1px var(--line); padding: 10px; font-size: 10.5px; color: var(--mute); }
+  .chip i { display:block; width: 22px; height: 22px; border-radius: 6px; margin-bottom: 26px; }
+  .recent { position:absolute; top: 486px; left: 40px; right: 40px; display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .doc { height: 70px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px var(--line); padding: 10px; font-size: 10.5px; }
+  .doc span { display:block; height: 6px; border-radius: 3px; background:#efecf6; margin-top: 7px; }
+</style></head>
+<body>
+<div id="win">
+  <div class="side layer" data-layer="side">
+    <div class="logo">lumen<b>.</b></div>
+    <div class="item on"><span class="dot"></span>Home</div>
+    <div class="item"><span class="dot"></span>Notes</div>
+    <div class="item"><span class="dot"></span>Meetings</div>
+    <div class="item"><span class="dot"></span>Tasks</div>
+    <div class="sec">Spaces</div>
+    <div class="item"><span class="dot"></span>Design</div>
+    <div class="item"><span class="dot"></span>Launch plan</div>
+    <div class="item"><span class="dot"></span>Hiring</div>
+    <div class="sec">Recent</div>
+    <div class="item"><span class="dot"></span>Weekly sync</div>
+    <div class="item"><span class="dot"></span>Q4 roadmap</div>
+  </div>
+  <div class="main">
+    <div class="hero layer" data-layer="hero"></div>
+    <div class="nav layer" data-layer="nav"><span>Product</span><span>Templates</span><span>Pricing</span><span>Log in</span></div>
+    <div class="h h1 layer" data-layer="h1">Write less.</div>
+    <div class="h h2 layer" data-layer="h2">Know more.</div>
+    <div class="h sub layer" data-layer="sub">Lumen turns your meetings, docs and threads into notes that write themselves.</div>
+    <div class="prompt layer" data-layer="prompt">Ask Lumen anything…<div class="row"><span>＋</span><span>Notes ⌃</span><span style="margin-left:auto">Deep</span><span class="send"></span></div></div>
+    <div class="chips layer" data-layer="icons">
+      <div class="chip"><i style="background:#ede6ff"></i>Summarize</div>
+      <div class="chip"><i style="background:#ffe8f4"></i>Action items</div>
+      <div class="chip"><i style="background:#e6f6ff"></i>Draft reply</div>
+      <div class="chip"><i style="background:#eafbe9"></i>Plan my week</div>
+    </div>
+    <div class="recent layer" data-layer="start">
+      <div class="doc">Weekly sync<span></span><span style="width:70%"></span></div>
+      <div class="doc">Launch checklist<span></span><span style="width:55%"></span></div>
+      <div class="doc">Interview notes<span></span><span style="width:80%"></span></div>
+    </div>
+  </div>
+</div>
+<script>document.body.dataset.ready = '1'</script>
+</body></html>
