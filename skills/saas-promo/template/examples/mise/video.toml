@@ -1,0 +1,140 @@
+# mise: an original example. A promo for a fictional AI site builder for restaurants: say what
+# your place is, get a whole site with a menu, bookings and orders. It shows what changes
+# between films: a warm palette, a different flow, durations in beats on a 124 bpm grid, an
+# original synthesized track (tools/bgm.py), and art-directed screens with real, credited
+# photography (screens/*.html, references/screens.md, SOURCES.md).
+#
+#   uv run tools/bgm.py examples/mise/video.toml --bpm 124 --out /tmp/bgm.wav   # then -> audio/bgm.mp3
+#   tools/promo.sh examples/mise/video.toml render -o mise.mp4
+
+[video]
+title = "mise: your restaurant, online tonight"
+audio = { file = "bgm.mp3", gain = 0.0 }
+bpm = 124
+
+[palette]
+preset = "ember"
+
+[look]
+font = "Inter Display"
+weight = 400
+dots = 0.03
+pace = 0.95
+
+[[scene]]
+kind = "title"
+beats = 4
+bg = ["sky", "dawn"]
+words = ["Doors", "open", "at", "six"]
+size = 112
+
+[[scene]]
+kind = "window"
+beats = 5
+bg = "window"
+backtitle = ["Doors", "open", "at", "six"]
+window_size = [994, 585]
+layer_size = [994, 585]
+page = "#f8f2e8"
+prompt_layer = "window_prompt.png"
+prompt_rect = [350, 256, 830, 358]
+layers = [
+  { image = "window_hero.png", at = 0.30, fade = 0.22 },
+  { image = "window_side.png", at = 0.22, fade = 0.06 },
+  { image = "window_nav.png", at = 0.36, fade = 0.1 },
+  { image = "window_h1.png", at = 0.46, fade = 0.06, rise = 7 },
+  { image = "window_h2.png", at = 0.54, fade = 0.06, rise = 10 },
+  { image = "window_sub.png", at = 0.64, fade = 0.07, rise = 7 },
+  { image = "window_icons.png", at = 0.58, fade = 0.07, rise = 8, cols = { n = 4, x = 332, w = 132, y = 394, h = 96, step = 0.05 } },
+  { image = "window_start.png", at = 0.72, fade = 0.06, rise = 6, wipe = { x = 376, y = 508, w = 432, h = 36, from = 20, dur = 0.12 } },
+]
+
+[[scene]]
+kind = "caption"
+beats = 3
+bg = "sweep"
+move = "settle"
+drop = true
+lines = ["Your menu, [online]", "before [service]"]
+
+[[scene]]
+kind = "prompt"
+beats = 8
+bg = ["prompt", "prompt2"]
+text = "Make a site for my late-night taco bar"
+placeholder = "Describe your place..."
+controls = ["Restaurant", "Menu"]
+
+[[scene]]
+kind = "screen"
+beats = 7
+bg = "prompt2"
+chrome = "screen_chrome.png"
+size = [1128, 676]
+viewport = [335, 40, 780, 630]
+content = "screen_site.png"
+content_h = 1255
+content_bg = "#0d0b0a"
+content_layers = [{ image = "screen_site_word.png", at = 0.2, fade = 0.24 }]
+scroll = { to = 625, down_at = 0.72, back_at = 1.32 }
+layers = [
+  { image = "screen_card.png", at = 0.98, fade = 0.12 },
+  { image = "screen_text.png", stream = [
+    [90, 56, 226, 30, 0.18, 0.22], [14, 96, 44, 20, 0.26, 0.1], [14, 124, 306, 28, 0.30, 0.26],
+    [14, 166, 210, 16, 0.38, 0.40], [14, 190, 80, 16, 0.46, 0.16],
+    [14, 212, 230, 16, 0.48, 0.44], [14, 232, 190, 16, 0.52, 0.44], [14, 252, 200, 16, 0.56, 0.44],
+    [14, 272, 190, 16, 0.60, 0.44], [14, 292, 160, 16, 0.64, 0.44], [14, 312, 170, 16, 0.68, 0.44],
+    [14, 332, 170, 16, 0.72, 0.44], [14, 360, 245, 16, 0.84, 0.44], [14, 380, 210, 16, 0.94, 0.40],
+  ] },
+]
+sprite = { float = 3.0, shadow = [476, 428, 160, 12], shadow_color = "#ff3b81", shadow_alpha = 0.32, frames = [
+  [0.00, "screen_hero_birria.png", 470, 292, 196, -6],
+  [0.46, "screen_hero_fish.png", 474, 292, 186, -8],
+  [0.62, "screen_hero_pastor.png", 476, 272, 268, -10, -34],
+] }
+
+[[scene]]
+kind = "tiles"
+beats = 4
+bg = "free"
+headline = "Live in [two minutes]"
+tiles = [
+  { big = "0%", label = "commission", sub = "on orders" },
+  { big = "2", label = "minutes", sub = "to launch", on = true },
+  { big = "24/7", label = "bookings", sub = "while you cook", on = true },
+  { big = "1", label = "tap", sub = "menu edits" },
+  { big = "∞", label = "specials", sub = "every night" },
+]
+
+[[scene]]
+kind = "caption"
+beats = 4
+bg = "low"
+move = "drop"
+lines = ["[1,200 kitchens]", "already cooking"]
+
+[[scene]]
+kind = "wall"
+beats = 6
+bg = "sweep"
+dots = 0.0
+letterbox = true
+drop = true
+# eight businesses "built with mise" (screens/cards/cards.html), in slot order: mid-left,
+# top-right, bottom-centre, bottom-right, top-left, top-centre, bottom-left, mid-right
+cards = ["card_pizza.png", "card_wine.png", "card_ramen.png", "card_coffee.png", "card_dumpling.png", "card_bakery.png", "card_oyster.png", "card_gelato.png"]
+center = [
+  { word = "NOCHE", bg = "#0d0b0a", ink = "#ff3b81", font = "Anton" },
+  "card_poster.png",
+]
+wipe = ["#c8f24a", "#2a0e8f"]
+button = ["Publish", "Live"]
+
+[[scene]]
+kind = "end"
+beats = 10
+bg = ["logo", "end", "end2"]
+dots = 0.0
+logo = "logo.svg"
+tagline = "Cook. We'll do the rest."
+pill = "Open your site tonight"

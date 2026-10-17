@@ -7,7 +7,7 @@ PNGs (render an HTML mock-up with `tools/screens/render.py`, one PNG per layer, 
 
 | time | what happens |
 |---|---|
-| 0.00-0.40 s | The pill keeps rising and turns from frosted to cool glass to lilac/blue glass; a glass sheet the size of the window sweeps in from the left behind it; the title's outlined glass line lifts to the top (`backtitle`); the halftone ring's tail fades at the edges. |
+| 0.00-0.40 s | The pill keeps rising and turns from frosted to cool glass to lilac/blue glass; a glass sheet the size of the window sweeps in from the left behind it; the title's outlined glass line lifts to the top (`backtitle`); with `halftone = true`, the halftone ring's tail fades at the edges. |
 | 0.14-0.22 s | The sheet goes solid (the `tint` colours). |
 | 0.22 s → | The page appears and your `layers` come up on their own times while the tint fades off (0.24-0.52 s); the pill shrinks into the window's prompt box (0.20-0.52 s) and shows `prompt_layer`. |
 | 0.76-1.56 s | Settled, drifting slowly (the window narrows a few px). **This hold stretches with `dur`.** |
@@ -26,7 +26,7 @@ Without `from_pill` the scene starts on the glass sheet sweeping in (no pill, no
 | `prompt_layer` | — | Image drawn inside the pill as it locks in (e.g. the prompt box layer). Without it the pill becomes a plain panel with an accent dot. |
 | `backtitle` | — | Words of the title line kept behind the window as outlined glass, or a table `{ words, size, x, y, ... }` with the `title` params. Match the `title` scene. |
 | `from_pill` | `true` | Continue from a `title` with `pill = true`. |
-| `halftone` | `true` | Draw the tail of the title's halftone ring. |
+| `halftone` | `false` | Draw the tail of the title's halftone ring (set it when the title has `halftone = true`). |
 | `window_scale`, `window_y` | `1.0`, `0` | Scale about the frame centre and vertical offset. |
 | `sheet`, `cool`, `tint` | from the palette | Glass sheet (3 hex, lilac → blue), the pill's cool pass (3 hex), the solid tint (2 hex). |
 | `soften` | `0.45` | Blur (px) on the page, like the reference video's softness. |

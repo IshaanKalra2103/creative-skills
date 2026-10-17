@@ -391,7 +391,7 @@ pub fn render<'a>(p: P<'a>, tm: &T, frame: &mut Frame, ctx: &FFramesContext<'a, 
     } else {
         Svgr::empty()
     };
-    let ring = if from_pill && p.b("halftone", true) { title::halftone(frame, f, p.f("ring_x", 660.0), p.f("ring_y", 380.0)) } else { Svgr::empty() };
+    let ring = if from_pill && p.b("halftone", false) { title::halftone(frame, f, p.f("ring_x", 660.0), p.f("ring_y", 380.0)) } else { Svgr::empty() };
     let window = window(p, &win, f, f0, ctx);
     let pill = if from_pill { pill(p, f, Some(&win), ctx) } else { Svgr::empty() };
     let scene = fframes::svgr!(

@@ -394,7 +394,7 @@ pub fn render<'a>(p: P<'a>, tm: &T, frame: &mut Frame, ctx: &FFramesContext<'a, 
         _ => (Some(31.0), (0.0, 0.0)),
     };
     let line = draw(&ln, f, hold, out, frame, ctx, "ttw");
-    let ring = if p.b("halftone", true) { halftone(frame, f, p.f("ring_x", 660.0), p.f("ring_y", 380.0)) } else { Svgr::empty() };
+    let ring = if p.b("halftone", false) { halftone(frame, f, p.f("ring_x", 660.0), p.f("ring_y", 380.0)) } else { Svgr::empty() };
     let pill = if pill_on { super::window::pill(p, f, None, ctx) } else { Svgr::empty() };
     fframes::svgr!(
         <g>

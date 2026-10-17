@@ -1,0 +1,81 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- NOCHE: the late-night taco bar site mise generates in the `screen` scene. 780 CSS px wide,
+     1255 tall, rendered at 3x. ?part=noword: the page without the outlined NOCHE (the film fades
+     it in late); ?part=word: only the outlined word, transparent. The hero dish is a sprite in
+     the film (screen_hero_*.png), so the page leaves its spot empty. -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Anton&family=Fraunces:ital,opsz,wght@1,9..144,500;1,9..144,900&family=Space+Mono:wght@400;700&display=swap');
+  :root { --ink:#0d0b0a; --pink:#ff3b81; --cream:#f6ead6; --lime:#c8f24a; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 780px; height: 1255px; overflow: hidden; }
+  body { position: relative; background: var(--ink); font-family: Inter, sans-serif; color: var(--cream); -webkit-font-smoothing: antialiased; }
+  .a { position: absolute; white-space: nowrap; }
+  .anton { font-family: Anton; line-height: .92; }
+  .mono { font-family: 'Space Mono', monospace; letter-spacing: .18em; text-transform: uppercase; }
+  body.noword #word { display: none; }
+  body.word { background: transparent; }
+  body.word > *:not(#word) { display: none; }
+  /* hero glow behind the dish */
+  .glow { left: 300px; top: 70px; width: 470px; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,59,129,.32), rgba(255,59,129,0)); }
+</style></head>
+<body>
+  <!-- nav -->
+  <div class="a anton" style="left:16px; top:20px; font-size:22px; letter-spacing:.12em; color:var(--pink)">NOCHE</div>
+  <div class="a" style="left:132px; top:27px; font-size:8px; font-weight:600; letter-spacing:.08em">MENÚ</div>
+  <div class="a" style="left:176px; top:27px; font-size:8px; font-weight:600; letter-spacing:.08em">MEZCAL</div>
+  <div class="a" style="left:230px; top:27px; font-size:8px; font-weight:600; letter-spacing:.08em">RESERVAS</div>
+  <div class="a" style="left:640px; top:18px; border:1.4px solid var(--cream); border-radius:20px; padding:6px 12px; font-size:8px; font-weight:700; letter-spacing:.1em">BOOK A TABLE →</div>
+
+  <div class="a glow"></div>
+  <!-- the big idea: outlined NOCHE behind the dish -->
+  <div id="word" class="a anton" style="left:196px; top:52px; font-size:252px; letter-spacing:-.01em; color:transparent; -webkit-text-stroke:2.6px var(--pink); text-shadow: 0 0 22px rgba(255,59,129,.35)">NOCHE</div>
+
+  <!-- headline -->
+  <div class="a anton" style="left:16px; top:92px; font-size:70px; line-height:66px; color:var(--cream)">TACOS<br>TILL<br><span style="color:var(--pink)">2 AM.</span></div>
+  <div class="a mono" style="left:17px; top:304px; font-size:7px; line-height:13px; color:#cdbfa8">Taquería · Mezcal<br>Open late in Little Havana</div>
+  <div class="a" style="left:17px; top:340px; width:20px; height:1.4px; background:var(--pink)"></div>
+  <div class="a" style="left:17px; top:350px; font-size:9px; line-height:13px; color:#d8ccb8; white-space:normal; width:170px">Al pastor off the trompo, birria with consommé to dip, and mezcal until the lights go out.</div>
+  <!-- badge -->
+  <div class="a" style="left:18px; top:398px; width:74px; height:74px; border-radius:50%; background:var(--pink); color:var(--ink); display:grid; place-items:center; text-align:center; font:700 7px/10px Inter; letter-spacing:.08em">VER EL<br>MENÚ<br><span style="font-size:13px">→</span></div>
+
+  <!-- price line + salsa dots -->
+  <div class="a mono" style="left:560px; top:430px; font-size:7.5px; color:var(--cream)">AL PASTOR / 3 FOR $12</div>
+  <div class="a" style="left:560px; top:446px; width:120px; height:1px; background:var(--cream)"></div>
+  <div class="a" style="left:700px; top:427px; display:flex; gap:6px"><i style="width:11px;height:11px;border-radius:50%;background:#5fbf3a;display:block"></i><i style="width:11px;height:11px;border-radius:50%;background:#e8352a;display:block"></i><i style="width:11px;height:11px;border-radius:50%;background:#ff9f1a;display:block"></i></div>
+
+  <!-- EL MENÚ on cream paper -->
+  <div class="a" style="left:0; top:486px; width:780px; height:340px; background:var(--cream)"></div>
+  <div class="a anton" style="left:16px; top:500px; font-size:78px; color:var(--ink); letter-spacing:-.005em">EL MENÚ</div>
+  <div class="a" style="left:290px; top:520px; font:italic 500 22px Fraunces; color:var(--pink)">hasta las dos</div>
+  <div class="a mono" style="left:648px; top:532px; font-size:7px; color:var(--ink)">Full menu →</div>
+  <div class="a" style="left:16px; top:588px; width:748px; height:1.4px; background:var(--ink)"></div>
+  <div class="a" style="left:260px; top:600px; width:1px; height:208px; background:var(--ink)"></div>
+  <div class="a" style="left:520px; top:600px; width:1px; height:208px; background:var(--ink)"></div>
+  <img class="a" src="img/cut/fish_tacos.png" style="left:14px; top:598px; width:232px; transform:rotate(-6deg)">
+  <img class="a" src="img/cut/birria.png" style="left:296px; top:600px; width:190px; transform:rotate(5deg)">
+  <img class="a" src="img/cut/cocktail.png" style="left:600px; top:592px; height:140px">
+  <div class="a" style="left:16px; top:742px; width:232px; color:var(--ink)"><div class="anton" style="font-size:24px">BAJA FISH <span style="float:right">$5</span></div><div style="font-size:8.5px; line-height:12px; margin-top:4px; color:#4a3f35; white-space:normal">Beer-battered cod, cabbage, chipotle crema</div></div>
+  <div class="a" style="left:276px; top:742px; width:230px; color:var(--ink)"><div class="anton" style="font-size:24px">BIRRIA <span style="float:right">$5</span></div><div style="font-size:8.5px; line-height:12px; margin-top:4px; color:#4a3f35; white-space:normal">Braised beef, melted cheese, consommé to dip</div></div>
+  <div class="a" style="left:536px; top:742px; width:228px; color:var(--ink)"><div class="anton" style="font-size:24px">MEZCALITA <span style="float:right">$11</span></div><div style="font-size:8.5px; line-height:12px; margin-top:4px; color:#4a3f35; white-space:normal">Mezcal, blood orange, chile-salt rim</div></div>
+
+  <!-- SALSA BAR: hot pink block with a chili close-up -->
+  <div class="a" style="left:0; top:826px; width:780px; height:270px; background:var(--pink); overflow:hidden">
+    <div style="position:absolute; left:360px; top:0; width:420px; height:270px; background:url(img/chili.jpg) center/cover; filter: grayscale(1) contrast(1.5) brightness(.9); mix-blend-mode: multiply"></div>
+    <div style="position:absolute; left:360px; top:0; width:120px; height:270px; background: linear-gradient(90deg, var(--pink), rgba(255,59,129,0))"></div>
+    <div class="anton" style="position:absolute; left:16px; top:18px; font-size:92px; line-height:84px; color:var(--ink)">SALSA<br>BAR</div>
+    <div style="position:absolute; left:18px; top:196px; font:italic 500 15px Fraunces; color:var(--ink)">Six salsas. One of them is a dare.</div>
+    <div class="mono" style="position:absolute; left:596px; top:26px; background:var(--ink); color:var(--cream); padding:10px 12px; font-size:7.5px; line-height:18px">Heat check<br>Verde &nbsp;&nbsp;&nbsp;●○○○<br>Roja &nbsp;&nbsp;&nbsp;&nbsp;●●○○<br>Morita &nbsp;&nbsp;●●●○<br>Habanero ●●●●</div>
+    <img src="img/cut/lime.png" style="position:absolute; left:250px; top:150px; width:118px; transform:rotate(-18deg); filter: drop-shadow(0 10px 12px rgba(0,0,0,.35))">
+  </div>
+
+  <!-- footer -->
+  <div class="a anton" style="left:12px; top:1098px; font-size:150px; letter-spacing:.07em; color:var(--cream)">NOCHE</div>
+  <div class="a mono" style="left:560px; top:1132px; font-size:7px; line-height:15px; color:#cdbfa8">418 Calle Ocho, Miami<br>Tue–Sun · 6 PM – 2 AM<br>@nochetacos</div>
+  <div class="a" style="left:560px; top:1192px; background:var(--pink); color:var(--ink); padding:7px 12px; font:700 8px Inter; letter-spacing:.1em">BOOK A TABLE →</div>
+<script>
+  const part = new URLSearchParams(location.search).get("part");
+  if (part) document.body.classList.add(part);
+  document.body.dataset.ready = "1";
+</script>
+</body></html>

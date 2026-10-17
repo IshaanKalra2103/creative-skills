@@ -1,0 +1,65 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- The mise editor around the generated site, for the `screen` scene: 1128 x 676 window px at
+     3x. Layers: chrome (the window, empty chat), text (the chat transcript only, streamed in
+     by the film), card (the version card). The preview pane (335,40)-(1115,670) is left empty:
+     the film scrolls screen_site.png inside it. Light and plain, so the site can be loud. -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@1,9..144,900&display=swap');
+  :root { --ink:#1b1612; --mute:#7b6f62; --tomato:#e5432b; --line:#ece3d4; --paper:#fbf8f3; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: transparent; font-family: Inter, sans-serif; color: var(--ink); }
+  #win { width: 1128px; height: 676px; position: relative; border-radius: 14px; overflow: hidden; }
+  .L { position: absolute; }
+  .frame { left: 0; top: 0; width: 1128px; height: 676px; background: var(--paper); }
+  .top { left: 0; top: 0; width: 1128px; height: 40px; display: flex; align-items: center; gap: 12px; padding: 0 14px; font-size: 11.5px; border-bottom: 1px solid var(--line); background: var(--paper); }
+  .logo { font: italic 900 17px/1 Fraunces; color: var(--tomato); }
+  .proj { font-weight: 600; display: flex; gap: 6px; align-items: center; }
+  .proj i { width: 7px; height: 7px; border-radius: 50%; background: #3fae5a; display: block; }
+  .chip { margin-left: 70px; background: #f1ebe1; border-radius: 12px; padding: 4px 10px; color: var(--mute); font-size: 10.5px; }
+  .tabs { margin-left: 26px; display: flex; gap: 4px; font-size: 10.5px; color: var(--mute); }
+  .tabs span { padding: 4px 9px; border-radius: 7px; } .tabs .on { background: #fff; color: var(--ink); box-shadow: 0 0 0 1px var(--line); font-weight: 600; }
+  .url { margin-left: 18px; background: #fff; box-shadow: 0 0 0 1px var(--line); border-radius: 8px; padding: 4px 10px; font-size: 10px; color: var(--mute); width: 230px; }
+  .share { margin-left: auto; color: var(--mute); } .pub { background: var(--tomato); color: #fff; padding: 6px 12px; border-radius: 8px; font-weight: 600; }
+  .chatbg { left: 0; top: 40px; width: 335px; height: 636px; border-right: 1px solid var(--line); background: var(--paper); }
+  .ask { left: 12px; top: 586px; width: 311px; height: 78px; border-radius: 12px; background: #fff; box-shadow: 0 0 0 1px var(--line); padding: 10px 12px; font-size: 11px; color: #a3927c; }
+  .ask .row { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; gap: 10px; font-size: 10px; color: var(--mute); align-items: center; }
+  .ask .send { margin-left: auto; width: 22px; height: 22px; border-radius: 50%; background: #f1c9bf; }
+  .pane { left: 335px; top: 40px; width: 780px; height: 630px; background: #0d0b0a; border-radius: 0 0 8px 8px; }
+  /* transcript: absolute lines so the film can stream them (see video.toml) */
+  .t { position: absolute; font-size: 11.5px; line-height: 16px; color: #3d342b; white-space: nowrap; }
+  .bubble { position: absolute; right: 813px; top: 56px; background: #f1ebe1; border-radius: 12px 12px 3px 12px; padding: 7px 11px; font-size: 11.5px; color: var(--ink); }
+  .who { font: italic 900 15px Fraunces; color: var(--tomato); }
+  .worked { position: absolute; left: 14px; top: 124px; width: 306px; height: 28px; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); background: #fff; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 11px; color: var(--mute); }
+  .card { left: 14px; top: 478px; width: 306px; height: 52px; border-radius: 10px; background: #fff3ec; box-shadow: 0 0 0 1px #f3d4c6; padding: 9px 12px; font-size: 11px; }
+  .card b { display: block; font-weight: 600; color: var(--ink); } .card span { color: var(--mute); font-size: 9.5px; }
+  .card i { position: absolute; right: 12px; top: 12px; width: 9px; height: 12px; background: var(--tomato); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 70%, 0 100%); }
+</style></head>
+<body>
+<div id="win">
+  <div class="L frame" data-layer="chrome"></div>
+  <div class="L top" data-layer="chrome"><span class="logo">mise</span><span class="proj"><i></i>Noche</span><span class="chip">Make a site for my late-night taco bar</span>
+    <span class="tabs"><span class="on">Preview</span><span>Menu</span><span>Bookings</span></span><span class="url">noche.mise.site</span><span class="share">Share</span><span class="pub">Publish</span></div>
+  <div class="L chatbg" data-layer="chrome"></div>
+  <div class="L pane" data-layer="chrome"></div>
+  <div class="L ask" data-layer="chrome">Ask mise to change anything...<div class="row"><span>＋</span><span>Restaurant ⇅</span><span class="send"></span></div></div>
+  <div class="L" data-layer="text" style="left:0;top:0;width:1128px;height:676px">
+    <div class="bubble">Make a site for my late-night taco bar</div>
+    <div class="t who" style="left:14px; top:98px">mise</div>
+    <div class="worked">✓&nbsp; Worked for 3m 12s<span style="margin-left:auto">9 steps ⌄</span></div>
+    <div class="t" style="left:14px; top:166px">Noche is ready. Here's what's on it:</div>
+    <div class="t" style="left:14px; top:190px; font-weight:600; color:#1b1612">On the site:</div>
+    <div class="t" style="left:14px; top:212px">• Neon hero with your signature plate</div>
+    <div class="t" style="left:14px; top:232px">• Menu with photos and prices</div>
+    <div class="t" style="left:14px; top:252px">• Mezcal list, priced by the pour</div>
+    <div class="t" style="left:14px; top:272px">• Table bookings until 1:30 AM</div>
+    <div class="t" style="left:14px; top:292px">• Order ahead for pickup</div>
+    <div class="t" style="left:14px; top:312px">• Salsa bar with heat levels</div>
+    <div class="t" style="left:14px; top:332px">• Hours, map and Instagram</div>
+    <div class="t" style="left:14px; top:360px">Live at <b style="color:#1b1612">noche.mise.site</b>. Bookings are open.</div>
+    <div class="t" style="left:14px; top:380px">Want a Spanish version of the menu?</div>
+  </div>
+  <div class="L card" data-layer="card"><b>Noche · first service</b><span>v1 · Today 6:02 PM · 3 pages</span><i></i></div>
+</div>
+<script>document.body.dataset.ready = '1'</script>
+</body></html>

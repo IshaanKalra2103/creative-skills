@@ -1,0 +1,91 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- mise: the app's own home window for the `window` scene. 994 x 585 window px, rendered at 2x,
+     one transparent PNG per data-layer (the root stays transparent so the layers stack).
+     Identity: kraft and cream paper, tomato red, ink; Fraunces italic + Anton + Inter.
+     The hero is a real photo (steak over open flame), faded into the page. -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Anton&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,900&display=swap');
+  :root { --ink:#1b1612; --mute:#7b6f62; --tomato:#e5432b; --kraft:#efe4d2; --cream:#f8f2e8; --line:#e3d5bf; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: transparent; font-family: Inter, sans-serif; color: var(--ink); }
+  #win { width: 994px; height: 585px; position: relative; border-radius: 14px; overflow: hidden; background: transparent; }
+  .L { position: absolute; }
+  /* page base (drawn under everything) */
+  .base { left: 0; top: 0; width: 994px; height: 585px; background: var(--cream); }
+  /* sidebar */
+  .side { left: 0; top: 0; width: 186px; height: 585px; background: var(--kraft); border-right: 1px solid var(--line); padding: 16px 14px; font-size: 11px; color: var(--mute); }
+  .logo { font: italic 900 25px/1 Fraunces; color: var(--tomato); letter-spacing: -0.5px; margin: 0 0 16px 2px; }
+  .newbtn { background: var(--ink); color: var(--cream); border-radius: 18px; padding: 7px 12px; font-weight: 600; font-size: 11px; display: inline-block; margin-bottom: 14px; }
+  .item { padding: 6px 8px; border-radius: 7px; margin: 1px 0; display: flex; gap: 9px; align-items: center; }
+  .item.on { background: var(--cream); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+  .item svg { width: 13px; height: 13px; }
+  .sec { margin: 18px 8px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: .14em; color: #a3927c; font-weight: 600; }
+  .place { display: flex; align-items: center; gap: 9px; padding: 5px 8px; color: var(--ink); font-weight: 500; }
+  .place img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--cream); }
+  .place small { display: block; color: var(--mute); font-weight: 400; font-size: 9.5px; margin-top: 1px; }
+  .place i { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: #3fae5a; }
+  .ticket { position: absolute; left: 12px; right: 12px; bottom: 14px; background: var(--cream); border: 1px dashed #c9b597; border-radius: 6px; padding: 10px 11px; font: 500 10px/1.45 'Inter'; color: var(--ink); }
+  .ticket b { font: 400 22px/1 Anton; display: block; letter-spacing: .02em; margin: 2px 0 1px; }
+  .ticket span { color: var(--mute); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+  /* top nav */
+  .nav { left: 186px; top: 0; width: 808px; height: 44px; display: flex; justify-content: flex-end; align-items: center; gap: 22px; padding: 0 18px; font-size: 11px; font-weight: 500; color: #fff6ea; }
+  .nav .cta { background: var(--tomato); color: #fff; border-radius: 16px; padding: 6px 12px; font-weight: 600; }
+  /* hero photo band, faded into the page */
+  .hero { left: 186px; top: 0; width: 808px; height: 330px; background: url(img/grill_5.jpg) center 58%/cover; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(27,14,8,.62) 0%, rgba(27,14,8,.45) 46%, rgba(248,242,232,0) 70%); }
+  .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(248,242,232,0) 58%, var(--cream) 96%); }
+  .h1 { left: 186px; width: 808px; top: 66px; text-align: center; font: italic 400 40px/1 Fraunces; color: #fff6ea; letter-spacing: -0.5px; }
+  .h2 { left: 186px; width: 808px; top: 108px; text-align: center; font: 400 74px/1 Anton; color: #fff6ea; letter-spacing: .01em; text-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  .h2 em { font-style: normal; color: var(--tomato); }
+  .sub { left: 186px; width: 808px; top: 196px; text-align: center; font-size: 12.5px; color: rgba(255,246,234,.88); }
+  /* prompt box: the pill locks into this rect (350,256)-(830,358) */
+  .prompt { left: 350px; top: 256px; width: 480px; height: 102px; background: #fff; border-radius: 16px; box-shadow: 0 14px 34px rgba(60,25,10,.22), 0 0 0 1px #eadcc6; padding: 15px 17px; font-size: 13px; color: #a3927c; }
+  .row { position: absolute; left: 14px; right: 14px; bottom: 12px; display: flex; gap: 12px; align-items: center; font-size: 11px; color: var(--mute); font-weight: 500; }
+  .plus { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 1px #e0d0b8; display: grid; place-items: center; font-size: 15px; color: var(--ink); }
+  .send { margin-left: auto; width: 28px; height: 28px; border-radius: 50%; background: var(--tomato); display: grid; place-items: center; }
+  /* start from a kitchen: real photo tiles */
+  .klabel { left: 332px; width: 516px; top: 378px; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: #a3927c; font-weight: 600; text-align: center; }
+  .tiles { left: 332px; top: 396px; display: flex; gap: 12px; }
+  .tile { width: 120px; height: 92px; border-radius: 10px; overflow: hidden; position: relative; box-shadow: 0 6px 16px rgba(60,25,10,.16); }
+  .tile img { width: 100%; height: 100%; object-fit: cover; }
+  .tile span { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 8px 6px; font: 400 15px/1 Anton; letter-spacing: .03em; color: #fff; background: linear-gradient(0deg, rgba(0,0,0,.6), rgba(0,0,0,0)); }
+  .start { left: 186px; width: 808px; top: 512px; display: flex; justify-content: center; gap: 8px; font-size: 10.5px; color: var(--mute); align-items: center; }
+  .start .pill { box-shadow: 0 0 0 1px var(--line); border-radius: 14px; padding: 5px 10px; color: var(--ink); background: #fff; font-weight: 500; }
+</style></head>
+<body>
+<div id="win">
+  <div class="L base" data-layer="base"></div>
+  <div class="L hero" data-layer="hero"></div>
+  <div class="L side" data-layer="side">
+    <div class="logo">mise</div>
+    <div class="newbtn">+ New place</div>
+    <div class="item on"><svg viewBox="0 0 16 16"><path d="M2 7 L8 2 L14 7 L14 14 L2 14 Z" fill="none" stroke="#1b1612" stroke-width="1.6"/></svg>Home</div>
+    <div class="item"><svg viewBox="0 0 16 16"><path d="M3 2 H13 V14 H3 Z M5.5 6 H10.5 M5.5 9 H10.5" fill="none" stroke="#7b6f62" stroke-width="1.5"/></svg>Menus</div>
+    <div class="item"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="#7b6f62" stroke-width="1.5"/><path d="M2 7 H14 M5 1.5 V4.5 M11 1.5 V4.5" stroke="#7b6f62" stroke-width="1.5"/></svg>Bookings</div>
+    <div class="item"><svg viewBox="0 0 16 16"><path d="M2.5 4 H13.5 L12.3 13 H3.7 Z M5.5 4 C5.5 1.5 10.5 1.5 10.5 4" fill="none" stroke="#7b6f62" stroke-width="1.5"/></svg>Orders</div>
+    <div class="sec">Your places</div>
+    <div class="place"><img src="img/taco_1.jpg"><div>Noche<small>taquería · Miami</small></div><i></i></div>
+    <div class="place"><img src="img/bread_4.jpg"><div>Crumb &amp; Co.<small>bakery · Lisbon</small></div><i></i></div>
+    <div class="place"><img src="img/wine_2.jpg"><div>Bar Vela<small>wine bar · Austin</small></div><i style="background:#e0a52c"></i></div>
+    <div class="ticket"><span>Tonight · Noche</span><b>84 COVERS</b>booked · first seating 6 PM</div>
+  </div>
+  <div class="L nav" data-layer="nav"><span>Templates</span><span>Pricing</span><span>For chefs</span><span>Log in</span><span class="cta">Start cooking</span></div>
+  <div class="L h1" data-layer="h1">You cook it.</div>
+  <div class="L h2" data-layer="h2">WE SERVE <em>IT.</em></div>
+  <div class="L sub" data-layer="sub">Menu, bookings and orders from one sentence. Live before service.</div>
+  <div class="L prompt" data-layer="prompt">Describe your place...
+    <div class="row"><span class="plus">+</span><span>Restaurant &#8645;</span><span>Menu &#8645;</span>
+      <span class="send"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 10 V2 M2.5 5.5 L6 2 L9.5 5.5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+  </div>
+  <div class="L klabel" data-layer="sub">Start from a kitchen</div>
+  <div class="L tiles" data-layer="icons">
+    <div class="tile"><img src="img/taco_1.jpg"><span>TAQUERÍA</span></div>
+    <div class="tile"><img src="img/bread_4.jpg"><span>BAKERY</span></div>
+    <div class="tile"><img src="img/wine_2.jpg"><span>WINE BAR</span></div>
+    <div class="tile"><img src="img/ramen.jpg"><span>RAMEN</span></div>
+  </div>
+  <div class="L start" data-layer="start">or bring what you have:<span class="pill">Menu PDF</span><span class="pill">Instagram</span><span class="pill">Google Maps listing</span></div>
+</div>
+<script>document.body.dataset.ready = '1'</script>
+</body></html>

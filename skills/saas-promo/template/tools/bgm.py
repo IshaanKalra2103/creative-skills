@@ -5,8 +5,8 @@
 four-on-the-floor kick, claps, hats, a side-chained supersaw pad, sub bass and a pluck, a
 noise riser into every `drop` and a whoosh on every scene cut, an impact on the end card.
 
-    uv run tools/bgm.py examples/lumen/video.toml                # -> audio/bgm.wav, length = film
-    uv run tools/bgm.py examples/lumen/video.toml --bpm 124 --key A --minor
+    uv run tools/bgm.py examples/mise/video.toml                # -> audio/bgm.wav, length = film
+    uv run tools/bgm.py examples/mise/video.toml --bpm 124 --key A --minor
 
 Uses the spec's `video.bpm` (or --bpm) and scene layout (durations / beats, `at`). Scenes with
 `drop = true` get a riser before them and the full beat from there on; before the first drop

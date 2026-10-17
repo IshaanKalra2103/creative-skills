@@ -1,0 +1,234 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- The mise card wall: eight fictional food businesses "built with mise", each with its own
+     palette, display face and photo treatment, plus the centre poster. One 640x360 card per
+     #id, rendered at 2x by tools/screens/render.py (see examples/mise/screens/cards/render.sh).
+     Photos: ../img (credited in examples/mise/SOURCES.md). -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,900;0,9..144,600&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@900&family=Archivo+Black&family=Shrikhand&family=Anton&family=Cormorant+Garamond:wght@500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #222; display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; width: 1400px; font-family: Inter, sans-serif; }
+.c { position: relative; width: 640px; height: 360px; overflow: hidden; }
+.a { position: absolute; }
+.nav { position: absolute; left: 0; right: 0; top: 0; height: 30px; display: flex; align-items: center; gap: 18px; padding: 0 18px; font-size: 8px; }
+.lead { display: flex; gap: 6px; align-items: baseline; }
+.lead i { flex: 1; border-bottom: 1px dotted currentColor; transform: translateY(-3px); opacity: .6; }
+
+/* 1. CRUMB & RYE: bakery. Paper, a huge italic serif, a cut-out loaf breaking the word. */
+#bakery { background: #efe3cc; color: #4a2512; }
+#bakery .word { left: 16px; top: 18px; font: italic 900 214px/0.9 Fraunces; letter-spacing: -8px; color: #7a3d1a; }
+#bakery .loaf { left: 300px; top: 92px; width: 350px; transform: rotate(-9deg); filter: drop-shadow(0 26px 22px rgba(70,30,5,.45)); }
+#bakery .tag { left: 22px; top: 226px; font: 600 8px Inter; letter-spacing: .24em; }
+#bakery .menu { left: 22px; top: 252px; width: 238px; font: 600 15px Fraunces; line-height: 1.55; }
+#bakery .badge { left: 548px; top: 34px; width: 74px; height: 74px; border-radius: 50%; background: #b5481f; color: #f6ead6; display: grid; place-items: center; text-align: center; font: 700 8px/1.3 Inter; letter-spacing: .12em; transform: rotate(12deg); }
+
+/* 2. SKIN CONTACT: natural wine bar. Oxblood, an amber duotone photo, serif italics, mono list. */
+#wine { background: #3a0c15; color: #ffc2cc; }
+#wine .ph { right: 0; top: 0; width: 360px; height: 360px; background: #f08a3c; }
+#wine .ph img { width: 100%; height: 100%; object-fit: cover; object-position: 60% 50%; filter: grayscale(1) contrast(1.35) brightness(1.05); mix-blend-mode: multiply; }
+#wine .ph::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #3a0c15 0%, rgba(58,12,21,0) 28%); }
+#wine .t { left: 22px; top: 40px; font: italic 400 98px/0.86 'Instrument Serif'; }
+#wine .k { left: 24px; top: 222px; font: 400 7.5px 'Space Mono'; letter-spacing: .12em; color: #f7a3b3; }
+#wine .list { left: 24px; top: 248px; width: 230px; font: 400 10.5px/1.75 'Space Mono'; color: #ffd9df; }
+#wine .nav { color: #ffc2cc; font-family: 'Space Mono'; }
+
+/* 3. OKAWARI: ramen counter. Tomato red, giant katakana, the bowl in a white ring. */
+#ramen { background: #d9261c; color: #fff4e6; }
+#ramen .kana { left: -10px; top: -36px; font: 900 150px/1 'Noto Sans JP'; color: #ff5a45; letter-spacing: -6px; white-space: nowrap; }
+#ramen .bowl { left: 330px; top: 52px; width: 270px; height: 270px; border-radius: 50%; overflow: hidden; border: 8px solid #fff4e6; box-shadow: 0 18px 30px rgba(80,0,0,.35); }
+#ramen .bowl img { width: 130%; height: 130%; object-fit: cover; margin: -12% 0 0 -14%; }
+#ramen .name { left: 22px; top: 176px; font: 400 54px/1 'Archivo Black'; letter-spacing: -1px; }
+#ramen .k { left: 24px; top: 240px; font: 700 8px Inter; letter-spacing: .22em; }
+#ramen .price { left: 24px; top: 262px; font: 400 40px 'Archivo Black'; color: #ffd84a; }
+#ramen .note { left: 112px; top: 272px; width: 160px; font: 500 9px/1.4 Inter; }
+
+/* 4. SLOW ROAST CO.: coffee roaster. Full-bleed beans, a spec-sheet bag label in mono. */
+#coffee { background: #1b120c; }
+#coffee .ph { inset: 0; width: 640px; height: 360px; object-fit: cover; filter: brightness(.72) contrast(1.1); }
+#coffee .label { left: 34px; top: 34px; width: 248px; height: 292px; background: #f1e9da; color: #1b120c; padding: 18px; box-shadow: 0 20px 30px rgba(0,0,0,.45); }
+#coffee .label h3 { font: 400 40px/0.92 Anton; letter-spacing: .5px; }
+#coffee .label .no { font: 700 9px 'Space Mono'; margin: 10px 0 8px; letter-spacing: .1em; color: #c2410c; }
+#coffee .label .row { font: 400 8.6px/1.85 'Space Mono'; }
+#coffee .bars { position: absolute; left: 18px; bottom: 16px; width: 120px; height: 22px; background: repeating-linear-gradient(90deg, #1b120c 0 2px, transparent 2px 4px, #1b120c 4px 5px, transparent 5px 8px); }
+#coffee .stamp { left: 400px; top: 210px; width: 96px; height: 96px; border-radius: 50%; background: #ff7a2f; box-shadow: 0 10px 20px rgba(0,0,0,.4); color: #1b120c; display: grid; place-items: center; text-align: center; font: 700 9px/1.35 'Space Mono'; transform: rotate(-14deg); letter-spacing: .08em; }
+#coffee .nav { color: #f1e9da; justify-content: flex-end; font-family: 'Space Mono'; }
+
+/* 5. LOLA'S: gelato. Mint and pink, a script logo, two cut-out cones, flavour pills. */
+#gelato { background: #bfeedd; color: #2d1640; }
+#gelato .disc { left: 330px; top: 30px; width: 300px; height: 300px; border-radius: 50%; background: #ff9ec3; }
+#gelato .c1 { left: 330px; top: 60px; height: 270px; transform: rotate(-8deg); filter: drop-shadow(0 18px 14px rgba(120,20,70,.3)); }
+#gelato .c2 { left: 500px; top: 96px; height: 250px; transform: rotate(12deg); filter: drop-shadow(0 18px 14px rgba(120,20,70,.3)); }
+#gelato .logo { left: 22px; top: 40px; font: 400 92px/1 Shrikhand; color: #ff3f86; transform: rotate(-6deg); }
+#gelato .sub { left: 30px; top: 150px; font: 400 26px 'Archivo Black'; letter-spacing: 6px; color: #2d1640; }
+#gelato .pills { left: 28px; top: 206px; width: 300px; display: flex; flex-wrap: wrap; gap: 7px; }
+#gelato .pills span { padding: 6px 11px; border-radius: 20px; background: #fff7e8; font: 600 10px Inter; box-shadow: 0 0 0 1.5px #2d1640; }
+#gelato .pills span:nth-child(2n) { background: #ffe066; }
+#gelato .k { left: 30px; top: 300px; font: 700 8px Inter; letter-spacing: .2em; }
+
+/* 6. SLICE CLUB: pizza by the slice. Black, an outlined word, the slice breaking it. */
+#pizza { background: #121212; color: #ffd400; }
+#pizza .out { left: 196px; top: 34px; font: 400 268px/1 Anton; color: transparent; -webkit-text-stroke: 3px #ffd400; letter-spacing: -2px; }
+#pizza .slice { left: 250px; top: 70px; width: 330px; transform: rotate(28deg); filter: drop-shadow(0 26px 18px rgba(0,0,0,.6)); }
+#pizza .price { left: 22px; top: 46px; font: 400 70px/0.88 Anton; }
+#pizza .k { left: 24px; top: 186px; font: 700 8px Inter; letter-spacing: .22em; color: #fff; }
+#pizza .sticker { left: 520px; top: 228px; width: 96px; height: 96px; border-radius: 50%; background: #e3261b; color: #fff; display: grid; place-items: center; text-align: center; font: 400 17px/0.95 Anton; transform: rotate(14deg); }
+#pizza .nav { color: #fff; justify-content: flex-end; }
+
+/* 7. THE PEARL: oyster bar. Navy, a hard-cropped photo, letterspaced serif caps, a raw-bar menu. */
+#oyster { background: #0e1a33; color: #f3ead8; }
+#oyster .ph { left: 0; top: 0; width: 640px; height: 196px; object-fit: cover; object-position: 50% 40%; }
+#oyster .rule { left: 0; top: 196px; width: 640px; height: 4px; background: #d6b46a; }
+#oyster .t { left: 24px; top: 218px; font: 600 50px/1 'Cormorant Garamond'; letter-spacing: 9px; }
+#oyster .k { left: 27px; top: 278px; font: 500 8px Inter; letter-spacing: .26em; color: #d6b46a; }
+#oyster .list { left: 372px; top: 216px; width: 244px; font: 600 15px/1.55 'Cormorant Garamond'; }
+#oyster .list .lead i { opacity: .4; }
+#oyster .hh { left: 27px; top: 306px; font: italic 500 15px 'Cormorant Garamond'; color: #f3ead8; opacity: .85; }
+
+/* 8. GOLDEN FOLD: dumpling house. Mustard, a red wide grotesk, a photo grid, a seal. */
+#dumpling { background: #f2b631; color: #a8180f; }
+#dumpling .t { left: 20px; top: 26px; font: 800 64px/0.9 'Bricolage Grotesque'; letter-spacing: -2.5px; }
+#dumpling .grid { left: 20px; top: 158px; display: flex; gap: 10px; }
+#dumpling .grid img { width: 128px; height: 128px; object-fit: cover; border-radius: 6px; border: 3px solid #a8180f; }
+#dumpling .menu { left: 458px; top: 150px; width: 166px; font: 500 10.5px/1.7 'Bricolage Grotesque'; color: #4a0c06; }
+#dumpling .seal { left: 528px; top: 26px; width: 92px; height: 92px; background: #c3241b; color: #ffe9b0; display: grid; place-items: center; font: 900 40px/1 'Noto Sans JP'; transform: rotate(-6deg); border-radius: 6px; box-shadow: inset 0 0 0 4px #c3241b, inset 0 0 0 6px #ffe9b0; }
+#dumpling .k { left: 22px; top: 300px; font: 700 8px Inter; letter-spacing: .2em; color: #4a0c06; }
+
+/* CENTRE: LATE NIGHT TACOS, a paper-cutout collage poster. */
+#poster { background: #ff5a1f; }
+#poster .w { font: 400 74px/0.86 Anton; color: #2a0e8f; letter-spacing: -1px; }
+#poster .lbl { left: 22px; top: 120px; padding: 8px 14px 4px; background: #f4ead6; color: #121212; font: 400 64px/0.9 Anton; transform: rotate(-3deg); box-shadow: 3px 4px 0 rgba(0,0,0,.18); }
+#poster .arch { left: 300px; top: 64px; width: 138px; height: 250px; border-radius: 69px 69px 0 0; background: #f4ead6; }
+#poster .arch .in { position: absolute; left: 12px; top: 12px; right: 12px; bottom: 0; border-radius: 57px 57px 0 0; overflow: hidden; }
+#poster .arch img { width: 300%; height: 100%; object-fit: cover; margin-left: -60%; }
+#poster .chili { left: 405px; top: 30px; width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 6px solid #ff3f86; }
+#poster .chili img { width: 100%; height: 100%; object-fit: cover; }
+#poster .moon { left: 540px; top: 22px; width: 76px; height: 76px; border-radius: 50%; background: #ffd23f; }
+#poster .moon::after { content: ""; position: absolute; left: 22px; top: -8px; width: 70px; height: 70px; border-radius: 50%; background: #ff5a1f; }
+#poster .stripes { left: 528px; top: 120px; width: 70px; height: 150px; background: repeating-linear-gradient(0deg, #121212 0 10px, #f4ead6 10px 20px); transform: rotate(4deg); }
+#poster .steps { left: 430px; top: 236px; width: 180px; height: 78px; background: linear-gradient(#2a0e8f, #2a0e8f) 0 52px/180px 26px no-repeat, linear-gradient(#2a0e8f, #2a0e8f) 60px 26px/120px 26px no-repeat, linear-gradient(#2a0e8f, #2a0e8f) 120px 0/60px 26px no-repeat; }
+#poster .lime { left: 418px; top: 172px; width: 128px; transform: rotate(-18deg); filter: drop-shadow(0 8px 8px rgba(0,0,0,.25)); }
+#poster .check { left: 262px; top: 260px; width: 48px; height: 48px; background: conic-gradient(#121212 25%, #f4ead6 0 50%, #121212 0 75%, #f4ead6 0) 0 0/16px 16px; }
+#poster .half { left: 250px; top: 18px; width: 70px; height: 35px; border-radius: 35px 35px 0 0; background: #ff3f86; }
+#poster .squig { left: 196px; top: 40px; }
+#poster .strip { left: 0; right: 0; bottom: 0; height: 34px; background: #121212; color: #f4ead6; display: flex; align-items: center; gap: 22px; padding: 0 22px; font: 400 15px Anton; letter-spacing: 1.5px; }
+#poster .strip b { color: #ffd23f; font-weight: 400; }
+#poster .nav { color: #121212; font-weight: 700; }
+</style></head>
+<body>
+
+<div class="c" id="bakery">
+  <div class="nav"><b style="font:700 10px Fraunces;letter-spacing:.06em">CRUMB &amp; RYE</b><span style="margin-left:auto">Breads</span><span>Pastries</span><span>Order ahead</span></div>
+  <div class="a word">Crumb</div>
+  <img class="a loaf" src="img/wall_bread_cut.png">
+  <div class="a tag">BAKED AT 4AM · GONE BY NOON</div>
+  <div class="a menu">
+    <div class="lead">Country sourdough<i></i>9</div>
+    <div class="lead">Seeded rye<i></i>10</div>
+    <div class="lead">Cardamom bun<i></i>5</div>
+  </div>
+  <div class="a badge">ORDER<br>FOR<br>PICKUP</div>
+</div>
+
+<div class="c" id="wine">
+  <div class="nav"><span>SKIN CONTACT</span><span style="margin-left:auto">LIST</span><span>BOOK</span></div>
+  <div class="a ph"><img src="img/wall_wine_8.jpg"></div>
+  <div class="a t">Skin<br>Contact</div>
+  <div class="a k">ORANGE WINE · SMALL PLATES · THU–SUN 5PM–1AM</div>
+  <div class="a list">
+    <div class="lead">Pét-nat, Loire<i></i>13</div>
+    <div class="lead">Skin-contact Malvasia<i></i>15</div>
+    <div class="lead">Gamay, chilled<i></i>12</div>
+  </div>
+</div>
+
+<div class="c" id="ramen">
+  <div class="a kana">ラーメン</div>
+  <div class="a bowl"><img src="img/wall_ramen_1.jpg"></div>
+  <div class="a name">OKAWARI</div>
+  <div class="a k">TONKOTSU · SHOYU · 12 SEATS</div>
+  <div class="a price">$16</div>
+  <div class="a note">Counter only. No bookings. Second bowl of noodles is on us.</div>
+</div>
+
+<div class="c" id="coffee">
+  <img class="a ph" src="img/wall_coffee_8.jpg">
+  <div class="nav"><span>SHOP</span><span>SUBSCRIBE</span><span>CAFÉ</span></div>
+  <div class="a label">
+    <h3>SLOW<br>ROAST CO.</h3>
+    <div class="no">ROAST No. 42</div>
+    <div class="row lead">ORIGIN<i></i>HUILA, CO</div>
+    <div class="row lead">PROCESS<i></i>WASHED</div>
+    <div class="row lead">NOTES<i></i>PANELA, PLUM</div>
+    <div class="row lead">ROASTED<i></i>MON 13</div>
+    <div class="row lead">250 G<i></i>$19</div>
+    <div class="bars"></div>
+  </div>
+  <div class="a stamp">FRESH<br>EVERY<br>MONDAY</div>
+</div>
+
+<div class="c" id="gelato">
+  <div class="a disc"></div>
+  <img class="a c1" src="img/wall_cone_berry_cut.png">
+  <img class="a c2" src="img/wall_cone_pink_cut.png">
+  <div class="a logo">Lola's</div>
+  <div class="a sub">GELATERIA</div>
+  <div class="a pills"><span>pistacchio</span><span>fior di latte</span><span>amarena</span><span>stracciatella</span><span>blood orange</span></div>
+  <div class="a k">14 FLAVOURS DAILY · OPEN TIL MIDNIGHT</div>
+</div>
+
+<div class="c" id="pizza">
+  <div class="nav"><span>MENU</span><span>LOCATIONS</span><span>CATERING</span></div>
+  <div class="a out">SLICE</div>
+  <img class="a slice" src="img/wall_pizza6_cut.png">
+  <div class="a" style="left:24px; top:214px; width:150px; font:500 9px/1.5 Inter; color:#ddd">Cheese, pepperoni, white pie and one wild card a night. Cash or card, no waiting.</div>
+  <div class="a price">$4<br>A SLICE</div>
+  <div class="a k">SLICE CLUB · 3 LOCATIONS</div>
+  <div class="a sticker">OPEN<br>TIL<br>4AM</div>
+</div>
+
+<div class="c" id="oyster">
+  <img class="a ph" src="img/wall_oyster_3.jpg">
+  <div class="a rule"></div>
+  <div class="a t">THE PEARL</div>
+  <div class="a k">OYSTER BAR · EST. 2019</div>
+  <div class="a hh">Half-shell hour, 4 to 6, every day</div>
+  <div class="a list">
+    <div class="lead">Kumamoto<i></i>4</div>
+    <div class="lead">Kusshi<i></i>4.5</div>
+    <div class="lead">Island Creek<i></i>3.5</div>
+    <div class="lead">Champagne, glass<i></i>18</div>
+  </div>
+</div>
+
+<div class="c" id="dumpling">
+  <div class="a t">GOLDEN<br>FOLD</div>
+  <div class="a seal">餃子</div>
+  <div class="a grid"><img src="img/wall_dumpling_1.jpg"><img src="img/wall_dumpling_3.jpg"><img src="img/wall_dumpling_5.jpg"></div>
+  <div class="a menu">
+    <div class="lead">Pork &amp; chive ×10<i></i>11</div>
+    <div class="lead">Soup dumplings ×6<i></i>12</div>
+    <div class="lead">Chili oil wontons<i></i>10</div>
+    <div class="lead">Smashed cucumber<i></i>7</div>
+  </div>
+  <div class="a k">HAND-FOLDED DAILY · FREE DELIVERY 2 MI</div>
+</div>
+
+<div class="c" id="poster">
+  <div class="nav"><span style="font:400 13px Anton;letter-spacing:1px">NOCHE</span><span>MENU</span><span>RESERVE</span></div>
+  <div class="a w" style="left:22px; top:40px">LATE</div>
+  <div class="a lbl">NIGHT</div>
+  <div class="a w" style="left:22px; top:196px">TACOS</div>
+  <div class="a half"></div>
+  <svg class="a squig" width="70" height="26" viewBox="0 0 70 26"><path d="M3 18 Q11 2 19 14 T35 14 T51 14 T67 10" fill="none" stroke="#121212" stroke-width="4" stroke-linecap="round"/></svg>
+  <div class="a arch"><div class="in"><img src="img/wall_taco_1.jpg"></div></div>
+  <div class="a chili"><img src="img/wall_chili_1.jpg"></div>
+  <div class="a moon"></div>
+  <div class="a stripes"></div>
+  <div class="a steps"></div>
+  <img class="a lime" src="img/wall_lime_cut.png">
+  <div class="a check"></div>
+  <div class="a strip"><span>TUE</span><span>WED</span><span>THU</span><b>9PM – 2AM</b><span style="margin-left:auto">$3 TACOS</span></div>
+</div>
+
+<script>document.fonts.ready.then(() => document.body.dataset.ready = '1')</script>
+</body></html>

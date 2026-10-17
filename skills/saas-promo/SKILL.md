@@ -30,10 +30,10 @@ out in seconds or beats, snaps the cuts to the music's beat grid, and draws ever
 | path | what it is |
 |---|---|
 | `template/` | The fframes crate (`cargo build --release` once; the first build takes 1-2 min). `src/spec.rs` reads the spec, `src/kit.rs` holds the shared look (palette, the backdrop shader and its framings, glass type, highlight boxes, the 3D camera, cursor, letterbox), `src/scenes/` has one file per kind, `src/shaders/` the backdrop and halftone shaders, `media/` the Inter and Anton fonts. |
-| `template/tools/` | `promo.sh` (run the engine on a spec), `beats.py` (beat grid of a track → `build/beats.json`, snapped cut list), `bgm.py` (an original synthesized bed cut to the spec), `palette.py` (a full `[palette]` from one brand colour), `screens/render.py` (HTML mock-ups → PNG, layer by layer), `bgfit/fit.py` (fit a backdrop framing to any reference frame), `cmp.sh` (reference vs ours at the same seconds), `sheet.py`, `refsheet.py` (contact sheets). |
+| `template/tools/` | `promo.sh` (run the engine on a spec), `beats.py` (beat grid of a track → `build/beats.json`, snapped cut list), `bgm.py` (an original synthesized bed cut to the spec), `palette.py` (a full `[palette]` from one brand colour), `screens/render.py` (HTML mock-ups → PNG, layer by layer), `images/fetch.py` (credited photos from Openverse or Bing, with a contact sheet to vet), `images/cutout.py` (cut a subject off its background), `bgfit/fit.py` (fit a backdrop framing to any reference frame), `cmp.sh` (reference vs ours at the same seconds), `sheet.py`, `refsheet.py` (contact sheets). |
 | `template/examples/bolt-weekend/` | The worked example: bolt.new's 27.7 s "Bolt is free this weekend" promo rebuilt on the generic kinds, scene starts on the original cuts. `reference.jpg` = frames from the original, `render.jpg` = ours at the same times. It plays over an original synthesized track (`tools/bgm.py`); the promo's own video and music aren't included. |
-| `template/examples/lumen/` | An original film for a fictional AI-notes app: violet palette, a different flow, durations in beats at 124 bpm, an original synthesized track, every screen as HTML in `screens/`. It shows what changes between films. |
-| `references/` | `spec.md` (every `video.toml` key, timing model, backdrop presets, music), `kinds/*.md` (every kind's params, defaults and measured timing), `look.md` (what makes the style and every measured number), `case-study.md` (how the reference was rebuilt, lessons). |
+| `template/examples/mise/` | An original film for a fictional AI site builder for restaurants: warm palette, a different flow, durations in beats at 124 bpm, an original synthesized track, and art-directed screens (HTML in `screens/`, real credited photography and cut-outs). It shows what changes between films. |
+| `references/` | `screens.md` (art direction for the screens, the slop checklist, recipes), `spec.md` (every `video.toml` key, timing model, backdrop presets, music), `kinds/*.md` (every kind's params, defaults and measured timing), `look.md` (what makes the style and every measured number), `case-study.md` (how the reference was rebuilt, lessons). |
 
 Requirements: Rust (cargo), `ffmpeg`, `uv`. Screens render with Playwright's Chromium
 (`uvx playwright install chromium` once). The engine renders with Skia on Metal (macOS);
@@ -45,16 +45,22 @@ Read `references/look.md` first: the style is a small set of moves (glass words,
 highlights, a camera that always settles, blur cuts, one gradient world) and they matter more
 than any single scene.
 
-1. **Copy an example** to `template/examples/<name>/` (`lumen` is the cleaner starting
+1. **Copy an example** to `template/examples/<name>/` (`mise` is the cleaner starting
    point). Write the story as 8-12 beats: hook (title), what it is (window), the offer
    (tiles/caption), how it works (prompt → screen), proof or community (wall), CTA (end).
    Captions are 2-6 words a line, two lines, one or two `[highlight]` runs on the payoff.
-2. **Screens.** Make each UI a small HTML page in `screens/` (real copy, your product's
-   look), then render: `uv run tools/screens/render.py screens/window.html
-   "assets/window_{layer}.png" --select "#win" --layers side,hero,nav,h1,h2,...` (elements
-   with `data-layer` render one at a time, transparent: keep the window's own background off
-   the root element or every layer covers the one below). Tall pages for `screen` use
-   `--full` or `--select "#doc"`. Card thumbnails: one HTML with a `#id` per card.
+2. **Screens: art direction, not UI filler.** Read `references/screens.md`. The screens
+   carry the taste: pick a product whose output is visual, give each screen one big idea (a
+   giant outlined word behind a cut-out, a colour-block page, a collage), use real photos
+   with credits (`uv run tools/images/fetch.py screens/img tacos "tacos"`, then look at the
+   contact sheet and cut subjects out with `tools/images/cutout.py`), make every wall card a
+   different business, write specific copy. Reject anything on the slop checklist (purple
+   gradient heroes, skeleton bars, identical rounded cards with pastel icon squares).
+   Make each UI a small HTML page in `screens/`, then render: `uv run
+   tools/screens/render.py screens/window.html "assets/window_{layer}.png" --select "#win"
+   --layers side,hero,nav,h1,h2,...` (elements with `data-layer` render one at a time,
+   transparent: keep the window's own background off the root element or every layer covers
+   the one below). Tall pages for `screen` use `--full` or `--select "#doc"`.
 3. **Colour.** `[palette] preset = "blue" | "ember" | "mint" | "violet" | "noir"`, or
    `uv run tools/palette.py "#ff5a1f"` and paste the block. `[look] font` takes any face
    whose TTF you drop in `assets/`.
@@ -122,5 +128,5 @@ Fonts: Inter and Anton (SIL OFL 1.1, `template/licenses/`). The look and timings
 measured on bolt.new's "Bolt is free for everyone, all weekend long" promo (StackBlitz);
 `examples/bolt-weekend/reference.jpg` shows frames from it for comparison, and the
 example's sources (the bolt.new wordmark, product photos and clip art inside the rebuilt
-screens) are listed in `examples/bolt-weekend/SOURCES.md`. The `lumen` example, its
+screens) are listed in `examples/bolt-weekend/SOURCES.md`. The `mise` example's design, copy and music are original; its photos are credited in `examples/mise/SOURCES.md`. Its
 screens and its music are original.

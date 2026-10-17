@@ -36,6 +36,7 @@ cool = ["#5b8cf2", "#9cc0f6", "#eef5ff"]
 
 [[scene]]
 kind = "window"
+halftone = true
 dur = 2.12
 bg = "window"
 backtitle = ["Calling", "all", "builders"]
