@@ -517,6 +517,26 @@ Motion modeled on a logo sting by [G4K Motion](https://x.com/G4K_Motion). The ma
 
 Copied unchanged from [wheresryan22/anatomy](https://github.com/wheresryan22/anatomy) (`dbf697a`), with its MIT `LICENSE`. By Ryan; see [skills.wheresryan.sh/anatomy](https://skills.wheresryan.sh/anatomy).
 
+## launch-promo
+
+![Frames from the Loopcast example: a rival's reel going viral, 2:03 AM link pasting, the Loopcast brand reveal, the iMessage flow, four TinyFish primitive cards, a post scan, the live dashboard, "Just one command." and "$0.27 a run."](skills/launch-promo/assets/preview.jpg)
+
+*`examples/loopcast`: a 57.5 s, 9-scene launch film for Loopcast, a TinyFish-powered growth agent. Every number on screen comes from two real runs.*
+
+![The 20 s template: a flood of unanswered questions, the Orbit brand reveal, three agent cards, the end card with a CTA click](skills/launch-promo/assets/template.jpg)
+
+*`template/`: the 20 s starter for a placeholder product (Orbit). It renders before any API call.*
+
+- `SKILL.md`: the workflow (collect the product truth → pick the shape, with or without a reference → script against target beats → build scenes beat by beat → voice, music and SFX → check the cut and render), plus starting from the Loopcast example.
+- `template/`: one HTML page where `seek(t)` is pure: scenes, components (mascot, phone, stickers, toggles, keycaps, cursor), and `vo.py`, `music.py`, `audio.py` and `render.py` for the ElevenLabs voice, ElevenLabs Music, synthesised SFX with ducking, and parallel headless-Chromium rendering with motion blur.
+- `examples/loopcast/`: the full film as an overlay on the template, with the real placed word timings.
+- `scripts/`: contact sheets, Whisper line timings, palette sampling and motion density for studying a reference.
+- `references/`: `aesthetic.md`, `motion.md`, `text.md`, `structure.md` (the 9-beat map), `audio.md`, `gotchas.md`.
+
+**Use:** ask for a launch video, product promo or motion-graphics ad for your own product, or share a promo and say "make one like this". Needs `uv`, `ffmpeg` and Playwright's Chromium; an ElevenLabs key for voice and music.
+
+Structure and timing studied from the DMflo launch promo (motion by [@that.product.guy](https://x.com/that.product.guy)). The scenes, mascot, code and audio are original.
+
 ## 3d-deep-explainer
 
 ![The attention plane of the Next-Word Machine: a masked, softmaxed 5×5 score grid above the bench, with beams from the query word to every key sized by attention weight](skills/3d-deep-explainer/.github/assets/attention-plane.jpg)
