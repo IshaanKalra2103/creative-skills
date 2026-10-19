@@ -40,6 +40,7 @@
 | [3d-deep-explainer](skills/3d-deep-explainer) | A cinematic, interactive 3D "machine" in three.js that explains how something works: data flows along a workbench through 6–10 stations (glass lenses for matrices, drawer cabinets for lookup tables, beams sized by weight, gauges, histograms, an exploded view for depth), with eased fly-throughs, what-if toggles that re-run the computation, a guided Tour and a frame-stepped tour video. A tiny real implementation runs live, so every number on screen is genuine. Comes with a generic engine and 3-station starter, a 13-part station cookbook, a train-a-tiny-real-model pipeline, screenshot and recording scripts, and the full Next-Word Machine (a real 2-layer Transformer with a MoE twin) as the worked example. |
 | [doc-shorts](skills/doc-shorts) | Vertical documentary and infographic shorts rendered in code with fframes, in a retro "archive under glass" look: scanlines, a 30° halftone screen and low grain over real archival photos, small Instrument Serif captions with a chromatic fringe, flat grey, paper and black type cards, and graphic beats (a network Earth, a wireframe globe grid, a thumbnail tunnel, a magnifier, a typed search pill, charts). Everything animates on threes and cuts on narration words. One `video.toml` per film: an ElevenLabs voiceover with word timings, an optional ElevenLabs Music bed, and one shot per cut cued on a word. 15 shot kinds, tools for voice, music, Whisper timings, cut-outs and side-by-side review, a script that studies a reference reel tick by tick, and a 27 s reel about Google's origin at Stanford rebuilt tick for tick as the worked example. |
 | [saas-promo](skills/saas-promo) | Snappy SaaS and product promo films rendered in code with fframes, in the "glass on a screen gradient" look of the bolt.new weekend promo: a deep gradient behind a monitor dot screen, words that blur in as frosted glass and settle, highlight boxes that pop, caption groups that tilt in and settle, a frosted pill that grows into an app window, a prompt typed with a cursor click, an editor whose site scrolls, a card wall with depth of field and a button click, and a logo end card. One `video.toml` sets the palette (presets or one brand colour), fonts, the flow (8 scene kinds in any order), durations in seconds or beats snapped to the music's beat grid, and the music. Tools for beat detection, an original synthesized bed, palettes, credited photo search and cut-outs, HTML-to-PNG screens and backdrop fitting; the bolt.new promo rebuilt shot for shot (with reference frames) and an original second film. |
+| [colorfigures](skills/colorfigures) | Hand-inked, flat-coloured isometric figures of everyday machines (a gumball machine, a kettle, a record player, a washing machine) as one self-contained HTML page with buttons that really work: real 3D bodies shaded in light, mid and dark bands, a heavy ink silhouette with finer inner lines, a flat blue cast shadow, a hand-drawn wobble slider and body-colour swatches. Ask how something works and it labels the parts, lighting each one up while it works. By [April Zhu](https://april-zhu.com/colorfigures). |
 
 ## Install
 
@@ -81,6 +82,7 @@ ln -s ~/src/claude-skills/skills/launch-promo ~/.claude/skills/launch-promo
 ln -s ~/src/claude-skills/skills/3d-deep-explainer ~/.claude/skills/3d-deep-explainer
 ln -s ~/src/claude-skills/skills/doc-shorts ~/.claude/skills/doc-shorts
 ln -s ~/src/claude-skills/skills/saas-promo ~/.claude/skills/saas-promo
+ln -s ~/src/claude-skills/skills/colorfigures ~/.claude/skills/colorfigures
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -190,7 +192,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques) and anatomy (MIT, Ryan). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan) and colorfigures (MIT, April Zhu; its demo figures and previews are hers too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
 
 ## pixel-showcase
 
@@ -587,3 +589,17 @@ The example rebuilds a reel by EarnEdits.com ([Pinterest pin 1086986060090796381
 
 The look and timings were measured on bolt.new's "Bolt is free for everyone, all weekend long" promo by StackBlitz; the original video and music are not included. Sources of the example's assets (the bolt.new wordmark, product photos and clip art inside the rebuilt screens) are in `examples/bolt-weekend/SOURCES.md`. The engine and the mise film's design, copy and music are original; its photos are credited in `examples/mise/SOURCES.md`.
 
+## colorfigures
+
+![Eight Colorfigures: a gumball machine, a kettle, a record player, a washing machine, an espresso machine, a vending machine, a toaster and a capsule toy machine](skills/colorfigures/demo/preview.jpg)
+
+*Posters from [april-zhu.com/colorfigures](https://april-zhu.com/colorfigures). The top row's first three each came from a one-line prompt in a fresh install.*
+
+- `SKILL.md`: the workflow (copy the engine, read the two examples, write one figure, look at it in headless Chrome for at most two rounds, build one file), the coordinate system and fixed view, the look (three-tone shading, ink weights, boards and cast shadows), scenes with several objects, painter's order, interaction rules (follow the real process, every supply comes from something in the scene, sensible out-of-order presses), labels for "how does it work" figures, and lessons from earlier figures.
+- `assets/core.js`: the engine: projection, 3D shapes and shading, ink, labels, and the page with its buttons, swatches and wobble slider.
+- `assets/examples/`: two editable figures to learn from (vending machine, washing machine). `scripts/build.py` inlines the engine so a figure runs on its own.
+- `demo/`: three finished figures from the skill page (gumball machine, kettle, record player) with the prompts that made them, plus the page's posters and hover clips. Open any `.html` and press things.
+
+**Use:** describe an everyday object in one line ("a record player: put on a record, drop the needle and it plays"), or ask how something works and say "make it a Colorfigure". Needs Chrome for the screenshot check and `python3` for the build.
+
+Copied unchanged from April Zhu's [colorfigures.zip](https://april-zhu.com/colorfigures/colorfigures.zip) (identical to the copy on her page on 2026-10-18), with its MIT `LICENSE`. The demo figures and previews are from her [skill page](https://april-zhu.com/colorfigures); more are playable in the [live demo](https://april-zhu.com/colorfigures-demo). By [April Zhu](https://april-zhu.com) ([@Aprilzz423](https://x.com/Aprilzz423)), built on her [ISO-GLOW](https://isoglow.dev), which is built on [iso-figure](https://github.com/MrBongoC/ai-iso-skill) by Tolga Cohce.

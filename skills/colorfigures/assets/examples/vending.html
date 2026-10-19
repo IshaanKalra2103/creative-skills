@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vending machine</title>
+</head>
+<body>
+<script src="core.js"></script>
+<script>
+/* ---------- geometry (x = depth, y = width, z = height) ---------- */
+const W = 90, D = 130, H = 232, R = 8, T = 6;
+const WIN = [40,62,122,196];          // glass window on the front: y0,z0,y1,z1
+const TRAY = [44,16,118,42];          // pickup opening
+const CUP = [12,64,30,80];            // coin-return cup under the return button
+const SHELF_X = 82;                   // front edge of the shelves
+const ITEM_X = 70, ITEM_STEP = 16;    // front item depth, spacing of the items queued behind it
+const COL_Y = [92,72,52,32];          // columns 1-4, left to right on screen
+const ROWS = [
+  { code:'A', s:148, kind:'can',    price:1.5, cols:['#e2473a','#2f6fd6','#f2c230','#38a565'] },
+  { code:'B', s:116, kind:'can',    price:1.5, cols:['#8c4bd1','#f08a2b','#ece6d6','#33302c'] },
+  { code:'C', s:84,  kind:'bottle', price:2.0, cols:['#f07b2a','#5cc0e8','#d94f86','#9ccc3c'] },
+  { code:'D', s:52,  kind:'snack',  price:1.0, cols:['#f2c230','#e2473a','#3e86d9','#8a5a3c'] },
+];
+
+
+/* ---------- turn-aware helpers ---------- */
+// axis-aligned box drawing only the faces toward the viewer (core box() always draws +y/+x/top)
+function boxV(x0,y0,z0,x1,y1,z1,m,shade=toneI,w=1){
+  const F = [
+    [[0,1,0],  [[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]]],
+    [[1,0,0],  [[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]]],
+    [[0,0,1],  [[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]]],
+    [[0,-1,0], [[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]]],
+    [[-1,0,0], [[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]]],
+  ];
+  return F.filter(([n]) => facing(n)).map(([n,p]) => shape(p, shade(n,m), w)).join('');
+}
+// text lying on any vertical face: U = reading direction in 3D (along the face, left-to-right as seen from outside)
+const txOn = (x,y,z,U,str,size,col=INK,weight=700,extra='letter-spacing=".04em"') => { const o=P(x,y,z);
+  return `<text transform="${txM(o, Dv(...U), Dv(0,0,-1))}" font-size="${size}" fill="${col}" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="${weight}" ${extra}>${str}</text>`; };
+const txBack  = (y,z,str,size,col,weight) => txOn(-.4,y,z,[0,1,0],str,size,col,weight);     // back face x = 0
+const txRight = (x,z,str,size,col,weight) => txOn(x,-.4,z,[-1,0,0],str,size,col,weight);    // right side y = 0
+
+/* ---------- products ---------- */
+const zRing = (x,y,z,r) => on(PZ(z), ellUV(x,y,r,r));
+function can(x,y,z,col){
+  const m=matOf(col), a=zRing(x,y,z,5.6), b=zRing(x,y,z+2,6.5), c=zRing(x,y,z+17,6.5), d=zRing(x,y,z+20,5.6);
+  return loft(a,b,n=>toneI(n,METAL)) + loft(b,c,n=>toneI(n,m)) + loft(c,d,n=>toneI(n,METAL))
+    + fill(pd(d),METAL.l) + ink(pd(d),.9) + ink(pd(zRing(x+1.5,y,z+20.1,1.6)),.7)
+    + `<path d="${pd([[x+5.5,y-2.5,z+4],[x+5.5,y-2.5,z+15]],false)}" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" stroke-linecap="round"/>`
+    + hullInk([...a,...b,...c,...d],1.2);
+}
+function bottle(x,y,z,col){
+  const m=matOf(col), cap=matOf(mix(col,'#000000',.25));
+  const r0=zRing(x,y,z,6), r1=zRing(x,y,z+15,6), r2=zRing(x,y,z+20,2.6), r3=zRing(x,y,z+23,2.6), r4=zRing(x,y,z+23,3), r5=zRing(x,y,z+26,3);
+  return loft(r0,r1,n=>toneI(n,m)) + loft(r1,r2,n=>toneI(n,CLEAR)) + loft(r2,r3,n=>toneI(n,CLEAR))
+    + loft(r4,r5,n=>toneI(n,cap)) + fill(pd(r5),cap.l) + ink(pd(r5),.8)
+    + ink(pd([[x+6,y-3,z+4],[x+6,y-3,z+12]],false),.5).replace(INK,'#ffffff')
+    + hullInk([...r0,...r1,...r2,...r3],1.2) + ink(sp(hull([...r4,...r5].map(p=>P(...p)))),.9);
+}
+function snack(x,y,z,col){
+  const m=matOf(col);
+  return boxV(x-3.5,y-7,z,x+3.5,y+7,z+21,m,toneI,1.1)
+    + shape(on(PX(x+3.6),rectUV(y-5.5,z+7,y+5.5,z+13)),'#fbf7ea',.8);
+}
+const ITEM = { can, bottle, snack };
+// the same products lying in the pickup tray
+function lying(kind,col){
+  const m=matOf(col), x=W-9;
+  if (kind === 'snack') return boxV(W-15,60,14,W-4,82,18,m,toneI,1.1);
+  const r = kind==='can' ? 6.5 : 6, y0 = kind==='can' ? 66 : 60, y1 = kind==='can' ? 86 : 88, z = 14+r;
+  const A=on(PY(y0),ellUV(x,z,r,r)), B=on(PY(y1),ellUV(x,z,r,r));
+  const capM = kind==='can' ? METAL : matOf(mix(col,'#000000',.25));
+  const [E, n] = facing([0,1,0]) ? [B,[0,1,0]] : [A,[0,-1,0]];       // the end cap toward the viewer
+  return loft(A,B,n=>toneI(n,m)) + fill(pd(E),toneI(n,capM)) + ink(pd(E),1) + hullInk([...A,...B],1.2);
+}
+
+
+/* ---------- state ---------- */
+const st = { pal:'tomato', credit:0, returned:0, sel:'', msg:'', drop:null, tray:null, press:null, flap:0, flapTarget:0,
+             stock: ROWS.map(() => COL_Y.map(() => 3)) };
+
+/* ---------- coins in the return cup ---------- */
+const COIN = { l:'#f0d27a', m:'#d2ad4a', d:'#9a7a2a' };
+const COIN_SPOTS = [[-3.4,21],[-4.6,16.5],[-4.2,25.6],[-2.2,17.8],[-2.4,24.4],[-5.6,20.8]];
+function coins(n){
+  const pts = [];
+  for (let i=0; i<Math.min(n,18); i++){ const [dx,y] = COIN_SPOTS[i % 6]; pts.push([W+dx, y, CUP[1] + .1 + Math.floor(i/6)*1.1]); }
+  pts.sort((a,b) => (a[2]-b[2]) || (depthOf([a[0],a[1],0])-depthOf([b[0],b[1],0])));
+  let s = '';
+  for (const [x,y,z] of pts){
+    const A = on(PZ(z), ellUV(x,y,2.6,2.6,16)), B = on(PZ(z+.9), ellUV(x,y,2.6,2.6,16));
+    s += loft(A,B,n=>toneI(n,COIN)) + fill(pd(B),COIN.l) + ink(sp(hull([...A,...B].map(p=>P(...p)))),.7) + ink(pd(on(PZ(z+.95),ellUV(x,y,1.5,1.5,12))),.4);
+  }
+  return s;
+}
+
+/* ---------- pickup door: a slab hinged along its bottom edge, drops open toward the viewer ---------- */
+const DOOR_MAT = { l:'#55504a', m:'#3d3935', d:'#272421' };   // smoked acrylic: faces see-through, edges solid
+const DOOR_MAX = 84;                           // degrees when fully open (almost flat)
+function pickupDoor(){
+  const th = ease(st.flap) * DOOR_MAX * Math.PI/180;
+  const y0 = TRAY[0]+1, y1 = TRAY[2]-1, len = TRAY[3]-TRAY[1]-1.5, t = 2, hx = W-.5, hz = TRAY[1];
+  const up = [Math.sin(th),0,Math.cos(th)], out = [Math.cos(th),0,-Math.sin(th)];   // along the door (hinge -> top edge), outward normal
+  const Q = (sAlong, w, y) => [hx + sAlong*up[0] - w*out[0], y, hz + sAlong*up[2] - w*out[2]];
+  const faces = [
+    { n: out,            p: [Q(0,0,y0),Q(0,0,y1),Q(len,0,y1),Q(len,0,y0)], clear: true },
+    { n: out.map(v=>-v), p: [Q(0,t,y0),Q(0,t,y1),Q(len,t,y1),Q(len,t,y0)], clear: true },
+    { n: up,             p: [Q(len,0,y0),Q(len,0,y1),Q(len,t,y1),Q(len,t,y0)] },
+    { n: up.map(v=>-v),  p: [Q(0,0,y0),Q(0,0,y1),Q(0,t,y1),Q(0,t,y0)] },
+    { n: [0,1,0],        p: [Q(0,0,y1),Q(len,0,y1),Q(len,t,y1),Q(0,t,y1)] },
+  ];
+  let s = '';
+  for (const fc of faces) if (vis(fc.n))
+    s += fc.clear ? fill(pd(fc.p), tone(fc.n, DOOR_MAT), 'fill-opacity=".34"') + ink(pd(fc.p),1.1) : shape(fc.p, tone(fc.n, DOOR_MAT), 1.1);
+  if (vis(out)){
+    s += fill(pd([Q(len*.15,-.1,y0+10),Q(len*.15,-.1,y0+18),Q(len*.85,-.1,y0+34),Q(len*.85,-.1,y0+26)]), '#ffffff', 'opacity=".28"');   // glint
+    const yc = (y0+y1)/2;
+    s += shape([Q(len-3.2,-.1,yc-16),Q(len-3.2,-.1,yc+16),Q(len-1.3,-.1,yc+16),Q(len-1.3,-.1,yc-16)], DOOR_MAT.d, .9);   // finger grip
+    const o = P(...Q(len*.66,-.15,yc));
+    s += `<text transform="${txM(o, Dv(0,-1,0), Dv(-up[0],0,-up[2]))}" font-size="4.6" fill="#e9e3d3" text-anchor="middle" dominant-baseline="middle" font-family="ui-monospace,Menlo,monospace" font-weight="800" letter-spacing=".25em">PULL</text>`;
+  }
+  s += ink(pd([[hx,y0-1,hz],[hx,y1+1,hz]],false),1.8);   // hinge
+  return `<g data-act="flap">${s}</g>`;
+}
+
+/* ---------- scene ---------- */
+const OUT = rrUV(0,0,D,H,R), IN = rrUV(T,T,D-T,H-T,R-T);
+const money = v => '$' + v.toFixed(2);
+
+function screenLines(){
+  if (st.msg) return st.msg.split('|');
+  if (st.drop) return ['VENDING', st.drop.code];
+  if (st.tray) return ['TAKE', 'ITEM'];
+  if (st.sel) return ['SELECT', st.sel + '_'];
+  return st.credit > 0 ? ['CREDIT', money(st.credit)] : ['INSERT', 'COIN'];
+}
+
+function scene(){
+  const m = PALS[st.pal];
+  // which faces of the cabinet are toward the viewer in the current turn
+  const FF = facing([1,0,0]), BF = facing([-1,0,0]), LF = facing([0,1,0]), RF = facing([0,-1,0]);
+  let s = '';
+
+  // cast shadow
+  s += castShadow([...on(PX(0),OUT), ...on(PX(W),OUT)]);
+
+  // parts on hidden faces that stick out past the body go first, so the body covers them
+  if (!FF) s += pickupDoor();
+  if (!BF) s += powerCord();
+
+  // front: openings, front face, everything mounted on it (only when the front is toward the viewer)
+  if (FF) s += frontAssembly(m);
+
+  // outer shell + side details
+  s += loft(on(PX(0),OUT), on(PX(W),OUT), n=>tone(n,m));
+  if (LF) s += leftSide(m);
+  if (RF) s += rightSide(m);
+  if (BF) s += backPanel(m);
+
+  // silhouette
+  if (FF) s += ink(pd(on(PX(W),OUT)),2.2);
+  if (BF) s += ink(pd(on(PX(0),OUT)),2.2);
+  s += hullInk([...on(PX(0),OUT), ...on(PX(W),OUT)], 2.8);
+  if (BF) s += powerCord();            // the cord lies on the viewer's side of the back panel
+  return s;
+}
+
+function frontAssembly(m){
+  let s = '';
+  const LW = facing([0,1,0]);          // which side wall of an opening we look at: y0-wall (view 0) or y1-wall (view 3)
+  const win = rectUV(WIN[0],WIN[1],WIN[2],WIN[3]), tray = rectUV(TRAY[0],TRAY[1],TRAY[2],TRAY[3]);
+  s += `<clipPath id="cWin"><path d="${pd(on(PX(W),win))}"/></clipPath><clipPath id="cTray"><path d="${pd(on(PX(W),tray))}"/></clipPath>`;
+
+  // interior behind the glass: lit cabinet, shelves bottom-up, products back-to-front
+  let it = fill(pd(on(PX(T),IN)), '#e8eef0');
+  it += loft(on(PX(T),IN), on(PX(W-3),IN), n => n[2]>.7 ? '#d3dbde' : '#dfe7e9', true);
+  it += fill(pd(on(PY(LW ? T+.2 : D-T-.2),rectUV(T+10,60,W-10,206))), '#ffffff', 'opacity=".8"');   // light strip on the visible side wall
+  for (let r = ROWS.length-1; r >= 0; r--){
+    const row = ROWS[r], z = row.s;
+    it += shape([[T,T,z],[SHELF_X,T,z],[SHELF_X,D-T,z],[T,D-T,z]], '#cfd6d8', 0);
+    const items = [];
+    COL_Y.forEach((y,c) => { for (let k = st.stock[r][c]-1; k >= 0; k--) items.push({ x:ITEM_X-k*ITEM_STEP, y, c }); });
+    items.sort((a,b) => depthOf([a.x,a.y,0]) - depthOf([b.x,b.y,0]));
+    for (const o of items) it += `<g data-act="item" data-r="${r}" data-c="${o.c}">${ITEM[row.kind](o.x,o.y,z,row.cols[o.c])}</g>`;
+    it += shape([[SHELF_X,T,z-3],[SHELF_X,D-T,z-3],[SHELF_X,D-T,z],[SHELF_X,T,z]], '#a9b1b4', 1);
+    COL_Y.forEach((y,c) => {
+      it += shape(on(PX(SHELF_X+.2),rectUV(y-5,z-2.7,y+5,z-.3)), st.stock[r][c] ? '#fffdf5' : '#f3c6bd', .6);
+      it += tx(SHELF_X+.3, y, z-.9, row.code+(c+1), 2.1, INK);
+    });
+  }
+  if (st.drop){
+    const { r, c } = st.drop, t = st.drop.t, row = ROWS[r];
+    const slide = Math.min(1, t/.25) * 10, fall = t > .25 ? 260*Math.pow((t-.25)/.75, 2) : 0;
+    it += ITEM[row.kind](ITEM_X+slide, COL_Y[c], row.s-fall, row.cols[c]);
+  }
+  s += `<g clip-path="url(#cWin)">${it}</g>`;
+
+  // glass: tint, streaks, window reveal
+  const GX = PX(W-2.9), wy = LW ? WIN[0] : WIN[2];
+  s += `<g pointer-events="none">${fill(pd(on(GX,win)),'#cfe9f0','opacity=".2"')}`
+     + fill(pd(on(GX,[[52,62],[66,62],[102,196],[88,196]])),'#ffffff','opacity=".38"')
+     + fill(pd(on(GX,[[72,62],[77,62],[113,196],[108,196]])),'#ffffff','opacity=".38"') + `</g>`;
+  s += face(pd([[W-3,wy,WIN[1]],[W,wy,WIN[1]],[W,wy,WIN[3]],[W-3,wy,WIN[3]]]), tone([0,LW?1:-1,0],m));
+  s += face(pd([[W-3,WIN[0],WIN[1]],[W,WIN[0],WIN[1]],[W,WIN[2],WIN[1]],[W-3,WIN[2],WIN[1]]]), tone([0,0,1],m));
+
+  // pickup tray: dark cavity + product (the door is drawn after the front face)
+  const tb = W-18, ty = LW ? TRAY[0] : TRAY[2];
+  let tr = shape(on(PX(tb),rectUV(TRAY[0],14,TRAY[2],TRAY[3])), m.d, 0);
+  tr += face(pd([[tb,ty,14],[W,ty,14],[W,ty,TRAY[3]],[tb,ty,TRAY[3]]]), mix(m.d,'#000000',.25));
+  tr += face(pd([[tb,TRAY[0],14],[W,TRAY[0],14],[W,TRAY[2],14],[tb,TRAY[2],14]]), mix(m.d,'#ffffff',.12));
+  if (st.tray) tr += lying(st.tray.kind, st.tray.col);
+  s += `<g clip-path="url(#cTray)" data-act="tray">${fill(pd(on(PX(W),tray)),'transparent')}${tr}</g>`;
+
+  // coin-return cup: small cavity with the refunded coins lying in it
+  const cup = rectUV(CUP[0],CUP[1],CUP[2],CUP[3]), cb = W-8, cy = LW ? CUP[0] : CUP[2];
+  s += `<clipPath id="cCup"><path d="${pd(on(PX(W),cup))}"/></clipPath>`;
+  let cp = shape(on(PX(cb),cup), mix(METAL.d,'#000000',.45), 0);
+  cp += face(pd([[cb,cy,CUP[1]],[W,cy,CUP[1]],[W,cy,CUP[3]],[cb,cy,CUP[3]]]), mix(METAL.d,'#000000',.3));
+  cp += face(pd([[cb,CUP[0],CUP[1]],[W,CUP[0],CUP[1]],[W,CUP[2],CUP[1]],[cb,CUP[2],CUP[1]]]), METAL.m);
+  cp += coins(Math.round(st.returned / .5));
+  s += `<g clip-path="url(#cCup)" data-act="cup">${fill(pd(on(PX(W),cup)),'transparent')}${cp}</g>`;
+
+  // front face with its openings
+  const X = PX(W);
+  s += `<path d="${pd(on(X,OUT))}${pd(on(X,win))}${pd(on(X,tray))}${pd(on(X,cup))}" fill="${tone([1,0,0],m)}" fill-rule="evenodd"/>`;
+  s += ink(pd(on(X,win)),1.8) + ink(pd(on(X,tray)),1.6) + ink(pd(on(X,cup)),1.4);
+  s += shape(on(PX(W+.3),rrUV(10,62,32,82,3)), 'none', 1);   // metal bezel line
+  s += ink(pd([[W,36,8],[W,36,200]],false),1) + ink(pd([[W,36,200],[W,124,200]],false),1);
+  s += pickupDoor();
+
+  // header sign
+  const F = PX(W+.3);
+  s += shape(on(F,rrUV(8,204,122,224,4)), '#fff4d6', 1.4);
+  s += tx(W+.4, 65, 211, 'DRINKS · SNACKS', 8.4, m.d, 800);
+
+  // control column: screen, keypad, coin slot, return
+  s += shape(on(F,rrUV(9,164,33,186,2.5)), '#1d2a26', 1.3);
+  const [l1,l2] = screenLines();
+  s += tx(W+.4, 21, 177.5, l1, 3.9, '#8af0ae', 700) + tx(W+.4, 21, 169.5, l2, 3.9, '#8af0ae', 700);
+  const keys = [];
+  ['A','B','C','D'].forEach((k,i) => keys.push({ k, y:26.5, z:152-i*11 }));
+  ['1','2','3','4'].forEach((k,i) => keys.push({ k, y:15.5, z:152-i*11 }));
+  for (const key of keys){
+    const down = st.press === key.k;
+    let b = shape(on(F,rrUV(key.y-4.6,key.z,key.y+4.6,key.z+8,2)), down ? METAL.d : METAL.l, 1.1);
+    b += tx(W+.5, key.y, key.z+2.4, key.k, 4.4, INK, 700);
+    s += `<g data-act="key" data-k="${key.k}">${b}</g>`;
+  }
+  s += `<g data-act="coin">${shape(on(F,rrUV(11,100,31,112,2.5)), METAL.m, 1.2)}${shape(on(PX(W+.5),rrUV(20,102,22.4,110,1)), '#26231f', .6)}${tx(W+.5, 26.5, 104, 'c', 4, INK)}</g>`;
+  s += `<g data-act="ret">${shape(on(F,ellUV(21,92,3.6,3.6)), METAL.l, 1.1)}${tx(W+.5, 21, 90.6, 'RET', 2.4, INK)}</g>`;
+  return s;
+}
+
+// a lighter take on the body palette for the side decals
+const decalPal = m => ({ l:mix(m.l,'#ffffff',.15), m:mix(m.m,'#ffffff',.12), d:mix(m.d,'#ffffff',.1) });
+// decal lettering takes the face colour; on a sunlit face that would vanish into the lighter panel, so go a step darker
+const decalInk = (n,m) => { const c = tone(n,m); return c === m.l ? mix(m.m,'#000000',.12) : c; };
+
+// +y side (viewer-left in the front view): low vents and the COLD decal
+function leftSide(m){
+  let s = '', v = '';
+  for (const z of [14,19,24,29]) v += pd([[18,D+.2,z],[W-18,D+.2,z]],false);
+  s += `<path d="${v}" fill="none" stroke="${INK}" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>`;
+  s += shape(on(PY(D+.2),rrUV(20,150,W-20,200,6)), tone([0,1,0],decalPal(m)), 1.2);
+  s += `<text transform="${txM(P(W/2,D+.3,170), Dv(1,0,0), Dv(0,0,-1))}" font-size="12" fill="${decalInk([0,1,0],m)}" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="800">COLD</text>`;
+  return s;
+}
+
+// −y side: matching vents, a SNACKS decal, a round 24h badge and an asset tag
+function rightSide(m){
+  const n = [0,-1,0], Y = PY(-.2);
+  let s = '', v = '';
+  for (const z of [14,19,24,29]) v += pd([[18,-.2,z],[W-18,-.2,z]],false);
+  s += `<path d="${v}" fill="none" stroke="${INK}" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>`;
+  s += shape(on(Y,rrUV(20,150,W-20,200,6)), tone(n,decalPal(m)), 1.2);
+  s += `<text transform="${txM(P(W/2,-.3,170), Dv(-1,0,0), Dv(0,0,-1))}" font-size="10.5" fill="${decalInk(n,m)}" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="800">SNACKS</text>`;
+  s += shape(on(Y,ellUV(W/2,118,11,11,28)), '#fff4d6', 1.2);
+  s += ink(pd(on(PY(-.3),ellUV(W/2,118,8.6,8.6,28))), .7);
+  s += txRight(W/2, 117.5, '24h', 6.4, m.d, 800) + txRight(W/2, 112.2, 'OPEN', 2.6, m.d, 800);
+  s += shape(on(Y,rrUV(58,62,76,71,1)), METAL.l, .9) + txRight(67, 65.4, 'No. 117', 2.6, INK, 700);
+  return s;
+}
+
+// back (−x): service panel with screws, fan grille, louvre, warning sticker, rating plate, cord grommet
+function backPanel(m){
+  const n = [-1,0,0], B = PX(-.3), bt = tone(n,m);
+  let s = shape(on(PX(0),OUT), bt, 0);
+  s += ink(pd(on(B,rrUV(12,16,118,220,4))), 1.1);                                  // service panel seam
+  for (const [y,z] of [[17,21],[65,21],[113,21],[17,118],[113,118],[17,215],[65,215],[113,215]])
+    s += shape(on(PX(-.4),ellUV(y,z,1.7,1.7,12)), METAL.l, .8) + line([[-.5,y-1.1,z+.5],[-.5,y+1.1,z-.5]], .6);
+  // round fan grille near the top (the compressor exhausts here)
+  const fc = [65,176];
+  s += shape(on(B,ellUV(...fc,23,23,32)), mix(m.d,'#000000',.35), 1.4);
+  let g = '';
+  for (const r of [19,14.5,10]) g += pd(on(PX(-.5),ellUV(...fc,r,r,32)));
+  for (const a of [45,135,225,315]){ const c = Math.cos(a*Math.PI/180), d = Math.sin(a*Math.PI/180);
+    g += pd([[-.5,fc[0]+5*c,fc[1]+5*d],[-.5,fc[0]+22*c,fc[1]+22*d]],false); }
+  s += `<path d="${g}" fill="none" stroke="${METAL.m}" stroke-width="1.3" stroke-linecap="round"/>`;
+  s += shape(on(PX(-.6),ellUV(...fc,4.4,4.4,16)), METAL.l, .9);
+  // louvred intake low down
+  s += shape(on(B,rectUV(28,36,102,66)), mix(m.d,'#000000',.35), 0);
+  for (let z = 39; z < 64; z += 5) s += shape(on(PX(-.4),rectUV(29,z,101,z+2.4)), mix(bt,'#ffffff',.06), .6);
+  s += ink(pd(on(B,rectUV(28,36,102,66))), 1.2);
+  // warning sticker + rating plate
+  s += shape(on(PX(-.4),rrUV(20,112,72,142,2)), '#f6d64a', 1);
+  s += ink(pd(on(PX(-.45),rrUV(22,114,70,140,1.4))), .6);
+  s += txBack(46, 131.2, 'KEEP 10 cm', 4.4, INK, 800) + txBack(46, 124.6, 'FROM WALL', 4.4, INK, 800) + txBack(46, 118.2, '↔ VENTILATION', 2.5, INK, 700);
+  s += shape(on(PX(-.4),rrUV(80,110,114,142,1.5)), METAL.l, .9);
+  s += txBack(97, 135.5, 'CF-01 VENDO', 3.1, INK, 800) + txBack(97, 129.5, 'SN 0423-1187', 2.4, INK, 700)
+     + txBack(97, 124.5, '230V~ 50Hz', 2.4, INK, 700) + txBack(97, 119.5, '4.2 A · R600a', 2.4, INK, 700)
+     + line([[-.45,82,127.8],[-.45,112,127.8]], .4);
+  // cord grommet
+  s += shape(on(PX(-.4),ellUV(92,30,3.4,3.4,14)), DARK.m, .9);
+  return s;
+}
+
+// mains cable: out of the grommet on the back, down to the floor, plug lying on the ground behind the machine
+function powerCord(){
+  const path = [[-.5,92,30],[-2.6,92,29],[-3.8,92,26],[-4,92,8],[-4.6,91.6,2.4],[-6.5,90.6,.9],[-11,88.6,.9],[-17,85.4,.9],[-22,82,.9],[-25,80,.9]];
+  const d = pd(path,false);
+  let s = `<path d="${d}" fill="none" stroke="${INK}" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>`
+        + `<path d="${d}" fill="none" stroke="${DARK.l}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`;
+  s += boxV(-26.5,77.5,0,-25,82.5,3.4,DARK,toneI,.8);                 // strain relief
+  s += boxV(-34,76,0,-26.5,84,5.6,DARK,toneI,1);                      // plug body
+  for (const y of [78.2,81.8]) s += line([[-34,y,2.8],[-38.5,y,2.8]], 1.6) + `<path d="${pd([[-34,y,2.8],[-38.5,y,2.8]],false)}" stroke="${METAL.l}" stroke-width=".6" stroke-linecap="round"/>`;
+  return s;
+}
+
+
+/* ---------- behaviour ---------- */
+let ui;
+const render = () => ui.render();
+const readoutText = st => st.drop ? `Vending ${st.drop.code}…` : st.tray ? (st.flap === 1 ? `${st.tray.code} is in the tray — click it to collect` : `${st.tray.code} is in the tray — open the pickup door`)
+    : st.returned > 0 ? `${money(st.returned)} in the coin return — click the cup to collect`
+    : st.credit > 0 ? 'Choose a drink — keypad, the glass, or step 2' : 'Insert coins to start';
+let msgTimer = 0, pressTimer = 0;
+const flash = (text, ms=1400) => { st.msg = text; clearTimeout(msgTimer); msgTimer = setTimeout(() => { st.msg=''; render(); }, ms); render(); };
+const press = k => { st.press = k; clearTimeout(pressTimer); pressTimer = setTimeout(() => { st.press=null; render(); }, 160); };
+
+function vend(r, c){
+  const row = ROWS[r], code = row.code + (c+1);
+  if (st.drop) return;
+  if (st.tray) return flash('TAKE|ITEM');
+  if (!st.stock[r][c]) return flash('SOLD|OUT');
+  if (st.credit < row.price - 1e-9) return flash('INSERT|' + money(row.price - st.credit));
+  st.credit -= row.price; st.stock[r][c]--; st.sel = '';
+  st.drop = { r, c, code, t:0 };
+  let last = performance.now();
+  const step = now => {
+    st.drop.t = Math.min(1, st.drop.t + (now-last)/1000/1.1); last = now;
+    if (st.drop.t >= 1){ st.tray = { kind:row.kind, col:row.cols[c], code }; st.drop = null; render(); return; }
+    render(); setTimeout(() => step(performance.now()), 16);
+  };
+  setTimeout(() => step(performance.now()), 16);
+}
+function key(k){
+  press(k);
+  if (/[A-D]/.test(k)){ st.sel = k; render(); return; }
+  if (!st.sel){ flash('PICK|A–D'); return; }
+  const r = 'ABCD'.indexOf(st.sel); st.sel = ''; vend(r, +k-1); render();
+}
+const coin = () => { if (st.credit >= 5) return flash('MAX|$5.00'); st.credit += .5; render(); };
+const refund = () => {
+  st.sel = '';
+  if (st.credit <= 0) return render();
+  st.returned += st.credit; st.credit = 0; flash('COINS|BELOW');
+};
+const takeCoins = () => { if (st.returned <= 0) return; const amt = st.returned; st.returned = 0; flash('THANK|YOU'); ui.flash(`Collected ${money(amt)}`); };
+let flapTimer = 0;
+function swing(target){
+  clearTimeout(flapTimer);
+  if (st.flapTarget === target) return;
+  st.flapTarget = target;
+  let last = performance.now();
+  const step = now => {
+    const sg = Math.sign(st.flapTarget - st.flap); if (!sg) return;
+    st.flap += sg * (now-last)/1000/.55; last = now;
+    if ((st.flapTarget - st.flap)*sg <= 0) st.flap = st.flapTarget;
+    render(); if (st.flap !== st.flapTarget) setTimeout(() => step(performance.now()), 16);
+  };
+  setTimeout(() => step(performance.now()), 16);
+}
+const toggleFlap = () => swing(st.flapTarget ? 0 : 1);
+const collect = () => {
+  if (!st.tray || st.flap < 1) return;
+  const code = st.tray.code; st.tray = null; flash('ENJOY|' + code);
+  flapTimer = setTimeout(() => swing(0), 900);          // door falls shut on its own
+};
+
+
+ui = mountFigure({
+  fig:'03', title:'Vending machine', hint:'insert a coin, punch a code or tap a product',
+  idea:"The machine counts your coins; when there is enough, it pushes your drink off the shelf and it drops into the tray.",
+  size:[W,D,H], palette:'tomato', state:st,
+  scene: () => scene(),
+  readout: readoutText,
+  stats: st => [ { label:'Credit', value: money(st.credit) }, st.returned > 0 && { label:'Change in the cup', value: money(st.returned), small:true } ],
+  buttonsLabel:'Machine',
+  buttons:[
+    { label:'Insert 50c', onClick: coin },
+    { label:'Choose a drink', choices: st => ROWS.flatMap((row,r) => COL_Y.map((_,c) => ({
+        label:`${row.code}${c+1} ${money(row.price)}`, disabled: !st.stock[r][c] || st.credit < row.price - 1e-9,
+        why: !st.stock[r][c] ? `${row.code}${c+1} is sold out` : `insert ${money(row.price - st.credit)} more`, onClick: () => vend(r,c) }))) },
+    { label:'Open pickup door', onClick: () => { if (st.flapTarget) return ui.flash('The door is already open'); swing(1); } },
+    { label:'Take your drink', onClick: () => st.tray ? (st.flap < 1 ? ui.flash('Open the pickup door first') : collect()) : ui.flash('Nothing in the tray yet') },
+    { label:'Return change', onClick: refund },
+    { label:'Take coins', onClick: () => st.returned > 0 ? takeCoins() : ui.flash('The coin cup is empty') },
+  ],
+  acts:{
+    key:  (st,a) => key(a.dataset.k),
+    item: (st,a) => vend(+a.dataset.r, +a.dataset.c),
+    coin, ret: refund, tray: collect, flap: toggleFlap, cup: takeCoins,
+  },
+  params:(st,q) => {
+    if (q.has('credit')) st.credit = +q.get('credit');
+    if (q.get('flap') === '1') st.flap = st.flapTarget = 1;
+    if (q.has('returned')) st.returned = +q.get('returned');
+    const tq = /^([A-D])([1-4])$/.exec(q.get('tray') || '');
+    if (tq){ const r = 'ABCD'.indexOf(tq[1]), row = ROWS[r]; st.tray = { kind:row.kind, col:row.cols[+tq[2]-1], code:tq[0] }; }
+  },
+});
+</script>
+</body>
+</html>
