@@ -41,6 +41,7 @@
 | [doc-shorts](skills/doc-shorts) | Vertical documentary and infographic shorts rendered in code with fframes, in a retro "archive under glass" look: scanlines, a 30° halftone screen and low grain over real archival photos, small Instrument Serif captions with a chromatic fringe, flat grey, paper and black type cards, and graphic beats (a network Earth, a wireframe globe grid, a thumbnail tunnel, a magnifier, a typed search pill, charts). Everything animates on threes and cuts on narration words. One `video.toml` per film: an ElevenLabs voiceover with word timings, an optional ElevenLabs Music bed, and one shot per cut cued on a word. 15 shot kinds, tools for voice, music, Whisper timings, cut-outs and side-by-side review, a script that studies a reference reel tick by tick, and a 27 s reel about Google's origin at Stanford rebuilt tick for tick as the worked example. |
 | [saas-promo](skills/saas-promo) | Snappy SaaS and product promo films rendered in code with fframes, in the "glass on a screen gradient" look of the bolt.new weekend promo: a deep gradient behind a monitor dot screen, words that blur in as frosted glass and settle, highlight boxes that pop, caption groups that tilt in and settle, a frosted pill that grows into an app window, a prompt typed with a cursor click, an editor whose site scrolls, a card wall with depth of field and a button click, and a logo end card. One `video.toml` sets the palette (presets or one brand colour), fonts, the flow (8 scene kinds in any order), durations in seconds or beats snapped to the music's beat grid, and the music. Tools for beat detection, an original synthesized bed, palettes, credited photo search and cut-outs, HTML-to-PNG screens and backdrop fitting; the bolt.new promo rebuilt shot for shot (with reference frames) and an original second film. |
 | [colorfigures](skills/colorfigures) | Hand-inked, flat-coloured isometric figures of everyday machines (a gumball machine, a kettle, a record player, a washing machine) as one self-contained HTML page with buttons that really work: real 3D bodies shaded in light, mid and dark bands, a heavy ink silhouette with finer inner lines, a flat blue cast shadow, a hand-drawn wobble slider and body-colour swatches. Ask how something works and it labels the parts, lighting each one up while it works. By [April Zhu](https://april-zhu.com/colorfigures). |
+| [rossark-motion-skill](skills/rossark-motion-skill) | Calm, believable motion for anything drawn: live faces (gliding pupils, blinks that close faster than they open, happy squints), full-body acting (floating with limp feet, landing with squash, waving, kicking a ball), plants, cloth, fire, smoke, water, weather, machines, icons, logos, charts and whole scenes. One clock per scene, parts that turn on their real pivots, follow-through by delay, idle life that never stops and `flow` curves through key poses. A small motion engine and live-face templates for SwiftUI and React Native, tools that measure a reference video frame by frame, and four demo scenes with an offline renderer to MP4 and GIF. By [Ross](https://github.com/rossark0). |
 
 ## Install
 
@@ -83,6 +84,7 @@ ln -s ~/src/claude-skills/skills/3d-deep-explainer ~/.claude/skills/3d-deep-expl
 ln -s ~/src/claude-skills/skills/doc-shorts ~/.claude/skills/doc-shorts
 ln -s ~/src/claude-skills/skills/saas-promo ~/.claude/skills/saas-promo
 ln -s ~/src/claude-skills/skills/colorfigures ~/.claude/skills/colorfigures
+ln -s ~/src/claude-skills/skills/rossark-motion-skill ~/.claude/skills/rossark-motion-skill
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -192,7 +194,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan) and colorfigures (MIT, April Zhu; its demo figures and previews are hers too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan), colorfigures (MIT, April Zhu; its demo figures and previews are hers too) and rossark-motion-skill (MIT, Ross; its demo scenes and videos are theirs too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
 
 ## pixel-showcase
 
@@ -603,3 +605,31 @@ The look and timings were measured on bolt.new's "Bolt is free for everyone, all
 **Use:** describe an everyday object in one line ("a record player: put on a record, drop the needle and it plays"), or ask how something works and say "make it a Colorfigure". Needs Chrome for the screenshot check and `python3` for the build.
 
 Copied unchanged from April Zhu's [colorfigures.zip](https://april-zhu.com/colorfigures/colorfigures.zip) (identical to the copy on her page on 2026-10-18), with its MIT `LICENSE`. The demo figures and previews are from her [skill page](https://april-zhu.com/colorfigures); more are playable in the [live demo](https://april-zhu.com/colorfigures-demo). By [April Zhu](https://april-zhu.com) ([@Aprilzz423](https://x.com/Aprilzz423)), built on her [ISO-GLOW](https://isoglow.dev), which is built on [iso-figure](https://github.com/MrBongoC/ai-iso-skill) by Tolga Cohce.
+
+## rossark-motion-skill
+
+<a href="skills/rossark-motion-skill/demo/reveal.mp4"><img width="360" alt="A blue silhouette floats in with dangling feet, then a kid in a striped kit drops in, lands, kicks a ball that rolls in from the right, waves, grins and hops" src="skills/rossark-motion-skill/demo/reveal.gif" /></a>
+
+*`demo/RevealScene.swift`, rendered in a phone frame at 60 fps with the skill's own SwiftUI engine. Every shape and every move is code.*
+
+<img width="270" alt="A girl in a sun hat waters a sprout; it grows and blooms, a butterfly lands on the flower, she hops with joy, then the petals fall and the sprout returns" src="skills/rossark-motion-skill/demo/garden.gif" /> <img width="270" alt="A chef flips a pancake; the second flip goes too high, lands on his hat, wobbles, slides off and he catches it in the pan" src="skills/rossark-motion-skill/demo/chef.gif" /> <img width="270" alt="A round bird with closed eyes floats while a tilted ring of cards orbits around it, with sparkles twinkling" src="skills/rossark-motion-skill/demo/orbit.gif" />
+
+*Garden, Chef and Orbit, the other three demo scenes.*
+
+- `SKILL.md`: the method. Principles (never teleport, calm curves, small amplitudes, arcs around real pivots, overlap and follow-through, seeded variety, reduced motion means still), recipes by subject with starting numbers (tails, plants, cloth, fire, smoke, water, rain, lights, machines, icons, charts), live faces, full-body acting (moving holds, layered channels, bent limbs, 2.5D turns, weight shifts, landings, hanging feet, shadows that breathe with height, props and strikes, camera-angle builds), scenes told in beats, motion in an interface (after Emil Kowalski and Benji Taylor), pitfalls, working from a reference video, and a workflow.
+- `MOTION.md`: a notes file to copy next to your art. Part 1 is the method in short; Part 2 is where the project's code, rules and limits go. The skill reads it first.
+- `templates/`: the engine (`motion.ts`, `Motion.swift`: loop and one-shot clocks, `track`, `flow`, `seg`, `wave`, `loop`, `bell`, `seeded`, curves) and live eyes and mouths (`liveFace.tsx`, `LiveFace.swift`) for React Native and SwiftUI.
+- `tools/`: `sheet.sh` (contact sheets at full frame rate), `track_edges.py` (measures 1-5% jiggles, floats and sways frame by frame) and `sample_colors.py` (exact colours from a video frame).
+- `demo/`: the four scenes (reveal, garden, chef, orbit) as Swift source with MP4 and GIF renders, a phone mockup and `render.swift`, an offline renderer that writes PNG frames for ffmpeg.
+
+**Use:** ask to animate an illustration, mascot, icon or scene, to make something "feel alive", to add idle motion, or to recreate the motion of a reference video. Re-rendering the demos needs macOS 14+ with `swiftc` and `ffmpeg`:
+
+```bash
+cd skills/rossark-motion-skill
+swiftc -parse-as-library -target arm64-apple-macos14 \
+  templates/swiftui/Motion.swift templates/swiftui/LiveFace.swift demo/*.swift -o /tmp/render-demo
+/tmp/render-demo reveal /tmp/frames phone fps=60   # or: garden, chef, orbit
+ffmpeg -framerate 60 -i /tmp/frames/%04d.png -c:v libx264 -pix_fmt yuv420p -crf 20 /tmp/reveal.mp4
+```
+
+Copied unchanged from [rossark0/rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (`9b20964`), with its MIT `LICENSE`. The demo scenes, renders and GIFs are from that repo too. By Ross ([@rossark0](https://github.com/rossark0), [thisross.com](https://thisross.com)). Its interface-motion rules follow [Emil Kowalski's skills](https://github.com/emilkowalski/skills) and Benji Taylor's [Family values](https://benji.org/family-values).
