@@ -22,7 +22,7 @@ An original example made with this skill's SwiftUI engine (`templates/swiftui/Mo
 - `Act` holds the key poses as data, one `flow` array per channel: squash, lean, head, both front legs, gaze and the firefly's path. Blinks, the cheek squint, the mouth and the ribbits are `track` keys, because each is one move.
 - Every channel gets idle life on top (breathing, sway, head tilt), and follow-through by delay: the head counters the lean 110 ms late, the forearms trail the upper arms by 90 ms, and the head turn trails the gaze by 150 ms.
 - Contact is solved through the frog's real transform: pad bob and rock, then the hop, then lean and squash around the feet, then the head tilt. The firefly on the nose, the tongue's target and the gaze all go through those transforms every frame, so nothing slides.
-- Everything visible at the loop's seam runs on periods that divide 10 s (625, 1250, 2500, 5000 and 10000 ms). The firefly's uneven wobble periods are fine because it is off screen at the seam. Frame 0 and the frame at 10 s differ less than two neighbouring frames do.
+- Everything visible at the loop's seam runs on periods that divide 10 s (1250, 2500, 5000 and 10000 ms). The firefly's uneven wobble periods are fine because it is off screen at the seam. Frame 0 and the frame at 10 s differ less than two neighbouring frames do.
 - Shapes that meet are drawn so no hairline shows: each lily pad and its notch is one outline. The firefly's light on the face is masked by the whole silhouette (body and eye bumps drawn separately into the mask), so it never stops at a seam.
 
 ## Render it
