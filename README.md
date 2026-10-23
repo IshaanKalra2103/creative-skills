@@ -616,11 +616,16 @@ Copied unchanged from April Zhu's [colorfigures.zip](https://april-zhu.com/color
 
 *Garden, Chef and Orbit, the other three demo scenes.*
 
+<a href="skills/rossark-motion-skill/examples/pond/pond.mp4"><img width="270" alt="A frog on a lily pad at dusk snaps its tongue at a firefly and misses; the firefly lands on its nose, the frog goes cross-eyed and puffs its throat, then hops as the firefly flies off and licks its lips" src="skills/rossark-motion-skill/examples/pond/pond.gif" /></a>
+
+*Pond, an original example made with the skill's engine for this repo: a frog snaps at a firefly and misses, the firefly lands on its nose, and the frog goes cross-eyed.*
+
 - `SKILL.md`: the method. Principles (never teleport, calm curves, small amplitudes, arcs around real pivots, overlap and follow-through, seeded variety, reduced motion means still), recipes by subject with starting numbers (tails, plants, cloth, fire, smoke, water, rain, lights, machines, icons, charts), live faces, full-body acting (moving holds, layered channels, bent limbs, 2.5D turns, weight shifts, landings, hanging feet, shadows that breathe with height, props and strikes, camera-angle builds), scenes told in beats, motion in an interface (after Emil Kowalski and Benji Taylor), pitfalls, working from a reference video, and a workflow.
 - `MOTION.md`: a notes file to copy next to your art. Part 1 is the method in short; Part 2 is where the project's code, rules and limits go. The skill reads it first.
 - `templates/`: the engine (`motion.ts`, `Motion.swift`: loop and one-shot clocks, `track`, `flow`, `seg`, `wave`, `loop`, `bell`, `seeded`, curves) and live eyes and mouths (`liveFace.tsx`, `LiveFace.swift`) for React Native and SwiftUI.
 - `tools/`: `sheet.sh` (contact sheets at full frame rate), `track_edges.py` (measures 1-5% jiggles, floats and sways frame by frame) and `sample_colors.py` (exact colours from a video frame).
 - `demo/`: the four scenes (reveal, garden, chef, orbit) as Swift source with MP4 and GIF renders, a phone mockup and `render.swift`, an offline renderer that writes PNG frames for ffmpeg.
+- `examples/pond/`: an original scene added in this repo, built only from the skill's templates. It shows gaze aimed per eye (the eyes cross by themselves), a tongue strike that misses, contact solved through a floating pad, a hop with hanging legs and pad ripples, and a loop that closes without a jump. Its README maps each beat to the SKILL.md section it uses.
 
 **Use:** ask to animate an illustration, mascot, icon or scene, to make something "feel alive", to add idle motion, or to recreate the motion of a reference video. Re-rendering the demos needs macOS 14+ with `swiftc` and `ffmpeg`:
 
@@ -632,4 +637,4 @@ swiftc -parse-as-library -target arm64-apple-macos14 \
 ffmpeg -framerate 60 -i /tmp/frames/%04d.png -c:v libx264 -pix_fmt yuv420p -crf 20 /tmp/reveal.mp4
 ```
 
-Copied unchanged from [rossark0/rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (`9b20964`), with its MIT `LICENSE`. The demo scenes, renders and GIFs are from that repo too. By Ross ([@rossark0](https://github.com/rossark0), [thisross.com](https://thisross.com)). Its interface-motion rules follow [Emil Kowalski's skills](https://github.com/emilkowalski/skills) and Benji Taylor's [Family values](https://benji.org/family-values).
+The skill's own files are copied unchanged from [rossark0/rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (`9b20964`), with its MIT `LICENSE`. The demo scenes, renders and GIFs are from that repo too. `examples/pond` is the only addition: an original scene made with the skill's engine for this repo. By Ross ([@rossark0](https://github.com/rossark0), [thisross.com](https://thisross.com)). Its interface-motion rules follow [Emil Kowalski's skills](https://github.com/emilkowalski/skills) and Benji Taylor's [Family values](https://benji.org/family-values).
