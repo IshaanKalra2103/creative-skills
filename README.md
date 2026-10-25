@@ -43,6 +43,8 @@
 | [colorfigures](skills/colorfigures) | Hand-inked, flat-coloured isometric figures of everyday machines (a gumball machine, a kettle, a record player, a washing machine) as one self-contained HTML page with buttons that really work: real 3D bodies shaded in light, mid and dark bands, a heavy ink silhouette with finer inner lines, a flat blue cast shadow, a hand-drawn wobble slider and body-colour swatches. Ask how something works and it labels the parts, lighting each one up while it works. By [April Zhu](https://april-zhu.com/colorfigures). |
 | [rossark-motion-skill](skills/rossark-motion-skill) | Calm, believable motion for anything drawn: live faces (gliding pupils, blinks that close faster than they open, happy squints), full-body acting (floating with limp feet, landing with squash, waving, kicking a ball), plants, cloth, fire, smoke, water, weather, machines, icons, logos, charts and whole scenes. One clock per scene, parts that turn on their real pivots, follow-through by delay, idle life that never stops and `flow` curves through key poses. A small motion engine and live-face templates for SwiftUI and React Native, tools that measure a reference video frame by frame, and four demo scenes with an offline renderer to MP4 and GIF. By [Ross](https://github.com/rossark0). |
 | [photoreal-spot](skills/photoreal-spot) | Photoreal product and sports spots cut to a soundtrack's hits, rendered in code with fframes: photoreal stills turned into AI video plates (Vizard or Wan), framed snap cuts (picture cards on a backdrop gradient, smears, black frames, thin white boxes that track the product with trailing boxes, found by Jev and cached), whips, lens kicks, flashes, a mono HUD, a tagline slam and a logo lockup. One `spot.json` per spot; tools study a reference's cuts and its track's onsets, unpack clips, build plates and snaps, render, and score the cut against the reference with Jev. An adidas x NBA spec spot is the worked example. |
+| [dimensional-drawing](skills/dimensional-drawing) | Any UI component (or physical product) as a one-page Apple-style dimensional drawing: a title block with the key variables, then one dense monochrome sheet with notes, a plan view with chained dimensions and radius callouts, an exploded view of the layer stack, detail circles (nested corner, radii, body) and variable tables. It draws architecture, not content (`TITLE SLOT · FLEX`, `ACTION · HUG`), every dimension is a code with its formula (`H1 = 2·S1 + H3`, `R2 = R1 − B − S6`), nothing is branded and unknown values stay `[TBD]`. Measures the real component in Playwright; ships an SVG drawing kit and card and dialog sheets as examples. By [Enes Ozturk](https://github.com/enesozturk/dimensional-drawing). |
+| [dimensional-drawing-motion](skills/dimensional-drawing-motion) | A finished dimensional drawing as a ~10 s film, like a pen drawing the sheet while a camera moves over the paper: the header draws in close up, the camera pulls back to the plan, layers lift off it into the exploded view (strokes first, fills after) and the full sheet resolves. The scene is a pure function of time, so it runs in Claude's Motion artifact or headless with Playwright + ffmpeg. By [Enes Ozturk](https://github.com/enesozturk/dimensional-drawing). |
 
 ## Install
 
@@ -87,6 +89,8 @@ ln -s ~/src/claude-skills/skills/saas-promo ~/.claude/skills/saas-promo
 ln -s ~/src/claude-skills/skills/colorfigures ~/.claude/skills/colorfigures
 ln -s ~/src/claude-skills/skills/rossark-motion-skill ~/.claude/skills/rossark-motion-skill
 ln -s ~/src/claude-skills/skills/photoreal-spot ~/.claude/skills/photoreal-spot
+ln -s ~/src/claude-skills/skills/dimensional-drawing ~/.claude/skills/dimensional-drawing
+ln -s ~/src/claude-skills/skills/dimensional-drawing-motion ~/.claude/skills/dimensional-drawing-motion
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -196,7 +200,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan), colorfigures (MIT, April Zhu; its demo figures and previews are hers too) and rossark-motion-skill (MIT, Ross; its demo scenes and videos are theirs too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan), colorfigures (MIT, April Zhu; its demo figures and previews are hers too) rossark-motion-skill (MIT, Ross; its demo scenes and videos are theirs too) and dimensional-drawing and dimensional-drawing-motion (MIT, Enes Ozturk; their demo sheets and film are theirs too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
 
 ## pixel-showcase
 
@@ -657,3 +661,30 @@ The skill's own files are copied unchanged from [rossark0/rossark-motion-skill](
 **Use:** ask for a product or sports spot, a brand commercial with snap cuts or tracking boxes, or share a reference ad and say "make one like this for my product". Needs Rust, `ffmpeg` and `uv`; an image model for the stills, the Vizard CLI or Wan for the video, and a TypeSafe key for the boxes and QA.
 
 The example is unsolicited spec work after Ali Zeyada's adidas x NBA case study on Behance; the reference, its soundtrack and the brand logos are not included. adidas, NBA and Spalding marks belong to their owners. The fonts are Barlow Condensed and IBM Plex Mono under the OFL (licences in `template/comp/licenses/`). The tools, comp and stills are original.
+
+## dimensional-drawing and dimensional-drawing-motion
+
+<a href="skills/dimensional-drawing-motion/demo/dialog-motion.mp4"><img width="100%" alt="A dialog component's dimensional drawing drawing itself: header close-up, pull back to the plan view, layers lifting into an exploded view, then the full sheet" src="skills/dimensional-drawing-motion/demo/dialog-motion.gif" /></a>
+
+*The reference film, `templates/scene-dialog.js`: the header draws up close, the camera pulls back to the plan, layers lift into the exploded view, then the full sheet.*
+
+![Dimensional drawing of a dialog component](skills/dimensional-drawing/demo/dialog-sheet.png)
+
+![Dimensional drawing of a card component](skills/dimensional-drawing/demo/card-sheet.png)
+
+*`examples/dialog-sheet.html` (fixed width, scrim, viewport placement, header controls, footer actions) and `examples/card-sheet.html` (flexible width, body well, nested corner, shadow envelope).*
+
+- `dimensional-drawing/SKILL.md`: the house rules (monochrome, architecture not content, variables not numbers, unbranded, never invent values), the code system (S spacing, H/Z/I sizes, R radii, the E1–E3 shadow envelope), the page and sheet layout, which views to add per component (card, dialog, button, navigation, physical products in third-angle views), how to measure a real component in Playwright, the SVG drawing kit (`dimH`, `dimV`, `callout`, `rad`, `detailRef`, `table`, `notes`) with its line conventions, and the checks before delivering.
+- `dimensional-drawing/examples/`: the card and dialog sheets as single HTML files to copy the kit from. `demo/` holds their PNGs.
+- `dimensional-drawing-motion/SKILL.md`: the choreography beat by beat, how the template works (one SVG and one camera with log zoom, `at()` registration, drawn vs faded elements, morph groups for the exploded view), adapting it to a new component, and the style rules for motion.
+- `dimensional-drawing-motion/templates/`: the reference 11 s dialog film (`scene-dialog.js`) and its stylesheet.
+- `dimensional-drawing-motion/adapters/`: `claude-motion.md` (build it as a claude.ai Motion artifact, the target it was tuned on) and `headless/` (`render.mjs`: Playwright renders each frame, ffmpeg encodes; `--still <t>` renders one frame). `demo/` holds the film as MP4 and GIF.
+
+**Use:** "make a dimensional drawing of the `Card` component in `src/components/Card.tsx`", then "animate this drawing". Rendering headless needs Node 18+ and ffmpeg:
+
+```bash
+cd skills/dimensional-drawing-motion/adapters/headless && npm install
+node render.mjs --scene ../../templates/scene-dialog.js --css ../../templates/base.css --out dialog.mp4
+```
+
+Copied unchanged from [enesozturk/dimensional-drawing](https://github.com/enesozturk/dimensional-drawing) (`5c45743`), with its MIT `LICENSE` in each skill. The demo sheets and film are from that repo's `assets/`. By Enes Ozturk ([@enesozturk](https://github.com/enesozturk)), after [Apple's accessory dimensional drawings](https://developer.apple.com/accessories/dimensional-drawings/) and a post by [Andreas Storm](https://x.com/avstorm).
