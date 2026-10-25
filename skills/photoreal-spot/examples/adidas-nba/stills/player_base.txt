@@ -1,0 +1,7 @@
+Use case: photorealistic-natural
+Asset type: film plate for a basketball commercial, will be cropped to 4:5 portrait
+Scene: seamless studio backdrop with a smooth horizontal gradient: almost-black deep navy on the left, royal blue in the middle, bright periwinkle blue on the far right. No floor, no court, no props.
+Subject: one anonymous athletic basketball player in a plain sleeveless top, seen as a near-black silhouette; face completely in shadow, no facial features visible.
+Lighting: subject underexposed to almost pure black; one hard thin cool-white rim light from behind on the right tracing the head, shoulders, arms and the edge of the torso; very faint blue edge light from the left; the basketball is dark orange-brown leather with a small warm specular highlight.
+Style: high-end commercial sports photography, slow shutter with motion blur on the moving hand and the ball, shallow depth of field, subtle 35mm film grain, deep blacks, high contrast.
+Avoid: any text, letters, logos, jersey numbers, watermark, visible face, crowd, court lines, extra people, rim or hoop.

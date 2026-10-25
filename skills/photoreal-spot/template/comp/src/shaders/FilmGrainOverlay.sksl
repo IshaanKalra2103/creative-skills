@@ -1,0 +1,33 @@
+// fx: FilmGrainOverlay
+// kind: overlay
+// blend: overlay
+// from: shader-effects-inc/shaders packages/core/src/shaders/FilmGrain (MIT), overlay variant
+// about: FilmGrain for SVG scenes. fframes cannot feed a rendered SVG subtree into a shader,
+//        so the grain is drawn as mid-grey noise and composited with mix-blend-mode:overlay
+//        (or soft-light). Overlay blending already weights grain away from pure white and
+//        black; uBias pushes it further toward the shadows by darkening the noise mean.
+// uniform: uStrength float 0.5
+// uniform: uBias float 0.0
+// uniform: uAnimated float 1.0
+// uniform: uSize float 1.0
+uniform float3 iResolution;
+uniform float iTime;
+uniform float uStrength;
+uniform float uBias;
+uniform float uAnimated;
+uniform float uSize;
+
+float hash12(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+half4 main(float2 coord) {
+    float animTime = floor(iTime * 24.0) / 24.0 * 10.0 * uAnimated;
+    float2 cell = floor(coord / max(uSize, 1.0));
+    float grain = hash12(cell + float2(animTime, animTime * 1.6180339)) * 2.0 - 1.0;
+    // Overlay maps 0.5 to "no change"; the grain swings around it.
+    float v = clamp(0.5 - uBias * 0.05 + grain * uStrength * 0.5, 0.0, 1.0);
+    return half4(half3(v), 1.0);
+}

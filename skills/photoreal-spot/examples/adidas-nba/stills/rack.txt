@@ -1,0 +1,9 @@
+Use case: photorealistic-natural
+Asset type: film plate for a premium basketball product commercial, cropped to 4:5 portrait
+Input images: Image 1 is only a reference for the basketball's look (dark red-brown pebbled leather, black channels, SPALDING wordmark); match that ball, ignore its background.
+Scene: floating in a seamless studio void with a smooth horizontal gradient backdrop: almost-black deep navy on the left, royal blue in the middle, bright periwinkle on the far right. No arena, no floor, no crowd.
+Lighting: low-key product lighting, one soft top key and one hard cool-white rim light from behind; undersides fall into deep shadow; glossy reflections on the glass and metal.
+Style: photoreal 3D product render quality like a high-end Blender/Octane commercial, shallow depth of field, subtle film grain, high contrast, rich saturated blues.
+Avoid: any extra text, watermark, people, hands, court lines, cartoon look.
+Primary request: low-angle three-quarter view along a long polished chrome basketball rack, three tiers deep, loaded with identical game basketballs packed side by side. The rack runs diagonally from the lower left foreground to the upper right background, so the rows of balls recede in strong perspective. The nearest ball, on the bottom tier at lower left, is large, crisp and in sharp focus with its SPALDING wordmark facing camera; balls further along the rack soften into shallow depth of field. Thin chrome tubes and cross braces catch hard white highlights. The backdrop gradient is visible above and behind the rack.
+Composition: 4:5 portrait framing in mind; rack fills the lower two thirds, clean gradient sky in the top third.

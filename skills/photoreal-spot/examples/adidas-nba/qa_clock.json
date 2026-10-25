@@ -1,0 +1,218 @@
+{
+ "ours": "adidas_nba_spot_clock.mp4",
+ "ref": "ref/ref.mp4",
+ "frames": {
+  "ours/opener": {
+   "6": {
+    "framed": 0.05,
+    "countdown": 0.02,
+    "real": 0.4,
+    "artifact": 0.48
+   },
+   "13": {
+    "framed": 0.04,
+    "countdown": 0.94,
+    "real": 1.04,
+    "artifact": 0.64
+   },
+   "20": {
+    "framed": 0.07,
+    "countdown": 0.94,
+    "real": 0.94,
+    "artifact": 0.55
+   },
+   "30": {
+    "framed": 0.05,
+    "countdown": 0.96,
+    "real": 1.14,
+    "artifact": 0.44
+   },
+   "38": {
+    "framed": 0.03,
+    "countdown": 0.96,
+    "real": 0.56,
+    "artifact": 0.59
+   }
+  },
+  "ref/opener": {
+   "6": {
+    "framed": 0.93,
+    "countdown": 0.04,
+    "real": 0.38,
+    "artifact": 0.65
+   },
+   "12": {
+    "framed": 0.06,
+    "countdown": 0.03,
+    "real": 0.98,
+    "artifact": 0.43
+   },
+   "29": {
+    "framed": 0.08,
+    "countdown": 0.03,
+    "real": 0.9,
+    "artifact": 0.29
+   },
+   "31": {
+    "framed": 0.97,
+    "countdown": 0.03,
+    "real": 0.81,
+    "artifact": 0.65
+   },
+   "39": {
+    "framed": 0.08,
+    "countdown": 0.02,
+    "real": 0.14,
+    "artifact": 0.22
+   }
+  },
+  "ours/rack": {
+   "165": {
+    "framed": 0.05,
+    "countdown": 0.97,
+    "real": 0.41,
+    "artifact": 0.69
+   },
+   "180": {
+    "framed": 0.04,
+    "countdown": 0.97,
+    "real": 0.38,
+    "artifact": 0.67
+   },
+   "198": {
+    "framed": 0.05,
+    "countdown": 0.93,
+    "real": 0.27,
+    "artifact": 0.64
+   }
+  },
+  "ref/rack": {
+   "190": {
+    "framed": 0.05,
+    "countdown": 0.02,
+    "real": 1.1,
+    "artifact": 0.69
+   },
+   "200": {
+    "framed": 0.07,
+    "countdown": 0.02,
+    "real": 1.18,
+    "artifact": 0.61
+   },
+   "208": {
+    "framed": 0.05,
+    "countdown": 0.03,
+    "real": 0.89,
+    "artifact": 0.66
+   }
+  },
+  "ours/snaps": {
+   "258": {
+    "framed": 0.36,
+    "countdown": 0.98,
+    "real": 0.52,
+    "artifact": 0.61
+   },
+   "266": {
+    "framed": 0.17,
+    "countdown": 0.98,
+    "real": 0.26,
+    "artifact": 0.45
+   },
+   "275": {
+    "framed": 0.17,
+    "countdown": 0.98,
+    "real": 0.49,
+    "artifact": 0.33
+   },
+   "283": {
+    "framed": 0.19,
+    "countdown": 0.97,
+    "real": 0.31,
+    "artifact": 0.31
+   },
+   "291": {
+    "framed": 0.17,
+    "countdown": 0.98,
+    "real": 0.35,
+    "artifact": 0.24
+   },
+   "299": {
+    "framed": 0.27,
+    "countdown": 0.98,
+    "real": 0.33,
+    "artifact": 0.32
+   },
+   "306": {
+    "framed": 0.14,
+    "countdown": 0.93,
+    "real": 0.45,
+    "artifact": 0.28
+   },
+   "314": {
+    "framed": 0.05,
+    "countdown": 0.29,
+    "real": 1.33,
+    "artifact": 0.53
+   },
+   "322": {
+    "framed": 0.06,
+    "countdown": 0.85,
+    "real": 0.56,
+    "artifact": 0.49
+   }
+  },
+  "ref/snaps": {
+   "298": {
+    "framed": 0.95,
+    "countdown": 0.03,
+    "real": 0.47,
+    "artifact": 0.92
+   },
+   "302": {
+    "framed": 0.94,
+    "countdown": 0.09,
+    "real": 0.87,
+    "artifact": 0.63
+   },
+   "306": {
+    "framed": 0.91,
+    "countdown": 0.04,
+    "real": 0.84,
+    "artifact": 0.42
+   },
+   "311": {
+    "framed": 0.94,
+    "countdown": 0.04,
+    "real": 0.71,
+    "artifact": 0.65
+   },
+   "318": {
+    "framed": 0.03,
+    "countdown": 0.03,
+    "real": 0.85,
+    "artifact": 0.37
+   },
+   "322": {
+    "framed": 0.06,
+    "countdown": 0.05,
+    "real": 0.97,
+    "artifact": 0.51
+   }
+  }
+ },
+ "sections": {
+  "opener": {
+   "device_match": 0.86,
+   "look_match": 1.23
+  },
+  "rack": {
+   "device_match": 0.12,
+   "look_match": 0.66
+  },
+  "snaps": {
+   "device_match": 0.48,
+   "look_match": 1.01
+  }
+ }
+}

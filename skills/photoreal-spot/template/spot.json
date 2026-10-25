@@ -1,0 +1,103 @@
+{
+  "title": "PRODUCT spot",
+  "notes": "Starter: a 15 s 4:5 spot. Replace the frame numbers with the ones from study.py and hits.py, the sources with your unpacked clips, and the text and logos with yours. Every key is in references/spot.md.",
+  "fps": 30,
+  "width": 1080,
+  "height": 1350,
+  "look": {
+    "gradient": [[0, "#000528"], [0.25, "#001154"], [0.5, "#02288b"], [0.75, "#2f5adb"], [1, "#889dfa"]],
+    "grade": true,
+    "grain": 0.14,
+    "vignette": 0.45
+  },
+  "box_prompt": "Locate the whole product in `frame`, including its shadowed side.",
+
+  "shots": [
+    {"id": "opener",  "start": 0,   "end": 45,  "src": "snaps"},
+    {"id": "hero",    "start": 45,  "end": 105, "src": "video"},
+    {"id": "detail",  "start": 105, "end": 150, "src": "video"},
+    {"id": "action",  "start": 150, "end": 210, "src": "video"},
+    {"id": "collage", "start": 210, "end": 300, "src": "snaps"},
+    {"id": "tagline", "start": 300, "end": 375, "src": "comp"},
+    {"id": "end",     "start": 375, "end": 450, "src": "comp"}
+  ],
+
+  "sources": {
+    "hero":   "frames/hero",
+    "detail": "frames/detail",
+    "action": "frames/action"
+  },
+
+  "segments": [
+    {"at": [45, 104],  "src": "hero",   "start": 0,  "step": 1.5, "zoom": [1.0, 1.06]},
+    {"at": [105, 149], "src": "detail", "start": 10, "step": 1.5, "zoom": [1.1, 1.2], "roll": [0, -4]},
+    {"at": [150, 209], "src": "action", "start": 0,  "step": 1.5, "zoom": [1.04, 1.08]}
+  ],
+
+  "beats": [
+    {"at": [0, 3],     "kind": "smear", "src": "action", "start": 20, "step": 2, "dark": 0.7},
+    {"at": [4, 9],     "kind": "full",  "src": "action", "start": 28, "step": 2, "zoom": [1.0, 1.04], "box": {"track": true, "trail": 2}},
+    {"at": [10, 11],   "kind": "full",  "src": "hero",   "start": 10, "step": 1, "zoom": [1.25, 1.3]},
+    {"at": [12, 14],   "kind": "card",  "src": "action", "start": 40, "step": 2, "card": [540, 640, 700, 875], "box": {"track": true}},
+    {"at": [15, 22],   "kind": "full",  "src": "action", "start": 46, "step": 2, "zoom": [1.04, 1.08], "frame": [250, 300, 830, 1050]},
+    {"at": [23, 24],   "kind": "black"},
+    {"at": [25, 28],   "kind": "card",  "src": "detail", "start": 20, "step": 1, "card": [540, 660, 560, 560], "box": {}},
+    {"at": [29, 30],   "kind": "smear", "src": "hero",   "start": 30, "step": 2, "dark": 0.8},
+    {"at": [31, 41],   "kind": "full",  "src": "hero",   "start": 40, "step": 2, "zoom": [1.04, 1.0], "box": {"track": true, "until": 36}},
+    {"at": [42, 44],   "kind": "full",  "src": "action", "start": 80, "step": 2},
+
+    {"at": [210, 217], "kind": "full",  "src": "hero",   "start": 60, "step": 1, "zoom": [1.12, 1.18]},
+    {"at": [218, 225], "kind": "card",  "src": "action", "start": 56, "step": 2, "card": [540, 640, 820, 1025], "box": {"track": true}},
+    {"at": [226, 233], "kind": "card",  "src": "detail", "start": 40, "step": 2, "card": [540, 660, 640, 800], "box": {}, "frame": [300, 330, 780, 1000]},
+    {"at": [234, 237], "kind": "full",  "src": "action", "start": 90, "step": 1, "zoom": [1.1, 1.12]},
+    {"at": [238, 241], "kind": "card",  "src": "hero",   "start": 80, "step": 1, "card": [540, 640, 560, 700], "box": {}},
+    {"at": [242, 245], "kind": "full",  "src": "detail", "start": 60, "step": 2, "zoom": [1.0, 1.02]},
+    {"at": [246, 249], "kind": "card",  "src": "action", "start": 100, "step": 2, "card": [540, 660, 600, 600], "box": {"track": true}},
+    {"at": [250, 253], "kind": "full",  "src": "hero",   "start": 90, "step": 1, "zoom": [1.0, 1.05]},
+    {"at": [254, 257], "kind": "card",  "src": "detail", "start": 80, "step": 1, "card": [540, 640, 760, 950]},
+    {"at": [258, 261], "kind": "full",  "src": "action", "start": 108, "step": 2, "zoom": [1.55, 1.65], "focus": [0.5, 0.45]},
+    {"at": [262, 265], "kind": "card",  "src": "hero",   "start": 100, "step": 1, "card": [540, 660, 700, 700], "box": {}},
+    {"at": [266, 273], "kind": "full",  "src": "detail", "start": 90, "step": 1, "zoom": [1.0, 1.03]},
+    {"at": [274, 281], "kind": "card",  "src": "action", "start": 60, "step": 2, "card": [540, 640, 700, 875], "box": {"track": true, "trail": 2}},
+    {"at": [282, 289], "kind": "full",  "src": "hero",   "start": 110, "step": 1, "zoom": [1.0, 1.04]},
+    {"at": [290, 299], "kind": "card",  "src": "hero",   "start": 112, "step": 1, "card": [540, 660, 420, 420], "box": {}}
+  ],
+
+  "comp": {
+    "audio": [{"file": "track.wav", "at": 0, "gain_db": 0}],
+    "kicks": [45, 105, 150, 210],
+    "whips": [{"from": 42, "to": 44, "travel": -360}, {"from": 207, "to": 209, "travel": 360}],
+    "flashes": [[299, 0.6], [300, 1.0], [301, 0.4]],
+    "hud": {
+      "mark": {"image": "logo.png", "w": 52, "h": 31},
+      "title": "PRODUCT NAME",
+      "subtitle": "WHAT IT IS",
+      "footer": "BRAND × PARTNER",
+      "counter": [45, 105, 150, 210],
+      "total": 5,
+      "from": 6
+    },
+    "tagline": {
+      "shot": "tagline",
+      "lines": [{"text": "LINE ONE", "at": 0}, {"text": "LINE TWO", "at": 15, "outline_until": 30}]
+    },
+    "end": {
+      "shot": "end",
+      "logos": [],
+      "mark": {"image": "logo.png", "w": 420, "h": 249},
+      "row": [],
+      "tag": "THE TAGLINE",
+      "fade": 12
+    }
+  },
+
+  "qa": {
+    "ref": "ref/ref.mp4",
+    "sections": [
+      {"name": "opener",  "ours": [6, 13, 20, 30, 38],            "ref": [6, 13, 20, 30, 38]},
+      {"name": "video",   "ours": [70, 125, 180],                 "ref": [70, 125, 180]},
+      {"name": "collage", "ours": [214, 222, 230, 248, 270, 285], "ref": [214, 222, 230, 248, 270, 285]}
+    ],
+    "questions": {}
+  }
+}

@@ -1,0 +1,8 @@
+Use case: photorealistic-natural
+Asset type: film plate for a premium basketball product commercial, cropped to 4:5 portrait
+Input images: Image 1 is only a reference for the basketball's look (dark red-brown pebbled leather, black channels, SPALDING wordmark); match that ball, ignore its background.
+Scene: floating in a seamless studio void with a smooth horizontal gradient backdrop: almost-black deep navy on the left, royal blue in the middle, bright periwinkle on the far right. No arena, no floor, no crowd.
+Lighting: low-key product lighting, one soft top key and one hard cool-white rim light from behind; undersides fall into deep shadow; glossy reflections on the glass and metal.
+Style: photoreal 3D product render quality like a high-end Blender/Octane commercial, shallow depth of field, subtle film grain, high contrast, rich saturated blues.
+Avoid: any extra text, watermark, people, hands, court lines, cartoon look.
+Primary request: extreme low angle looking straight up from directly under a basketball hoop: the orange-red rim forms a ring near the top of frame, the thick white braided cord net hangs toward the camera in big soft loops, and the basketball is dropping through the middle of the net, slightly motion blurred, its wordmark half visible. The underside of the dark backboard frame and the red padded arm cut across one corner. Composition: rim ring centred in the upper half, net filling the middle, strong perspective.

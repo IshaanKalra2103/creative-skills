@@ -42,6 +42,7 @@
 | [saas-promo](skills/saas-promo) | Snappy SaaS and product promo films rendered in code with fframes, in the "glass on a screen gradient" look of the bolt.new weekend promo: a deep gradient behind a monitor dot screen, words that blur in as frosted glass and settle, highlight boxes that pop, caption groups that tilt in and settle, a frosted pill that grows into an app window, a prompt typed with a cursor click, an editor whose site scrolls, a card wall with depth of field and a button click, and a logo end card. One `video.toml` sets the palette (presets or one brand colour), fonts, the flow (8 scene kinds in any order), durations in seconds or beats snapped to the music's beat grid, and the music. Tools for beat detection, an original synthesized bed, palettes, credited photo search and cut-outs, HTML-to-PNG screens and backdrop fitting; the bolt.new promo rebuilt shot for shot (with reference frames) and an original second film. |
 | [colorfigures](skills/colorfigures) | Hand-inked, flat-coloured isometric figures of everyday machines (a gumball machine, a kettle, a record player, a washing machine) as one self-contained HTML page with buttons that really work: real 3D bodies shaded in light, mid and dark bands, a heavy ink silhouette with finer inner lines, a flat blue cast shadow, a hand-drawn wobble slider and body-colour swatches. Ask how something works and it labels the parts, lighting each one up while it works. By [April Zhu](https://april-zhu.com/colorfigures). |
 | [rossark-motion-skill](skills/rossark-motion-skill) | Calm, believable motion for anything drawn: live faces (gliding pupils, blinks that close faster than they open, happy squints), full-body acting (floating with limp feet, landing with squash, waving, kicking a ball), plants, cloth, fire, smoke, water, weather, machines, icons, logos, charts and whole scenes. One clock per scene, parts that turn on their real pivots, follow-through by delay, idle life that never stops and `flow` curves through key poses. A small motion engine and live-face templates for SwiftUI and React Native, tools that measure a reference video frame by frame, and four demo scenes with an offline renderer to MP4 and GIF. By [Ross](https://github.com/rossark0). |
+| [photoreal-spot](skills/photoreal-spot) | Photoreal product and sports spots cut to a soundtrack's hits, rendered in code with fframes: photoreal stills turned into AI video plates (Vizard or Wan), framed snap cuts (picture cards on a backdrop gradient, smears, black frames, thin white boxes that track the product with trailing boxes, found by Jev and cached), whips, lens kicks, flashes, a mono HUD, a tagline slam and a logo lockup. One `spot.json` per spot; tools study a reference's cuts and its track's onsets, unpack clips, build plates and snaps, render, and score the cut against the reference with Jev. An adidas x NBA spec spot is the worked example. |
 
 ## Install
 
@@ -85,6 +86,7 @@ ln -s ~/src/claude-skills/skills/doc-shorts ~/.claude/skills/doc-shorts
 ln -s ~/src/claude-skills/skills/saas-promo ~/.claude/skills/saas-promo
 ln -s ~/src/claude-skills/skills/colorfigures ~/.claude/skills/colorfigures
 ln -s ~/src/claude-skills/skills/rossark-motion-skill ~/.claude/skills/rossark-motion-skill
+ln -s ~/src/claude-skills/skills/photoreal-spot ~/.claude/skills/photoreal-spot
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -638,3 +640,20 @@ ffmpeg -framerate 60 -i /tmp/frames/%04d.png -c:v libx264 -pix_fmt yuv420p -crf 
 ```
 
 The skill's own files are copied unchanged from [rossark0/rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (`9b20964`), with its MIT `LICENSE`. The demo scenes, renders and GIFs are from that repo too. `examples/pond` is the only addition: an original scene made with the skill's engine for this repo. By Ross ([@rossark0](https://github.com/rossark0), [thisross.com](https://thisross.com)). Its interface-motion rules follow [Emil Kowalski's skills](https://github.com/emilkowalski/skills) and Benji Taylor's [Family values](https://benji.org/family-values).
+
+## photoreal-spot
+
+![Frames from the adidas x NBA example: a silhouette player dribbling with a box on the ball, a framed card, the ball in an inset card, the hero ball, the backboard, under the net, the chrome ball rack, the player, a jump shot card with a tracking box, the ball card, the tagline IMPOSSIBLE IS NOTHING, the adidas mark](skills/photoreal-spot/assets/preview.jpg)
+
+*`examples/adidas-nba`: a 15.6 s spec spot for the adidas x NBA game ball. The player, hoop and rack shots are AI video made from photoreal stills; the opener and the collage are snap cuts with tracking boxes, cut on the soundtrack's hits.*
+
+- `SKILL.md`: the workflow (study the reference and its track → plan shots on the hits → photoreal stills → AI video, credits confirmed first → plates and snap beats → render → QA against the reference), the rules learned on the example, gotchas.
+- `template/spot.json`: a starter 15 s spot with an opener and a collage of snap beats, three video segments, HUD, tagline and end card.
+- `template/tools/`: `study.py` (cuts, holds and a contact sheet of a reference), `hits.py` (onsets, breakdowns, dips and fade of a track, in frames), `unpack.py`, `plates.py`, `snaps.py` (cards, smears, black frames, fixed frames and Jev tracking boxes with trails, cached by frame content), `assemble.py`, `spot.sh`, `sheet.py`, `qa.py` (Jev per-frame and per-section scores, with the reference as the control), `new_spot.py`.
+- `template/comp/`: the fframes crate that reads the same `spot.json`: backdrop gradient, plate grade, whips, chromatic-aberration kicks, flashes, the HUD with a shot counter, the tagline slam with an outline fill, logo flashes and the lockup, grain and vignette, the soundtrack.
+- `examples/adidas-nba/`: the spot.json of the final cut, the still prompts, the Vizard briefs, the start stills and the Jev reports for the final cut and for a rejected version.
+- `references/`: `look.md` (every measured number), `stills.md`, `video.md`, `snaps.md`, `soundtrack.md`, `spot.md`, `qa.md`, `case-study.md`.
+
+**Use:** ask for a product or sports spot, a brand commercial with snap cuts or tracking boxes, or share a reference ad and say "make one like this for my product". Needs Rust, `ffmpeg` and `uv`; an image model for the stills, the Vizard CLI or Wan for the video, and a TypeSafe key for the boxes and QA.
+
+The example is unsolicited spec work after Ali Zeyada's adidas x NBA case study on Behance; the reference, its soundtrack and the brand logos are not included. adidas, NBA and Spalding marks belong to their owners. The fonts are Barlow Condensed and IBM Plex Mono under the OFL (licences in `template/comp/licenses/`). The tools, comp and stills are original.

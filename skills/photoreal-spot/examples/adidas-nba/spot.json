@@ -1,0 +1,111 @@
+{
+  "title": "adidas x NBA spec spot",
+  "fps": 30,
+  "width": 1080,
+  "height": 1350,
+  "look": {
+    "gradient": [[0, "#000528"], [0.25, "#001154"], [0.5, "#02288b"], [0.75, "#2f5adb"], [1, "#889dfa"]],
+    "grade": true,
+    "grain": 0.14,
+    "vignette": 0.45
+  },
+  "box_prompt": "Locate the whole basketball in `frame`, including its shadowed side.",
+
+  "shots": [
+    {"id": "opener",  "start": 0,   "end": 47,  "src": "snaps"},
+    {"id": "hero",    "start": 47,  "end": 99,  "src": "render"},
+    {"id": "board",   "start": 99,  "end": 123, "src": "video"},
+    {"id": "net",     "start": 123, "end": 156, "src": "video"},
+    {"id": "rack",    "start": 156, "end": 205, "src": "video"},
+    {"id": "player",  "start": 205, "end": 254, "src": "video"},
+    {"id": "collage", "start": 254, "end": 328, "src": "snaps"},
+    {"id": "tagline", "start": 328, "end": 393, "src": "comp"},
+    {"id": "end",     "start": 393, "end": 468, "src": "comp"}
+  ],
+
+  "sources": {
+    "dribble":  "frames/dribble",
+    "jumpshot": "frames/jumpshot",
+    "board":    "frames/board",
+    "net":      "frames/net",
+    "rack":     "frames/rack",
+    "hero":     "renders/hero",
+    "macro":    "renders/macro"
+  },
+
+  "segments": [
+    {"at": [99, 122],  "src": "board",   "start": 54,  "step": 2.0, "zoom": [1.0, 1.06]},
+    {"at": [123, 155], "src": "net",     "start": 40,  "step": 1.5, "zoom": [1.15, 1.3], "roll": [0, -8]},
+    {"at": [156, 204], "src": "rack",    "start": 30,  "step": 1.8, "zoom": [1.0, 1.04]},
+    {"at": [205, 237], "src": "dribble", "start": 0,   "step": 1.5, "zoom": [1.08, 1.12]},
+    {"at": [238, 253], "src": "dribble", "start": 110, "step": 2.0, "zoom": [1.0, 1.05]}
+  ],
+
+  "beats": [
+    {"at": [0, 3],     "kind": "smear", "src": "dribble",  "start": 52, "step": 2, "dark": 0.7},
+    {"at": [4, 9],     "kind": "full",  "src": "dribble",  "start": 60, "step": 2, "zoom": [1.0, 1.04], "box": {"track": true}},
+    {"at": [10, 11],   "kind": "full",  "src": "hero",     "start": 3,  "step": 1, "zoom": [1.25, 1.3]},
+    {"at": [12, 14],   "kind": "card",  "src": "dribble",  "start": 72, "step": 2, "card": [540, 640, 700, 875], "box": {"track": true}},
+    {"at": [15, 22],   "kind": "full",  "src": "dribble",  "start": 78, "step": 2, "zoom": [1.04, 1.08], "frame": [250, 300, 830, 1050]},
+    {"at": [23, 24],   "kind": "black"},
+    {"at": [25, 28],   "kind": "card",  "src": "hero",     "start": 13, "step": 1, "card": [540, 660, 560, 560], "box": {}},
+    {"at": [29, 30],   "kind": "smear", "src": "jumpshot", "start": 30, "step": 2, "dark": 0.8},
+    {"at": [31, 43],   "kind": "full",  "src": "jumpshot", "start": 44, "step": 3, "zoom": [1.04, 1.0], "box": {"track": true, "until": 36}},
+    {"at": [44, 46],   "kind": "full",  "src": "jumpshot", "start": 83, "step": 2},
+
+    {"at": [254, 261], "kind": "full",  "src": "hero",     "start": 39, "step": 1, "zoom": [1.12, 1.18]},
+    {"at": [262, 270], "kind": "card",  "src": "jumpshot", "start": 56, "step": 2, "card": [540, 640, 820, 1025], "box": {"track": true}},
+    {"at": [271, 278], "kind": "card",  "src": "dribble",  "start": 20, "step": 2, "card": [540, 660, 640, 800], "box": {"track": true}, "frame": [300, 330, 780, 1000]},
+    {"at": [279, 286], "kind": "card",  "src": "board",    "start": 60, "step": 2, "card": [540, 620, 860, 860], "box": {}},
+    {"at": [287, 290], "kind": "full",  "src": "rack",     "start": 90, "step": 1, "zoom": [1.1, 1.12]},
+    {"at": [291, 294], "kind": "card",  "src": "net",      "start": 40, "step": 2, "card": [540, 640, 560, 700], "box": {}},
+    {"at": [295, 298], "kind": "full",  "src": "jumpshot", "start": 86, "step": 2, "zoom": [1.0, 1.02]},
+    {"at": [299, 302], "kind": "card",  "src": "hero",     "start": 47, "step": 1, "card": [540, 660, 600, 600], "box": {}},
+    {"at": [303, 307], "kind": "full",  "src": "macro",    "start": 0,  "step": 1, "zoom": [1.0, 1.05]},
+    {"at": [308, 311], "kind": "card",  "src": "dribble",  "start": 112, "step": 2, "card": [540, 640, 760, 950], "box": {"track": true}},
+    {"at": [312, 315], "kind": "full",  "src": "net",      "start": 50, "step": 2, "zoom": [1.55, 1.65], "focus": [0.5, 0.45]},
+    {"at": [316, 319], "kind": "card",  "src": "rack",     "start": 110, "step": 1, "card": [540, 660, 700, 700]},
+    {"at": [320, 323], "kind": "full",  "src": "jumpshot", "start": 100, "step": 2, "zoom": [1.0, 1.03]},
+    {"at": [324, 327], "kind": "card",  "src": "hero",     "start": 49, "step": 1, "card": [540, 660, 420, 420], "box": {}}
+  ],
+
+  "comp": {
+    "audio": [{"file": "track.wav", "at": 0, "gain_db": 0}],
+    "kicks": [47, 99, 123, 156, 205, 238, 254],
+    "whips": [{"from": 44, "to": 46, "travel": -360}, {"from": 235, "to": 237, "travel": 360}],
+    "flashes": [[327, 0.6], [328, 1.0], [329, 0.4]],
+    "hud": {
+      "mark": {"image": "adidas_mark.png", "w": 52, "h": 31},
+      "title": "× NBA",
+      "subtitle": "OFFICIAL GAME BALL",
+      "footer": "ADIDAS × NBA × SPALDING",
+      "counter": [47, 99, 123, 156, 205, 254],
+      "total": 7,
+      "from": 6
+    },
+    "tagline": {
+      "shot": "tagline",
+      "lines": [{"text": "IMPOSSIBLE", "at": 0}, {"text": "IS NOTHING", "at": 15, "outline_until": 30}]
+    },
+    "end": {
+      "shot": "end",
+      "logos": [{"image": "spalding.png", "w": 580, "h": 234, "frames": 8}, {"image": "nba.png", "w": 152, "h": 370, "frames": 8}],
+      "mark": {"image": "adidas_mark.png", "w": 420, "h": 249, "dy": -0.5},
+      "row": [{"image": "nba.png", "w": 40, "h": 98}, {"image": "spalding.png", "w": 180, "h": 73, "dy": 11.5}],
+      "tag": "IMPOSSIBLE IS NOTHING",
+      "fade": 12
+    }
+  },
+
+  "qa": {
+    "ref": "ref/ref.mp4",
+    "sections": [
+      {"name": "opener",  "ours": [6, 13, 20, 30, 38],                         "ref": [6, 12, 29, 31, 39]},
+      {"name": "rack",    "ours": [165, 180, 198],                             "ref": [190, 200, 208]},
+      {"name": "collage", "ours": [258, 266, 275, 283, 291, 299, 306, 314, 322], "ref": [298, 302, 306, 311, 318, 322]}
+    ],
+    "questions": {
+      "countdown": "Does `frame` show a shot clock or countdown: digits on a scoreboard or a numeric timer readout?"
+    }
+  }
+}
