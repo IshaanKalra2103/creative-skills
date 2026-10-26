@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ascii Tiles</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #3e80a8; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
+  canvas.grab { cursor: grab; }
+  canvas.grabbing { cursor: grabbing; }
+  .hud {
+    position: fixed; z-index: 1; pointer-events: none; color: var(--hud, #f2fbff);
+    font: 500 12px/1.7 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .04em;
+    text-shadow: 0 1px 2px var(--hud-shadow, transparent);
+  }
+  #title { top: 18px; left: 22px; }
+  #hint  { bottom: 18px; left: 22px; opacity: .85; }
+  #nogl  { position: fixed; inset: 0; display: none; place-items: center; color: #fff; font: 14px ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div class="hud" id="title">ascii tiles</div>
+<div class="hud" id="hint">click to pulse &middot; drag a shape &middot; l next look</div>
+<div id="nogl">this page needs WebGL2</div>
+<script>
+(() => {
+'use strict';
+
+// ---------------------------------------------------------------------------
+// EDIT: the looks. Colours are 0..255 rgb. ?look=night picks one, l cycles.
+// ---------------------------------------------------------------------------
+const LOOKS = {
+  water: {
+    bands:   [[52, 112, 150], [62, 129, 170], [76, 148, 190], [94, 168, 208]],  // flat background, dark to light
+    bandAt:  [0.36, 0.5, 0.64],     // value-noise thresholds between the bands
+    shadow:  [38, 86, 120],         // what tiles cast onto the background
+    shadowAt: [1, 2],               // shadow offset in cells (dx, dy): light from the top left
+    light:   [128, 200, 232],       // light-line fill
+    lightHi: [226, 246, 255],       // light-line glyphs, pulses, flecks
+    lines: true,                    // true: drifting network of light lines; false: twinkling flecks
+    hud: ['#f2fbff', 'rgba(10, 30, 40, .6)'],
+    kinds: [                        // the tiled things: fill, highlight, glyph ink, radius range in cells
+      { fill: [236, 122, 92],  hi: [248, 160, 122], ink: [150, 62, 46],  r: [3.2, 5.0] },
+      { fill: [244, 214, 150], hi: [252, 234, 186], ink: [168, 132, 70], r: [2.4, 3.6] },
+      { fill: [150, 204, 104], hi: [178, 222, 128], ink: [92, 140, 52],  r: [4.0, 6.5] },
+    ],
+  },
+  dusk: {
+    bands:   [[192, 104, 86], [210, 124, 94], [226, 148, 106], [240, 174, 124]],
+    bandAt:  [0.36, 0.5, 0.64],
+    shadow:  [150, 76, 72],
+    shadowAt: [-1, 1],              // low sun from the right
+    light:   [248, 200, 150],
+    lightHi: [255, 236, 204],
+    lines: false,
+    hud: ['#fff3e6', 'rgba(70, 30, 20, .5)'],
+    kinds: [
+      { fill: [88, 62, 98],   hi: [122, 92, 128], ink: [50, 32, 58],   r: [3.2, 5.0] },
+      { fill: [250, 224, 178], hi: [255, 242, 212], ink: [172, 120, 82], r: [2.4, 3.6] },
+      { fill: [66, 108, 106], hi: [94, 138, 132], ink: [36, 64, 62],   r: [4.0, 6.5] },
+    ],
+  },
+  night: {
+    bands:   [[14, 18, 40], [20, 26, 54], [28, 36, 70], [38, 48, 88]],
+    bandAt:  [0.4, 0.55, 0.7],
+    shadow:  [6, 8, 22],
+    shadowAt: [1, 1],
+    light:   [64, 84, 150],
+    lightHi: [204, 216, 255],
+    lines: false,                   // the flecks read as stars
+    hud: ['#d8e0ff', 'rgba(0, 0, 0, .6)'],
+    kinds: [
+      { fill: [255, 92, 160], hi: [255, 152, 200], ink: [130, 26, 84],  r: [3.2, 5.0] },
+      { fill: [72, 218, 228], hi: [162, 244, 250], ink: [18, 104, 124], r: [2.4, 3.6] },
+      { fill: [255, 190, 82], hi: [255, 224, 152], ink: [146, 92, 28],  r: [4.0, 6.5] },
+    ],
+  },
+  meadow: {
+    bands:   [[68, 118, 58], [82, 136, 66], [98, 154, 74], [118, 172, 86]],
+    bandAt:  [0.36, 0.5, 0.64],
+    shadow:  [48, 88, 44],
+    shadowAt: [1, 2],
+    light:   [152, 202, 110],
+    lightHi: [230, 246, 192],
+    lines: true,                    // the light lines read as sun through leaves
+    hud: ['#f4ffe8', 'rgba(20, 40, 10, .6)'],
+    kinds: [
+      { fill: [236, 120, 170], hi: [250, 166, 202], ink: [140, 50, 96],  r: [3.2, 5.0] },
+      { fill: [248, 214, 90],  hi: [255, 236, 150], ink: [160, 120, 30], r: [2.4, 3.6] },
+      { fill: [242, 238, 228], hi: [255, 255, 250], ink: [150, 146, 128], r: [4.0, 6.5] },
+    ],
+  },
+  paper: {
+    bands:   [[224, 214, 194], [232, 224, 206], [239, 233, 217], [245, 241, 229]],
+    bandAt:  [0.36, 0.5, 0.64],
+    shadow:  [196, 182, 158],
+    shadowAt: [1, 1],
+    light:   [214, 202, 180],
+    lightHi: [140, 120, 96],        // on a light ground the marks go darker, not lighter
+    lines: false,
+    hud: ['#5a4a38', 'transparent'],
+    kinds: [
+      { fill: [222, 74, 58],  hi: [238, 116, 96],  ink: [130, 34, 26], r: [3.2, 5.0] },
+      { fill: [52, 92, 180],  hi: [90, 128, 208],  ink: [24, 46, 104], r: [2.4, 3.6] },
+      { fill: [246, 196, 60], hi: [252, 220, 120], ink: [156, 112, 20], r: [4.0, 6.5] },
+    ],
+  },
+};
+const PER_CELLS = 700;            // one thing per this many grid cells
+
+// ---------------------------------------------------------------------------
+// settings
+// ---------------------------------------------------------------------------
+const qs = new URLSearchParams(location.search);
+const LOOK_NAMES = Object.keys(LOOKS);
+let lookName = LOOKS[qs.get('look')] ? qs.get('look') : 'water';
+let LOOK = LOOKS[lookName];
+const WORD = qs.get('text') || '';                                // ?text=HELLO: a word in tiles
+const COUNT = qs.has('n') ? Math.max(0, +qs.get('n') | 0) : -1;   // ?n=0: no things
+const CELL = Math.min(40, Math.max(8, +qs.get('cell') || 16));   // css px per grid cell
+const FROZEN = qs.has('t');                                       // ?t=12: render that moment and stop
+const GLYPHS = [' ', '.', '*', "'", ',', '#', '%', '&', '8', '@', 'x', '-', '\\', '|', '/', '~', 'o'];
+const G = {};
+GLYPHS.forEach((ch, i) => { G[ch] = i; });
+const LINE = [G['-'], G['\\'], G['|'], G['/']];
+const BODY_G = ['#', '%', '&', '8', '@', 'x'].map(ch => G[ch]);
+const FLECK_G = ['*', "'", '.', ',', '*'].map(ch => G[ch]);
+
+// ---------------------------------------------------------------------------
+// small math
+// ---------------------------------------------------------------------------
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function hash2(x, y) {
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function vnoise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy), b = hash2(ix + 1, iy), c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function mulberry32(a) {
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let r = Math.imul(a ^ (a >>> 15), 1 | a);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(qs.has('seed') ? +qs.get('seed') : (Math.random() * 1e9) | 0);
+const mixc = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+
+// glyph for a line running along (dx, dy), screen y pointing down
+function lineGlyph(dx, dy) {
+  let a = Math.atan2(dy, dx);
+  if (a < 0) a += Math.PI;
+  return LINE[Math.floor((a + Math.PI / 8) / (Math.PI / 4)) & 3];
+}
+
+// ---------------------------------------------------------------------------
+// WebGL: three cell textures (ground, tile, glyph) + a glyph atlas, one pass.
+// Each cell: ground colour, then a tile square inset by a gap, then a glyph.
+// ---------------------------------------------------------------------------
+const canvas = document.getElementById('view');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false });
+if (!gl) { document.getElementById('nogl').style.display = 'grid'; return; }
+
+const VS = `#version 300 es
+in vec2 p;
+void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
+
+const FS = `#version 300 es
+precision highp float;
+precision highp int;
+uniform sampler2D uGround;
+uniform sampler2D uTile;
+uniform sampler2D uFg;
+uniform sampler2D uAtlas;
+uniform float uCell;
+uniform float uGap;
+uniform float uH;
+out vec4 outColor;
+void main() {
+  vec2 px = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
+  vec2 cell = floor(px / uCell);
+  vec2 lp = px - cell * uCell;
+  ivec2 ci = ivec2(cell);
+  vec3 col = texelFetch(uGround, ci, 0).rgb;
+  vec4 t = texelFetch(uTile, ci, 0);
+  if (t.a > 0.0) {
+    vec2 q = abs(lp - 0.5 * uCell) - (0.5 * uCell - uGap);
+    float m = clamp(0.5 - max(q.x, q.y), 0.0, 1.0);
+    col = mix(col, t.rgb, t.a * m);
+  }
+  vec4 f = texelFetch(uFg, ci, 0);
+  int gi = int(f.a * 255.0 + 0.5);
+  if (gi > 0) {
+    float g = texelFetch(uAtlas, ivec2(gi * int(uCell) + int(lp.x), int(lp.y)), 0).r;
+    col = mix(col, f.rgb, g);
+  }
+  outColor = vec4(col, 1.0);
+}`;
+
+function shader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, shader(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+gl.bindVertexArray(gl.createVertexArray());
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+const aP = gl.getAttribLocation(prog, 'p');
+gl.enableVertexAttribArray(aP);
+gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0);
+
+function makeTex(unit, name) {
+  const tx = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit);
+  gl.bindTexture(gl.TEXTURE_2D, tx);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(gl.getUniformLocation(prog, name), unit);
+  return tx;
+}
+makeTex(0, 'uGround');
+makeTex(1, 'uTile');
+makeTex(2, 'uFg');
+makeTex(3, 'uAtlas');
+const uCell = gl.getUniformLocation(prog, 'uCell');
+const uGap = gl.getUniformLocation(prog, 'uGap');
+const uH = gl.getUniformLocation(prog, 'uH');
+
+// ---------------------------------------------------------------------------
+// grid buffers
+// ---------------------------------------------------------------------------
+let dpr = 1, cp = 16, cols = 0, rows = 0, N = 0;
+let Wb, Tb, Fb;              // ground rgb, tile rgba, glyph rgb + index (all 0..255)
+let shadowB, cK, cG;         // shadow amount, light-line strength, light-line glyph
+const CS = 15;               // light-line network cell size, in grid cells
+const COFF = 4;
+let SX, SY, SW = 0, SH = 0;  // network sites
+
+function buildAtlas() {
+  const n = GLYPHS.length;
+  const c = document.createElement('canvas');
+  c.width = n * cp; c.height = cp;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000';
+  x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = '#fff';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.font = `500 ${Math.round(cp * 0.62)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  for (let i = 1; i < n; i++) x.fillText(GLYPHS[i], i * cp + cp / 2, cp / 2 + cp * 0.03);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+}
+
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  // a word needs about 6 cells per letter to stay readable, so narrow screens get smaller cells
+  const css = WORD && !qs.has('cell') ? Math.max(8, Math.min(CELL, Math.floor(innerWidth * 0.84 / (WORD.length * 6.5)))) : CELL;
+  cp = Math.max(6, Math.round(css * dpr));
+  const w = Math.max(1, Math.round(innerWidth * dpr));
+  const h = Math.max(1, Math.round(innerHeight * dpr));
+  canvas.width = w; canvas.height = h;
+  const nc = Math.ceil(w / cp), nr = Math.ceil(h / cp);
+  if (cols) for (const s of things) { s.x *= nc / cols; s.y *= nr / rows; }
+  cols = nc; rows = nr; N = cols * rows;
+  Wb = new Uint8ClampedArray(N * 4);
+  Tb = new Uint8ClampedArray(N * 4);
+  Fb = new Uint8ClampedArray(N * 4);
+  shadowB = new Float32Array(N);
+  cK = new Float32Array(N);
+  cG = new Uint8Array(N);
+  for (let u = 0; u < 3; u++) {
+    gl.activeTexture(gl.TEXTURE0 + u);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, cols, rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  }
+  SW = Math.ceil((cols + 6) / CS) + COFF * 2 + 2;
+  SH = Math.ceil((rows + 6) / CS) + COFF * 2 + 2;
+  SX = new Float32Array(SW * SH);
+  SY = new Float32Array(SW * SH);
+  buildAtlas();
+  layoutWord();
+  gl.uniform1f(uCell, cp);
+  gl.uniform1f(uGap, Math.max(0.5, dpr * 0.5));
+  gl.uniform1f(uH, h);
+  gl.viewport(0, 0, w, h);
+}
+
+// compositing helpers: W = ground, T = tile (alpha = tile coverage), F = glyph
+const tmp = [0, 0, 0];
+function wMix(i, c, a) {
+  const k = i * 4;
+  Wb[k] += (c[0] - Wb[k]) * a; Wb[k + 1] += (c[1] - Wb[k + 1]) * a; Wb[k + 2] += (c[2] - Wb[k + 2]) * a;
+}
+function tOver(i, c, a) {
+  const k = i * 4, ta = Tb[k + 3] / 255, oa = a + ta * (1 - a);
+  if (oa <= 0) return;
+  const kb = ta * (1 - a);
+  Tb[k] = (c[0] * a + Tb[k] * kb) / oa;
+  Tb[k + 1] = (c[1] * a + Tb[k + 1] * kb) / oa;
+  Tb[k + 2] = (c[2] * a + Tb[k + 2] * kb) / oa;
+  Tb[k + 3] = oa * 255;
+}
+function tMix(i, c, a) {
+  const k = i * 4;
+  Tb[k] += (c[0] - Tb[k]) * a; Tb[k + 1] += (c[1] - Tb[k + 1]) * a; Tb[k + 2] += (c[2] - Tb[k + 2]) * a;
+}
+function fMix(i, c, a) {
+  const k = i * 4;
+  Fb[k] += (c[0] - Fb[k]) * a; Fb[k + 1] += (c[1] - Fb[k + 1]) * a; Fb[k + 2] += (c[2] - Fb[k + 2]) * a;
+}
+function visible(i, out) {
+  const k = i * 4, ta = Tb[k + 3] / 255;
+  out[0] = Wb[k] + (Tb[k] - Wb[k]) * ta;
+  out[1] = Wb[k + 1] + (Tb[k + 1] - Wb[k + 1]) * ta;
+  out[2] = Wb[k + 2] + (Tb[k + 2] - Wb[k + 2]) * ta;
+}
+function gSet(i, g, c) {
+  const k = i * 4;
+  Fb[k] = c[0]; Fb[k + 1] = c[1]; Fb[k + 2] = c[2]; Fb[k + 3] = g;
+}
+// glyph whose colour is c at strength a over whatever is already visible in the cell
+function gBlend(i, g, c, a) {
+  visible(i, tmp);
+  const k = i * 4;
+  Fb[k] = tmp[0] + (c[0] - tmp[0]) * a;
+  Fb[k + 1] = tmp[1] + (c[1] - tmp[1]) * a;
+  Fb[k + 2] = tmp[2] + (c[2] - tmp[2]) * a;
+  Fb[k + 3] = g;
+}
+
+// ---------------------------------------------------------------------------
+// EDIT: the things. Each is an ellipse of tiles with a glyph rim, a lighter
+// patch, body glyphs fixed to the thing (so they turn with it) and a shadow.
+// ---------------------------------------------------------------------------
+const things = [], ripples = [];
+let t = 0;
+const pointer = { x: -99, y: -99, down: false, moved: 0, held: null, ox: 0, oy: 0, vx: 0, vy: 0 };
+
+class Thing {
+  constructor(ki, x, y) {
+    const kind = LOOK.kinds[ki];
+    this.ki = ki; this.x = x; this.y = y;
+    this.R = kind.r[0] + (kind.r[1] - kind.r[0]) * rng();
+    this.asp = 0.72 + 0.28 * rng();
+    this.a = rng() * TAU;
+    this.va = (rng() - 0.5) * 0.12;
+    this.vx = (rng() - 0.5) * 0.7;
+    this.vy = (rng() - 0.5) * 0.7;
+    this.seed = (rng() * 1000) | 0;
+  }
+  get k() { return LOOK.kinds[this.ki % LOOK.kinds.length]; }   // follows the look when it changes
+  local(px, py) {                       // thing-space coords, 1 = on the rim
+    const dx = px - this.x, dy = py - this.y, c = Math.cos(this.a), s = Math.sin(this.a);
+    return [(dx * c + dy * s) / this.R, (-dx * s + dy * c) / (this.R * this.asp)];
+  }
+  each(fn) {
+    const R = this.R + 1;
+    const x0 = Math.max(0, Math.floor(this.x - R)), x1 = Math.min(cols - 1, Math.ceil(this.x + R));
+    const y0 = Math.max(0, Math.floor(this.y - R)), y1 = Math.min(rows - 1, Math.ceil(this.y + R));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const [u, v] = this.local(x + 0.5, y + 0.5), d2 = u * u + v * v;
+      if (d2 < 1) fn(y * cols + x, x, y, u, v, Math.sqrt(d2));
+    }
+  }
+  castShadow() {
+    const [sx, sy] = LOOK.shadowAt;
+    this.each((i, x, y) => {
+      const X = x + sx, Y = y + sy;
+      if (X >= 0 && Y >= 0 && X < cols && Y < rows) shadowB[Y * cols + X] = 0.5;
+    });
+  }
+  draw() {
+    const K = this.k, shade = mixc(K.fill, K.ink, 0.3);
+    this.each((i, x, y, u, v, d) => {
+      // lit on the side away from the shadow, a darker rim on the far side, noise fixed to the thing
+      const lit = -((x + 0.5 - this.x) * LOOK.shadowAt[0] + (y + 0.5 - this.y) * LOOK.shadowAt[1]) / (this.R * 1.6);
+      const n = vnoise(u * 2.2 + this.seed, v * 2.2);
+      const col = lit + n * 0.7 > 0.85 ? K.hi : d > 0.7 && lit < -0.3 ? shade : K.fill;
+      tOver(i, col, 1);
+      const h = hash2(Math.floor(u * this.R + 40) + this.seed, Math.floor(v * this.R * this.asp + 40));
+      if (d > 0.8) {                    // rim: line glyphs along the edge, with gaps
+        if (h < 0.55) {
+          const [gu, gv] = this.local(x + 0.6, y + 0.5), [hu, hv] = this.local(x + 0.5, y + 0.6);
+          const gx = gu * gu + gv * gv - d * d, gy = hu * hu + hv * hv - d * d;
+          gSet(i, lineGlyph(-gy, gx), mixc(col, K.ink, 0.8));
+        }
+      } else if (h < 0.3) {
+        gSet(i, BODY_G[(h * 97 | 0) % BODY_G.length], mixc(col, K.ink, 0.7));
+      }
+    });
+  }
+  contains(px, py) { const [u, v] = this.local(px, py); return u * u + v * v < 1.1; }
+}
+
+function populate() {
+  const n = COUNT >= 0 ? COUNT : Math.max(3, Math.round(N / PER_CELLS));
+  const first = WORD ? 1 : 0;            // the word takes the first kind's colours, so things don't blend into it
+  for (let j = 0; j < n; j++) {
+    const ki = first + j % (LOOK.kinds.length - first);
+    let x, y, tries = 0;
+    do { x = 4 + rng() * (cols - 8); y = 4 + rng() * (rows - 8); }
+    while (wordM && tries++ < 40 && overWord(x, y, 7));
+    things.push(new Thing(ki, x, y));
+  }
+  things.sort((a, b) => b.R - a.R);      // big ones underneath
+}
+
+function setLook(name) {
+  lookName = name; LOOK = LOOKS[name];
+  const st = document.documentElement.style;
+  st.setProperty('--hud', LOOK.hud[0]);
+  st.setProperty('--hud-shadow', LOOK.hud[1]);
+  document.body.style.background = `rgb(${LOOK.bands[1].join(',')})`;
+  document.getElementById('title').textContent = `ascii tiles \u00b7 ${name}`;
+}
+
+// ---------------------------------------------------------------------------
+// EDIT (optional): a word or logo in tiles, from ?text=. It is drawn into a
+// canvas at 4 px per cell and a cell is a tile when over half of it is ink.
+// For a logo, draw the image into the same canvas instead of fillText.
+// ---------------------------------------------------------------------------
+let wordM = null;                        // ink coverage per cell, 0..1
+
+function layoutWord() {
+  wordM = null;
+  if (!WORD) return;
+  const S = 4, c = document.createElement('canvas');
+  c.width = cols * S; c.height = rows * S;
+  const x = c.getContext('2d');
+  const font = px => `800 ${px}px ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif`;
+  let size = c.height * 0.42;
+  x.font = font(size);
+  size *= Math.min(1, c.width * 0.84 / x.measureText(WORD).width);
+  x.font = font(size);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = '#fff';
+  x.fillText(WORD, c.width / 2, c.height / 2);
+  const px = x.getImageData(0, 0, c.width, c.height).data;
+  wordM = new Float32Array(N);
+  for (let y = 0; y < rows; y++) for (let xx = 0; xx < cols; xx++) {
+    let a = 0;
+    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) a += px[((y * S + j) * c.width + xx * S + i) * 4 + 3];
+    wordM[y * cols + xx] = a / (S * S * 255);
+  }
+}
+
+const wordAt = (x, y) => x >= 0 && y >= 0 && x < cols && y < rows ? wordM[y * cols + x] : 0;
+function overWord(cx, cy, r) {           // any ink within r cells of (cx, cy)
+  for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++)
+    if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r && wordAt(x, y) >= 0.5) return true;
+  return false;
+}
+
+function wordShadow() {
+  const [sx, sy] = LOOK.shadowAt;
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const X = x + sx, Y = y + sy;
+    if (wordM[y * cols + x] >= 0.5 && X >= 0 && Y >= 0 && X < cols && Y < rows) shadowB[Y * cols + X] = 0.6;
+  }
+}
+
+// same rules as a Thing: lit edge toward the light, shaded edge away, line glyphs along the outline
+function drawWord() {
+  const K = LOOK.kinds[0], shade = mixc(K.fill, K.ink, 0.3);
+  const lx = -Math.sign(LOOK.shadowAt[0]), ly = -Math.sign(LOOK.shadowAt[1]);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const i = y * cols + x;
+    if (wordM[i] < 0.5) continue;
+    const col = wordAt(x + lx, y + ly) < 0.5 ? K.hi : wordAt(x - lx, y - ly) < 0.5 ? shade : K.fill;
+    tOver(i, col, 1);
+    const gx = wordAt(x + 1, y) - wordAt(x - 1, y), gy = wordAt(x, y + 1) - wordAt(x, y - 1);
+    const h = hash2(x + 13, y + 211);
+    if (gx * gx + gy * gy > 0.09) { if (h < 0.55) gSet(i, lineGlyph(-gy, gx), mixc(col, K.ink, 0.8)); }
+    else if (h < 0.3) gSet(i, BODY_G[(h * 97 | 0) % BODY_G.length], mixc(col, K.ink, 0.7));
+  }
+}
+
+function addRipple(x, y, amp = 1) { ripples.push({ x, y, age: 0, amp, speed: 6.5, life: 2.6 }); }
+
+// ---------------------------------------------------------------------------
+// step
+// ---------------------------------------------------------------------------
+function step(dt) {
+  for (const s of things) {
+    if (s === pointer.held) continue;
+    s.x += s.vx * dt; s.y += s.vy * dt; s.a += s.va * dt;
+    const m = s.R;                      // soft walls
+    if (s.x < m) s.vx += (m - s.x) * dt; if (s.x > cols - m) s.vx -= (s.x - cols + m) * dt;
+    if (s.y < m) s.vy += (m - s.y) * dt; if (s.y > rows - m) s.vy -= (s.y - rows + m) * dt;
+    const sp = Math.hypot(s.vx, s.vy), want = 0.45;   // fling decays back to a drift
+    if (sp > want) { const k = Math.pow(0.4, dt); s.vx *= k + (1 - k) * want / sp; s.vy *= k + (1 - k) * want / sp; }
+    s.va *= Math.pow(0.7, dt); if (Math.abs(s.va) < 0.03) s.va += (rng() - 0.5) * 0.02;
+    if (wordM) {                        // keep clear of the word: push away from any ink just outside the rim
+      let px = 0, py = 0;
+      for (let j = 0; j < 12; j++) {
+        const a = j * TAU / 12, ca = Math.cos(a), sa = Math.sin(a);
+        if (wordAt(Math.floor(s.x + ca * (s.R + 1.5)), Math.floor(s.y + sa * (s.R + 1.5))) >= 0.5) { px -= ca; py -= sa; }
+      }
+      s.vx += px * 1.5 * dt; s.vy += py * 1.5 * dt;
+    }
+  }
+  for (const r of ripples) r.age += dt;
+  while (ripples.length && ripples[0].age > ripples[0].life) ripples.shift();
+}
+
+// ---------------------------------------------------------------------------
+// render
+// ---------------------------------------------------------------------------
+// light lines: borders of a drifting, warped Voronoi diagram
+function lightField() {
+  const inv = 1 / CS;
+  for (let j = 0; j < SH; j++) for (let i = 0; i < SW; i++) {
+    const gi = i - COFF, gj = j - COFF, k = j * SW + i;
+    const h1 = hash2(gi, gj), h2 = hash2(gi + 31, gj + 17), h3 = hash2(gi + 7, gj + 71);
+    SX[k] = 0.5 + 0.38 * Math.sin(t * (0.25 + 0.2 * h3) + TAU * h1);
+    SY[k] = 0.5 + 0.38 * Math.cos(t * (0.22 + 0.2 * h1) + TAU * h2);
+  }
+  for (let y = 0; y < rows; y++) {
+    const py = y + 0.5;
+    for (let x = 0; x < cols; x++) {
+      const px = x + 0.5;
+      const wx = px + 1.3 * Math.sin(py * 0.23 + t * 0.6) + 0.6 * Math.sin((px + py) * 0.41 - t * 0.9);
+      const wy = py + 1.3 * Math.sin(px * 0.19 - t * 0.5) + 0.6 * Math.sin((px - py) * 0.37 + t * 0.7);
+      const gx = wx * inv, gy = wy * inv;
+      const ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy;
+      let md = 8, mrx = 0, mry = 0, mi = 0, mj = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+        const s = (iy + j + COFF) * SW + (ix + i + COFF);
+        const rx = i + SX[s] - fx, ry = j + SY[s] - fy, d = rx * rx + ry * ry;
+        if (d < md) { md = d; mrx = rx; mry = ry; mi = i; mj = j; }
+      }
+      md = 8;
+      let bx = 0, by = 0;
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
+        const ci = mi + i, cj = mj + j;
+        const s = (iy + cj + COFF) * SW + (ix + ci + COFF);
+        const rx = ci + SX[s] - fx, ry = cj + SY[s] - fy;
+        const dx = rx - mrx, dy = ry - mry, l2 = dx * dx + dy * dy;
+        if (l2 > 1e-6) {
+          const d = ((mrx + rx) * 0.5 * dx + (mry + ry) * 0.5 * dy) / Math.sqrt(l2);
+          if (d < md) { md = d; bx = dx; by = dy; }
+        }
+      }
+      const dist = md * CS, i = y * cols + x;
+      // let stretches of the network fade out so it reads as separate lines
+      const flick = clamp((vnoise(px * 0.07 + t * 0.12, py * 0.07 - t * 0.05) - 0.36) * 2.2, 0, 1);
+      if (dist < 0.6 && flick > 0) {
+        cK[i] = (1 - dist / 0.6) * flick;
+        cG[i] = lineGlyph(-by, bx);
+      } else cK[i] = 0;
+    }
+  }
+}
+
+function groundPass() {
+  const at = LOOK.bandAt;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const i = y * cols + x, k = i * 4;
+      const nx = x * 0.03 + t * 0.01, ny = y * 0.036 - t * 0.007;
+      const n = 0.7 * vnoise(nx, ny) + 0.3 * vnoise(nx * 2.2 + 5.2, ny * 2.2 + 1.3);
+      let b = 0;
+      while (b < at.length && n >= at[b]) b++;
+      const c = LOOK.bands[b];
+      Wb[k] = c[0]; Wb[k + 1] = c[1]; Wb[k + 2] = c[2]; Wb[k + 3] = 255;
+
+      const sh = shadowB[i];
+      if (sh > 0) wMix(i, LOOK.shadow, sh);
+
+      if (LOOK.lines) {
+        const ck = cK[i];
+        if (ck > 0) {
+          wMix(i, LOOK.light, ck * 0.75 * (1 - sh));
+          gBlend(i, cG[i], LOOK.lightHi, (0.5 + 0.5 * ck) * (1 - sh * 0.6));
+        }
+      } else {
+        const h = hash2(x + 101, y + 7);    // flecks that twinkle in and out
+        if (h > 0.93) {
+          const tw = vnoise(x * 0.25 + t * 0.55 + h * 9, y * 0.25 - t * 0.35);
+          if (tw > 0.58) gBlend(i, FLECK_G[(h * 1000 | 0) % FLECK_G.length], LOOK.lightHi, Math.min(1, (tw - 0.58) * 3.2));
+        }
+      }
+    }
+  }
+}
+
+// light lines cross tiles as a lighter band, leaving the tile's own glyphs readable
+function lightOverTiles() {
+  for (let i = 0; i < N; i++) {
+    const ck = cK[i];
+    if (ck < 0.15 || Tb[i * 4 + 3] === 0) continue;
+    tMix(i, LOOK.lightHi, ck * 0.3);
+    fMix(i, LOOK.lightHi, ck * 0.25);
+  }
+}
+
+function drawRipples() {
+  for (const r of ripples) {
+    const fade = Math.pow(1 - r.age / r.life, 1.6) * r.amp;
+    const r1 = r.age * r.speed, r2 = r1 - 1.8;
+    const R = r1 + 1;
+    const x0 = Math.max(0, Math.floor(r.x - R)), x1 = Math.min(cols - 1, Math.ceil(r.x + R));
+    const y0 = Math.max(0, Math.floor(r.y - R)), y1 = Math.min(rows - 1, Math.ceil(r.y + R));
+    for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+      const dx = cx + 0.5 - r.x, dy = cy + 0.5 - r.y, d = Math.sqrt(dx * dx + dy * dy);
+      let e = Math.abs(d - r1);
+      if (r2 > 0.5) e = Math.min(e, Math.abs(d - r2) + 0.15);
+      if (e >= 0.6) continue;
+      const k = Math.min(1, (1 - e / 0.6) * fade * 1.4);
+      if (k < 0.12) continue;
+      const i = cy * cols + cx;
+      wMix(i, LOOK.lightHi, k * 0.45);
+      if (Tb[i * 4 + 3]) tMix(i, LOOK.lightHi, k * 0.3);
+      gBlend(i, lineGlyph(-dy, dx), LOOK.lightHi, k);
+    }
+  }
+}
+
+// order matters: shadows before the ground reads them, tiles before anything that tints tiles
+function render() {
+  Tb.fill(0); Fb.fill(0); shadowB.fill(0);
+  for (const s of things) s.castShadow();
+  if (wordM) wordShadow();
+  if (LOOK.lines) lightField();
+  groundPass();
+  for (const s of things) s.draw();
+  if (wordM) drawWord();
+  if (LOOK.lines) lightOverTiles();
+  drawRipples();
+
+  gl.activeTexture(gl.TEXTURE0);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RGBA, gl.UNSIGNED_BYTE, Wb);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RGBA, gl.UNSIGNED_BYTE, Tb);
+  gl.activeTexture(gl.TEXTURE2);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RGBA, gl.UNSIGNED_BYTE, Fb);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+// ---------------------------------------------------------------------------
+// input: click for a ripple, drag a thing and fling it
+// ---------------------------------------------------------------------------
+function toCell(e) { return [e.clientX * dpr / cp, e.clientY * dpr / cp]; }
+function thingAt(x, y) {
+  for (let j = things.length - 1; j >= 0; j--) if (things[j].contains(x, y)) return things[j];
+  return null;
+}
+canvas.addEventListener('pointerdown', e => {
+  const [x, y] = toCell(e);
+  Object.assign(pointer, { x, y, down: true, moved: 0, vx: 0, vy: 0, held: thingAt(x, y) });
+  if (pointer.held) {
+    pointer.ox = pointer.held.x - x; pointer.oy = pointer.held.y - y;
+    things.push(things.splice(things.indexOf(pointer.held), 1)[0]);   // lift to the top
+    canvas.className = 'grabbing';
+  }
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  const [x, y] = toCell(e);
+  if (pointer.down) {
+    pointer.moved += Math.hypot(x - pointer.x, y - pointer.y);
+    pointer.vx = (x - pointer.x) * 60; pointer.vy = (y - pointer.y) * 60;
+    if (pointer.held) { pointer.held.x = x + pointer.ox; pointer.held.y = y + pointer.oy; }
+  } else canvas.className = thingAt(x, y) ? 'grab' : '';
+  pointer.x = x; pointer.y = y;
+});
+function release() {
+  if (pointer.held) {
+    pointer.held.vx = clamp(pointer.vx, -25, 25) * 0.5;
+    pointer.held.vy = clamp(pointer.vy, -25, 25) * 0.5;
+    addRipple(pointer.held.x, pointer.held.y, 0.6);
+    canvas.className = 'grab';
+  } else if (pointer.moved < 1) addRipple(pointer.x, pointer.y);
+  pointer.down = false; pointer.held = null;
+}
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+addEventListener('resize', () => { resize(); if (FROZEN) render(); });
+addEventListener('keydown', e => {
+  if (e.key !== 'l' || e.metaKey || e.ctrlKey) return;
+  setLook(LOOK_NAMES[(LOOK_NAMES.indexOf(lookName) + 1) % LOOK_NAMES.length]);
+  const u = new URL(location.href);
+  u.searchParams.set('look', lookName);
+  history.replaceState(null, '', u);
+  if (FROZEN) render();
+});
+
+// ---------------------------------------------------------------------------
+// go
+// ---------------------------------------------------------------------------
+setLook(lookName);
+resize();
+populate();
+if (FROZEN) {                            // deterministic still for screenshots: ?seed=3&t=12
+  const target = +qs.get('t') || 0;
+  while (t < target) { step(1 / 60); t += 1 / 60; }
+  render();
+} else {
+  let last = performance.now();
+  const frame = now => {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    t += dt;
+    step(dt);
+    render();
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+window.__tiles = { things, ripples, addRipple, setLook, get look() { return lookName; }, get t() { return t; } };
+})();
+</script>
+</body>
+</html>

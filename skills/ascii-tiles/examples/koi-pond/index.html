@@ -1,0 +1,1257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Koi Pond</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #4ea6e2; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
+  canvas.grab { cursor: grab; }
+  canvas.grabbing { cursor: grabbing; }
+  .hud {
+    position: fixed; z-index: 1; pointer-events: none; color: #f2fbff;
+    font: 500 12px/1.7 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .04em;
+    text-shadow: 0 1px 2px rgba(10, 40, 40, .6);
+  }
+  #title { top: 18px; left: 22px; }
+  #stats { top: 18px; right: 22px; text-align: right; }
+  #hint  { bottom: 18px; left: 22px; opacity: .85; }
+  @media (max-width: 560px) {
+    .hud { font-size: 11px; }
+    #title { left: 16px; } #stats { right: 16px; } #hint { left: 16px; bottom: 16px; }
+    .wide { display: none; }
+  }
+  #nogl  { position: fixed; inset: 0; display: none; place-items: center; color: #fff; font: 14px ui-monospace, Menlo, monospace; }
+  /* video ponds: the clip fitted to the screen over a blurred copy of itself */
+  #clip, #backdrop { position: fixed; inset: 0; width: 100vw; height: 100vh; display: none; }
+  #clip { object-fit: contain; }
+  #clip.fill { object-fit: cover; }
+  #backdrop { filter: blur(28px) brightness(.72) saturate(1.1); transform: scale(1.12); }
+</style>
+</head>
+<body>
+<canvas id="pond"></canvas>
+<canvas id="backdrop" width="32" height="32"></canvas>
+<video id="clip" loop muted playsinline preload="auto"></video>
+<div class="hud" id="title">koi pond</div>
+<div class="hud" id="stats"><span id="nKoi">0</span> <span id="fishWord">koi</span><br><span id="nFed">0</span> fed<br><span id="rainTag"></span></div>
+<div class="hud" id="hint">click to feed &middot; drag to stir<span class="wide"> &middot; drag a lily pad &middot; r for rain &middot; t to switch pond</span></div>
+<div id="nogl">this pond needs WebGL2</div>
+<script>
+(() => {
+'use strict';
+
+// ---------------------------------------------------------------------------
+// settings and themes
+// ---------------------------------------------------------------------------
+const qs = new URLSearchParams(location.search);
+const CELL = Math.min(40, Math.max(8, +qs.get('cell') || 16));   // css px per grid cell
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const THEMES = {
+  // bright blue pond: light-line network, koi, flat lily pads
+  koi: {
+    name: 'koi pond', fishWord: 'koi', bg: '#4ea6e2',
+    colors: {
+      light:        [ 98, 199, 246],
+      mid:          [ 80, 166, 228],
+      deep:         [ 66, 139, 204],
+      floorShadow:  [ 46, 104, 166],
+      caustic:      [130, 215, 249],
+      causticHi:    [218, 246, 255],
+      causticShade: [ 54, 118, 184],
+      ripple:       [236, 250, 255],
+      pad:          [155, 202,  90],
+      padHi:        [174, 217, 112],
+      padVein:      [114, 162,  60],
+      eye:          [ 20,  20,  26],
+      pellet:       [170, 100,  42],
+      deepTint:     [ 60, 128, 196],
+    },
+    bands: ['light', 'mid', 'deep'], bandAt: [0.42, 0.6],
+    light: 'network', algae: false, weeds: 0,
+    kinds: {
+      kohaku:   { base: [250, 250, 246], fin: [238, 245, 250], layers: [{ c: [229, 60, 42], f: 0.20, fv: 1.0, thr: 0.50, head: 0.35 }] },
+      sanke:    { base: [250, 250, 246], fin: [238, 245, 250], layers: [{ c: [229, 60, 42], f: 0.20, fv: 1.0, thr: 0.52, head: 0.20 },
+                                                                       { c: [36, 32, 34],  f: 0.55, fv: 2.4, thr: 0.76 }] },
+      kiutsuri: { base: [238, 154, 56],  fin: [242, 170, 86],  layers: [{ c: [36, 32, 34],  f: 0.24, fv: 1.4, thr: 0.58 }] },
+      tancho:   { base: [250, 250, 246], fin: [238, 245, 250], layers: [], spot: [229, 60, 42] },
+      ogon:     { base: [245, 198, 78],  fin: [248, 214, 124], layers: [], shimmer: true },
+      kumonryu: { base: [250, 250, 246], fin: [238, 245, 250], layers: [{ c: [36, 32, 34],  f: 0.22, fv: 1.2, thr: 0.48 }] },
+    },
+    order: ['kohaku', 'kiutsuri', 'sanke', 'kohaku', 'ogon', 'tancho', 'kiutsuri', 'kumonryu', 'kohaku', 'sanke'],
+    shape: { body: 0.76, W: 0.125, tail: 0.25, spread: 0.62, fin: 1.15, finAlpha: 0.85, speed: 1 },
+    fishPerCells: 900, fishSize: 0.46, maxFish: 10,
+    padSize: [0.8, 0.45], padAlpha: 1, padRim: false,
+  },
+
+  // green pond: algae, teal shallows, sunlight flecks, swaying grass, goldfish with long fins
+  green: {
+    name: 'green pond', fishWord: 'goldfish', bg: '#306447',
+    colors: {
+      shallow:      [ 44, 140, 104],
+      light:        [ 66, 114,  64],
+      mid:          [ 48, 100,  71],
+      deep:         [ 29,  82,  55],
+      algae:        [ 80, 160,  74],
+      algaeHi:      [112, 200,  96],
+      floorShadow:  [ 18,  54,  36],
+      caustic:      [128, 204,  96],
+      causticHi:    [222, 244, 140],
+      causticShade: [ 24,  70,  46],
+      ripple:       [222, 248, 222],
+      pad:          [140, 196,  98],
+      padHi:        [184, 224, 112],
+      padVein:      [ 96, 150,  74],
+      padRim:       [ 70, 120,  68],
+      weed:         [ 40, 108,  62],
+      weedHi:       [ 96, 170,  92],
+      eye:          [ 30,  18,  26],
+      pellet:       [222, 170,  86],
+      deepTint:     [ 38,  96,  68],
+    },
+    bands: ['shallow', 'light', 'mid', 'deep'], bandAt: [0.22, 0.4, 0.58],
+    light: 'flecks', algae: true, weeds: 340,
+    kinds: {
+      ember:  { base: [228, 86, 44],  fin: [252, 150, 98], ridge: 1.12,
+                layers: [{ c: [172, 48, 44], f: 0.30, fv: 1.4, thr: 0.56 }, { c: [92, 54, 86], f: 0.40, fv: 1.8, thr: 0.72 }] },
+      sunset: { base: [240, 128, 60], fin: [255, 182, 118], ridge: 1.1,
+                layers: [{ c: [214, 70, 42], f: 0.25, fv: 1.2, thr: 0.5 }] },
+      plum:   { base: [222, 96, 58],  fin: [246, 150, 124], ridge: 1.1,
+                layers: [{ c: [86, 50, 80], f: 0.30, fv: 1.4, thr: 0.6 }] },
+    },
+    order: ['ember', 'sunset', 'plum', 'ember', 'sunset', 'plum'],
+    shape: { body: 0.6, W: 0.16, tail: 0.36, spread: 0.75, fin: 1.3, finAlpha: 0.72, speed: 0.8 },
+    fishPerCells: 1500, fishSize: 0.44, maxFish: 6,
+    padSize: [0.55, 0.9], padAlpha: 0.84, padRim: true,
+  },
+};
+// clips converted to the same glyph-tile look by scripts/ascii_video.py
+const VIDEOS = {
+  koicarp: { name: 'koi carp · video', src: 'koi-carp-ascii.mp4', bg: '#3a4f63',
+             credit: 'from "Koi carp in Chinese pond" by Ruurd Zeinstra, CC BY 2.0',
+             link: 'https://commons.wikimedia.org/wiki/File:Koi_carp_in_Chinese_pond.webm' },
+};
+const CYCLE = [...Object.keys(THEMES), ...Object.keys(VIDEOS)];
+function nextTheme() {
+  const u = new URL(location.href);
+  u.searchParams.set('theme', CYCLE[(Math.max(0, CYCLE.indexOf(qs.get('theme'))) + 1) % CYCLE.length]);
+  location.href = u.href;
+}
+if (VIDEOS[qs.get('theme')]) { playVideo(VIDEOS[qs.get('theme')]); return; }
+
+function playVideo(V) {
+  const clip = document.getElementById('clip');
+  const back = document.getElementById('backdrop');
+  const bx = back.getContext('2d');
+  const hint = document.getElementById('hint');
+  document.title = V.name.split(' · ')[0].replace(/\b\w/g, ch => ch.toUpperCase());
+  document.body.style.background = V.bg;
+  document.getElementById('pond').style.display = 'none';
+  const stats = document.getElementById('stats');
+  if (V.credit) {
+    stats.innerHTML = '';
+    const a = Object.assign(document.createElement('a'), { href: V.link, textContent: V.credit, target: '_blank', rel: 'noopener' });
+    Object.assign(a.style, { color: 'inherit', pointerEvents: 'auto' });
+    stats.append(a);
+  } else stats.style.display = 'none';
+  document.getElementById('title').textContent = V.name;
+  clip.style.display = back.style.display = 'block';
+  Object.assign(hint.style, { left: 'auto', right: '22px', textAlign: 'right' });   // keeps the signature corner clear
+
+  const setHint = () => {
+    const sound = V.sound ? (clip.muted ? ' &middot; m for sound' : ' &middot; m to mute') : '';
+    hint.innerHTML = `t to switch pond${sound}<span class="wide"> &middot; space to pause &middot; f to ${clip.classList.contains('fill') ? 'fit' : 'fill'}</span>`;
+  };
+  clip.addEventListener('error', () => {
+    const n = document.getElementById('nogl');
+    n.textContent = `could not load ${V.src}`;
+    n.style.display = 'grid';
+  });
+  clip.src = V.src;
+  // with sound if the browser allows it, otherwise muted and m turns it on
+  clip.muted = !V.sound;
+  clip.play().catch(() => { clip.muted = true; setHint(); clip.play().catch(() => {}); });
+  setHint();
+
+  (function paint() {
+    if (clip.readyState >= 2) bx.drawImage(clip, 0, 0, back.width, back.height);
+    requestAnimationFrame(paint);
+  })();
+
+  addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (k === 't') nextTheme();
+    else if (k === 'm' && V.sound) { clip.muted = !clip.muted; if (clip.paused) clip.play(); setHint(); }
+    else if (k === 'f') { clip.classList.toggle('fill'); setHint(); }
+    else if (k === ' ') { e.preventDefault(); clip.paused ? clip.play() : clip.pause(); }
+  });
+}
+
+const THEME_KEYS = Object.keys(THEMES);
+const themeName = THEMES[qs.get('theme')] ? qs.get('theme') : 'koi';
+const TH = THEMES[themeName];
+const C = TH.colors;
+const KINDS = TH.kinds;
+document.title = TH.name.replace(/\b\w/g, ch => ch.toUpperCase());
+document.body.style.background = TH.bg;
+document.getElementById('title').textContent = TH.name;
+document.getElementById('fishWord').textContent = TH.fishWord;
+
+const GLYPHS = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@', '&', '8', 'o', '/', '\\', '|', '~', "'", ',', '•', 'x', 'O'];
+const G = {};
+GLYPHS.forEach((ch, i) => { G[ch] = i; });
+const LINE = [G['-'], G['\\'], G['|'], G['/']];
+const BODY_G = ['#', '%', '&', '8', '@', 'x'].map(ch => G[ch]);
+const FLECK_G = ['*', "'", '.', ',', '*'].map(ch => G[ch]);
+
+// ---------------------------------------------------------------------------
+// small math
+// ---------------------------------------------------------------------------
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function wrap(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
+function hash2(x, y) {
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function vnoise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy), b = hash2(ix + 1, iy), c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function mulberry32(a) {
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let r = Math.imul(a ^ (a >>> 15), 1 | a);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(qs.has('seed') ? +qs.get('seed') : (Math.random() * 1e9) | 0);
+const gauss = () => (rng() + rng() + rng() - 1.5) * 1.15;
+
+// glyph for a line running along (dx, dy), screen y pointing down
+function lineGlyph(dx, dy) {
+  let a = Math.atan2(dy, dx);
+  if (a < 0) a += Math.PI;
+  return LINE[Math.floor((a + Math.PI / 8) / (Math.PI / 4)) & 3];
+}
+
+// ---------------------------------------------------------------------------
+// WebGL: three cell textures (water, tile, glyph) + a glyph atlas, one pass
+// ---------------------------------------------------------------------------
+const canvas = document.getElementById('pond');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false });
+if (!gl) { document.getElementById('nogl').style.display = 'grid'; return; }
+
+const VS = `#version 300 es
+in vec2 p;
+void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
+
+const FS = `#version 300 es
+precision highp float;
+precision highp int;
+uniform sampler2D uWater;
+uniform sampler2D uTile;
+uniform sampler2D uFg;
+uniform sampler2D uAtlas;
+uniform float uCell;
+uniform float uGap;
+uniform float uH;
+out vec4 outColor;
+void main() {
+  vec2 px = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
+  vec2 cell = floor(px / uCell);
+  vec2 lp = px - cell * uCell;
+  ivec2 ci = ivec2(cell);
+  vec3 col = texelFetch(uWater, ci, 0).rgb;
+  vec4 t = texelFetch(uTile, ci, 0);
+  if (t.a > 0.0) {
+    vec2 q = abs(lp - 0.5 * uCell) - (0.5 * uCell - uGap);
+    float m = clamp(0.5 - max(q.x, q.y), 0.0, 1.0);
+    col = mix(col, t.rgb, t.a * m);
+  }
+  vec4 f = texelFetch(uFg, ci, 0);
+  int gi = int(f.a * 255.0 + 0.5);
+  if (gi > 0) {
+    float g = texelFetch(uAtlas, ivec2(gi * int(uCell) + int(lp.x), int(lp.y)), 0).r;
+    col = mix(col, f.rgb, g);
+  }
+  outColor = vec4(col, 1.0);
+}`;
+
+function shader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, shader(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+gl.bindVertexArray(gl.createVertexArray());
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+const aP = gl.getAttribLocation(prog, 'p');
+gl.enableVertexAttribArray(aP);
+gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0);
+
+function makeTex(unit, name) {
+  const tx = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit);
+  gl.bindTexture(gl.TEXTURE_2D, tx);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(gl.getUniformLocation(prog, name), unit);
+  return tx;
+}
+makeTex(0, 'uWater');
+makeTex(1, 'uTile');
+makeTex(2, 'uFg');
+makeTex(3, 'uAtlas');
+const uCell = gl.getUniformLocation(prog, 'uCell');
+const uGap = gl.getUniformLocation(prog, 'uGap');
+const uH = gl.getUniformLocation(prog, 'uH');
+
+// ---------------------------------------------------------------------------
+// grid buffers
+// ---------------------------------------------------------------------------
+let dpr = 1, cp = 16, cols = 0, rows = 0, N = 0;
+let Wb, Tb, Fb;              // water rgb, tile rgba, glyph rgb + index (all 0..255)
+let shadowB, cK, cG;         // floor shadow amount, caustic strength, caustic glyph
+const CS = 15;               // caustic network cell size, in grid cells
+const COFF = 4;
+let SX, SY, SW = 0, SH = 0;  // caustic sites
+
+function buildAtlas() {
+  const n = GLYPHS.length;
+  const c = document.createElement('canvas');
+  c.width = n * cp; c.height = cp;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000';
+  x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = '#fff';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.font = `500 ${Math.round(cp * 0.62)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  for (let i = 1; i < n; i++) x.fillText(GLYPHS[i], i * cp + cp / 2, cp / 2 + cp * 0.03);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+}
+
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  cp = Math.max(6, Math.round(CELL * dpr));
+  const w = Math.max(1, Math.round(innerWidth * dpr));
+  const h = Math.max(1, Math.round(innerHeight * dpr));
+  canvas.width = w; canvas.height = h;
+  const nc = Math.ceil(w / cp), nr = Math.ceil(h / cp);
+  if (cols && (nc !== cols || nr !== rows)) rescaleWorld(nc / cols, nr / rows);
+  cols = nc; rows = nr; N = cols * rows;
+  Wb = new Uint8ClampedArray(N * 4);
+  Tb = new Uint8ClampedArray(N * 4);
+  Fb = new Uint8ClampedArray(N * 4);
+  shadowB = new Float32Array(N);
+  cK = new Float32Array(N);
+  cG = new Uint8Array(N);
+  for (let u = 0; u < 3; u++) {
+    gl.activeTexture(gl.TEXTURE0 + u);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, cols, rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  }
+  SW = Math.ceil((cols + 6) / CS) + COFF * 2 + 2;
+  SH = Math.ceil((rows + 6) / CS) + COFF * 2 + 2;
+  SX = new Float32Array(SW * SH);
+  SY = new Float32Array(SW * SH);
+  buildAtlas();
+  gl.uniform1f(uCell, cp);
+  gl.uniform1f(uGap, Math.max(0.5, dpr * 0.5));
+  gl.uniform1f(uH, h);
+  gl.viewport(0, 0, w, h);
+}
+
+// compositing helpers
+const tmp = [0, 0, 0], tmp2 = [0, 0, 0];
+function wMix(i, c, a) {
+  const k = i * 4;
+  Wb[k] += (c[0] - Wb[k]) * a; Wb[k + 1] += (c[1] - Wb[k + 1]) * a; Wb[k + 2] += (c[2] - Wb[k + 2]) * a;
+}
+function tOver(i, c, a) {
+  const k = i * 4, ta = Tb[k + 3] / 255, oa = a + ta * (1 - a);
+  if (oa <= 0) return;
+  const kb = ta * (1 - a);
+  Tb[k] = (c[0] * a + Tb[k] * kb) / oa;
+  Tb[k + 1] = (c[1] * a + Tb[k + 1] * kb) / oa;
+  Tb[k + 2] = (c[2] * a + Tb[k + 2] * kb) / oa;
+  Tb[k + 3] = oa * 255;
+}
+function tMix(i, c, a) {
+  const k = i * 4;
+  Tb[k] += (c[0] - Tb[k]) * a; Tb[k + 1] += (c[1] - Tb[k + 1]) * a; Tb[k + 2] += (c[2] - Tb[k + 2]) * a;
+}
+function fMix(i, c, a) {
+  const k = i * 4;
+  Fb[k] += (c[0] - Fb[k]) * a; Fb[k + 1] += (c[1] - Fb[k + 1]) * a; Fb[k + 2] += (c[2] - Fb[k + 2]) * a;
+}
+function visible(i, out) {
+  const k = i * 4, ta = Tb[k + 3] / 255;
+  out[0] = Wb[k] + (Tb[k] - Wb[k]) * ta;
+  out[1] = Wb[k + 1] + (Tb[k + 1] - Wb[k + 1]) * ta;
+  out[2] = Wb[k + 2] + (Tb[k + 2] - Wb[k + 2]) * ta;
+}
+function gSet(i, g, c) {
+  const k = i * 4;
+  Fb[k] = c[0]; Fb[k + 1] = c[1]; Fb[k + 2] = c[2]; Fb[k + 3] = g;
+}
+// glyph whose colour is c at strength a over whatever is already visible in the cell
+function gBlend(i, g, c, a) {
+  visible(i, tmp2);
+  const k = i * 4;
+  Fb[k] = tmp2[0] + (c[0] - tmp2[0]) * a;
+  Fb[k + 1] = tmp2[1] + (c[1] - tmp2[1]) * a;
+  Fb[k + 2] = tmp2[2] + (c[2] - tmp2[2]) * a;
+  Fb[k + 3] = g;
+}
+
+// ---------------------------------------------------------------------------
+// world
+// ---------------------------------------------------------------------------
+const koi = [], pads = [], pellets = [], ripples = [], weeds = [];
+let t = 0, fed = 0, rain = false, rainClock = 0, ambientClock = 2;
+const pointer = { x: -99, y: -99, inside: false, down: false, moved: 0, pad: null, ox: 0, oy: 0,
+                  vx: 0, vy: 0, lastT: 0, stirX: 0, stirY: 0 };
+
+function profile(s) {   // fish half-width along the body, head (0) to tail root (1)
+  if (s < 0.32) return 0.64 + 0.36 * Math.sin(s / 0.32 * Math.PI * 0.5);
+  const q = (s - 0.32) / 0.68;
+  return 1 - 0.78 * Math.pow(q, 1.35);
+}
+
+class Koi {
+  constructor(kind, x, y, heading, len, depth) {
+    const S = TH.shape;
+    this.kind = KINDS[kind];
+    this.len = len;
+    this.n = 12;
+    this.bodyLen = len * S.body;
+    this.seg = this.bodyLen / (this.n - 1);
+    this.W = len * S.W;
+    this.tailLen = len * S.tail;
+    this.spread = S.spread;
+    this.finLen = this.W * S.fin;
+    this.finAlpha = S.finAlpha;
+    this.depth = depth;
+    this.speed0 = (2.4 + rng() * 1.8) * S.speed;
+    this.v = this.speed0;
+    this.heading = heading;
+    this.seed = rng() * 1000;
+    this.wt = rng() * 100;
+    this.phase = rng() * TAU;
+    this.finPh = rng() * TAU;
+    this.headBias = rng();
+    this.curious = rng();
+    this.fear = 0; this.fx = 0; this.fy = 0;
+    this.gulp = 0;
+    this.target = null; this.chase = 0;      // pellet being chased, and for how long
+    this.ignore = null; this.ignoreT = 0;    // pellet given up on after circling it
+    this.nearPointer = 0; this.bored = 0;    // time spent at the cursor, then a rest from it
+    this.surface = 6 + rng() * 14;
+    const n = this.n;
+    this.p = new Float32Array(n * 2);
+    this.rp = new Float32Array(n * 2);
+    this.rr = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      this.p[2 * i] = x - Math.cos(heading) * this.seg * i;
+      this.p[2 * i + 1] = y - Math.sin(heading) * this.seg * i;
+      this.rr[i] = this.W * profile(i / (n - 1));
+    }
+    const cap = Math.ceil((len * 1.6 + 12) ** 2);
+    this.rec = { n: 0, idx: new Int32Array(cap), cov: new Float32Array(cap), part: new Uint8Array(cap),
+                 u: new Float32Array(cap), v: new Float32Array(cap), g: new Uint8Array(cap) };
+  }
+
+  update(dt) {
+    const p = this.p, n = this.n;
+    const hx = p[0], hy = p[1];
+    const ch = Math.cos(this.heading), sh = Math.sin(this.heading);
+    let sx = ch, sy = sh;
+
+    // slow wandering
+    this.wt += dt * 0.11;
+    const w = (vnoise(this.wt, this.seed) - 0.5) * 2.4;
+    sx += -sh * w; sy += ch * w;
+
+    // soft pond walls
+    const m = Math.max(4, this.len * 0.35);
+    if (hx < m) sx += (m - hx) / m * 2.2; else if (hx > cols - m) sx -= (hx - cols + m) / m * 2.2;
+    if (hy < m) sy += (m - hy) / m * 2.2; else if (hy > rows - m) sy -= (hy - rows + m) / m * 2.2;
+
+    // keep a little room from fish swimming at the same depth
+    for (const o of koi) {
+      if (o === this || Math.abs(o.depth - this.depth) > 0.3) continue;
+      const dx = hx - o.p[0], dy = hy - o.p[1], d2 = dx * dx + dy * dy, R = (this.W + o.W) * 2.6;
+      if (d2 < R * R) {
+        const d = Math.sqrt(d2) || 1, k = (1 - d / R) * 1.6;
+        sx += dx / d * k; sy += dy / d * k;
+      }
+    }
+
+    // food
+    let boost = 1, target = null, best = 46 * 46, close = 0;
+    if (this.ignoreT > 0 && (this.ignoreT -= dt) <= 0) this.ignore = null;
+    for (const f of pellets) {
+      if (f.dead || f === this.ignore) continue;
+      const dx = f.x - hx, dy = f.y - hy, d2 = dx * dx + dy * dy;
+      if (d2 < best) { best = d2; target = f; }
+    }
+    if (target !== this.target) { this.target = target; this.chase = 0; }
+    if (target) {
+      this.chase += dt;
+      const d = Math.sqrt(best) || 1;
+      sx += (target.x - hx) / d * 2.6; sy += (target.y - hy) / d * 2.6;
+      // slow down and turn harder near the food so the turning circle fits inside the reach
+      close = clamp(1 - d / 8, 0, 1);
+      boost = 1.6 - 1.1 * close;
+      const mx = hx + ch * this.rr[0] * 0.9, my = hy + sh * this.rr[0] * 0.9;
+      if (Math.hypot(target.x - mx, target.y - my) < 1.1 + this.W * 0.3 || d < this.rr[0] + 0.8) {
+        target.dead = true;
+        fed++;
+        this.gulp = 0.35;
+        this.target = null;
+        addRipple(target.x, target.y, 0.55, 5, 1.4);
+      } else if (this.chase > 7) {
+        // still circling it: swim off and come back later
+        this.ignore = target; this.ignoreT = 5; this.target = null;
+      }
+    } else if (pointer.inside && !pointer.down && this.curious > 0.45 && this.bored <= 0 &&
+               performance.now() - pointer.lastT < 4000) {
+      // fish drift toward someone standing at the edge, then lose interest
+      const dx = pointer.x - hx, dy = pointer.y - hy, d = Math.hypot(dx, dy);
+      if (d < 26 && d > 6) { sx += dx / d * 0.7; sy += dy / d * 0.7; }
+      if (d < 10 && (this.nearPointer += dt) > 5) { this.bored = 12 + rng() * 10; this.nearPointer = 0; }
+    }
+    this.bored = Math.max(0, this.bored - dt);
+
+    // startled by a stirring hand
+    if (this.fear > 0) {
+      sx += this.fx * this.fear * 3; sy += this.fy * this.fear * 3;
+      boost = Math.max(boost, 1 + this.fear * 1.8);
+      this.fear = Math.max(0, this.fear - dt * 0.8);
+    }
+
+    const turn = (target ? 1.9 + 2.5 * close : 1.0) * (1 + this.fear) * dt;
+    this.heading += clamp(wrap(Math.atan2(sy, sx) - this.heading), -turn, turn);
+    this.v += (this.speed0 * boost - this.v) * Math.min(1, dt * 1.4);
+    p[0] += Math.cos(this.heading) * this.v * dt;
+    p[1] += Math.sin(this.heading) * this.v * dt;
+
+    // spine follows the head, with a limit on how sharply each joint bends
+    const seg = this.seg, maxBend = 0.22;
+    let prev = this.heading;
+    for (let i = 1; i < n; i++) {
+      const ax = p[2 * i - 2], ay = p[2 * i - 1];
+      let a = Math.atan2(ay - p[2 * i + 1], ax - p[2 * i]);
+      a = prev + clamp(wrap(a - prev), -maxBend, maxBend);
+      p[2 * i] = ax - Math.cos(a) * seg;
+      p[2 * i + 1] = ay - Math.sin(a) * seg;
+      prev = a;
+    }
+
+    this.phase += dt * (1.4 + this.v * 0.75);
+    this.finPh += dt * (2.4 - Math.min(1.5, this.v * 0.2));
+    this.gulp = Math.max(0, this.gulp - dt);
+
+    this.surface -= dt;
+    if (this.surface < 0) {
+      this.surface = 8 + rng() * 16;
+      if (this.depth < 0.3) addRipple(p[0] + ch * this.rr[0], p[1] + sh * this.rr[0], 0.45, 4.5, 1.6);
+    }
+  }
+
+  // which grid cells this fish covers, and where on the body each one is
+  raster() {
+    const n = this.n, p = this.p, rp = this.rp, rr = this.rr, W = this.W, rec = this.rec;
+    const swim = 0.55 + 0.45 * Math.min(1.6, this.v / this.speed0);
+    const amp = W * 0.42 * swim;
+    let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+    for (let i = 0; i < n; i++) {
+      const s = i / (n - 1);
+      let dx, dy;
+      if (i === 0) { dx = p[0] - p[2]; dy = p[1] - p[3]; }
+      else { dx = p[2 * i - 2] - p[2 * i]; dy = p[2 * i - 1] - p[2 * i + 1]; }
+      const l = Math.hypot(dx, dy) || 1;
+      const off = amp * Math.pow(s, 1.4) * Math.sin(this.phase - s * 5.2);
+      const x = p[2 * i] - dy / l * off, y = p[2 * i + 1] + dx / l * off;
+      rp[2 * i] = x; rp[2 * i + 1] = y;
+      if (x < minx) minx = x; if (x > maxx) maxx = x;
+      if (y < miny) miny = y; if (y > maxy) maxy = y;
+    }
+
+    // tail frame
+    const Bx = rp[2 * n - 2], By = rp[2 * n - 1];
+    let Dx = Bx - rp[2 * n - 4], Dy = By - rp[2 * n - 3];
+    const dl = Math.hypot(Dx, Dy) || 1; Dx /= dl; Dy /= dl;
+    const sway = 0.35 * Math.sin(this.phase - 6.0) * swim;
+    const cs = Math.cos(sway), sn = Math.sin(sway);
+    const tdx = Dx * cs - Dy * sn, tdy = Dx * sn + Dy * cs;
+    const Lt = this.tailLen, spread = this.spread, bEnd = 0.45 + Lt * spread;
+
+    // pectoral fins
+    const fi = 0.2 * (n - 1), f0 = Math.floor(fi), fh = fi - f0;
+    const Px = rp[2 * f0] + (rp[2 * f0 + 2] - rp[2 * f0]) * fh;
+    const Py = rp[2 * f0 + 1] + (rp[2 * f0 + 3] - rp[2 * f0 + 1]) * fh;
+    let Fx = rp[2 * f0] - rp[2 * f0 + 2], Fy = rp[2 * f0 + 1] - rp[2 * f0 + 3];
+    const fl = Math.hypot(Fx, Fy) || 1; Fx /= fl; Fy /= fl;
+    const Nx = -Fy, Ny = Fx, rf = W * profile(0.2);
+    const fins = [];
+    for (const sd of [-1, 1]) {
+      const al = 1.05 + 0.32 * Math.sin(this.finPh + sd * 0.8);
+      fins.push({
+        x: Px + Nx * sd * rf * 0.75, y: Py + Ny * sd * rf * 0.75,
+        dx: -Fx * Math.cos(al) + Nx * sd * Math.sin(al), dy: -Fy * Math.cos(al) + Ny * sd * Math.sin(al),
+      });
+    }
+    const Lf = this.finLen;
+
+    const pad = W + Lt * Math.max(1, spread) + 1.5;
+    const x0 = Math.max(0, Math.floor(minx - pad)), x1 = Math.min(cols - 1, Math.ceil(maxx + pad));
+    const y0 = Math.max(0, Math.floor(miny - pad)), y1 = Math.min(rows - 1, Math.ceil(maxy + pad));
+    const cap = rec.idx.length;
+    rec.n = 0;
+
+    for (let cy = y0; cy <= y1; cy++) {
+      const py = cy + 0.5;
+      for (let cx = x0; cx <= x1; cx++) {
+        const px = cx + 0.5;
+
+        // body: union of tapered capsules along the spine
+        let best = 1e9, bi = 0, bh = 0, blat = 0, bside = 1, sgx = 1, sgy = 0;
+        for (let i = 0; i < n - 1; i++) {
+          const ax = rp[2 * i], ay = rp[2 * i + 1];
+          const bx = rp[2 * i + 2] - ax, by = rp[2 * i + 3] - ay;
+          const qx = px - ax, qy = py - ay;
+          let h = (qx * bx + qy * by) / (bx * bx + by * by);
+          h = h < 0 ? 0 : h > 1 ? 1 : h;
+          const ex = qx - bx * h, ey = qy - by * h;
+          const el = Math.sqrt(ex * ex + ey * ey);
+          const r = rr[i] + (rr[i + 1] - rr[i]) * h;
+          const d = el - r;
+          if (d < best) { best = d; bi = i; bh = h; blat = el / r; bside = (bx * qy - by * qx) > 0 ? 1 : -1; sgx = bx; sgy = by; }
+        }
+        const bcov = clamp(0.5 - best, 0, 1);
+
+        // tail fan with a forked trailing edge
+        let tcov = 0, gx = 0, gy = 0;
+        {
+          const qx = px - Bx, qy = py - By;
+          const a = qx * tdx + qy * tdy, b = -qx * tdy + qy * tdx;
+          if (a > -0.8 && a < Lt + 0.8) {
+            const ab = Math.abs(b), aa = Math.max(a, 0);
+            const bmax = 0.45 + aa * spread;
+            const aEnd = Lt * (0.58 + 0.42 * Math.min(1, ab / bEnd));
+            tcov = clamp(Math.min(bmax - ab, aEnd - a, a + 0.4) + 0.5, 0, 1);
+            gx = qx; gy = qy;
+          }
+        }
+        // pectoral paddles
+        for (const f of fins) {
+          const qx = px - f.x, qy = py - f.y;
+          const a = qx * f.dx + qy * f.dy, b = -qx * f.dy + qy * f.dx;
+          if (a > -0.5 && a < Lf + 0.5) {
+            const hw = 0.25 + 0.6 * Math.sin(Math.PI * clamp(a / Lf, 0, 1) * 0.85);
+            const c = clamp(Math.min(hw - Math.abs(b), Lf - a, a + 0.3) + 0.5, 0, 1);
+            if (c > tcov) { tcov = c; gx = qx; gy = qy; }
+          }
+        }
+
+        if (bcov <= 0 && tcov <= 0) continue;
+        if (rec.n >= cap) continue;
+        const r = rec.n++;
+        rec.idx[r] = cy * cols + cx;
+        if (bcov >= 0.5 || tcov <= 0) {
+          rec.part[r] = 0; rec.cov[r] = bcov;
+          rec.u[r] = (bi + bh) / (n - 1);
+          rec.v[r] = clamp(blat, 0, 1) * bside;
+          rec.g[r] = lineGlyph(sgx, sgy);
+        } else {
+          rec.part[r] = 1; rec.cov[r] = Math.max(tcov, bcov);
+          rec.g[r] = lineGlyph(gx, gy);
+        }
+      }
+    }
+  }
+
+  colorAt(u, v, out) {
+    const K = this.kind;
+    let c = K.base;
+    if (K.spot) {
+      const du = (u - 0.11) * this.bodyLen, dv = v * this.W;
+      if (du * du + dv * dv < (this.W * 0.62) ** 2) c = K.spot;
+    }
+    for (let l = 0; l < K.layers.length; l++) {
+      const L = K.layers[l];
+      const nx = u * this.bodyLen * L.f + this.seed * (l + 1), ny = v * L.fv + this.seed * 0.37;
+      const val = 0.65 * vnoise(nx, ny) + 0.35 * vnoise(nx * 2.1 + 7.3, ny * 2.1 + 3.1);
+      let thr = L.thr;
+      if (L.head) thr -= L.head * this.headBias * Math.max(0, 1 - u / 0.2);
+      thr += Math.max(0, u - 0.82) * 1.6;           // keep the tail root clean
+      if (val > thr) c = L.c;
+    }
+    let s = 1 - 0.13 * v * v;
+    if (K.shimmer) s *= 0.92 + 0.14 * Math.sin(u * this.bodyLen * 0.45 - t * 2.4 + v * 1.5);
+    if (K.ridge && Math.abs(v) < 0.32 && u > 0.1 && u < 0.8) s *= K.ridge;
+    const d = this.depth * 0.35;
+    out[0] = c[0] * s + (C.deepTint[0] - c[0] * s) * d;
+    out[1] = c[1] * s + (C.deepTint[1] - c[1] * s) * d;
+    out[2] = c[2] * s + (C.deepTint[2] - c[2] * s) * d;
+  }
+
+  castShadow() {
+    const rec = this.rec;
+    const sx = Math.round(1 + 1.4 * (1 - this.depth)), sy = Math.round(2 + 1.6 * (1 - this.depth));
+    const k = 0.55 * (1 - this.depth * 0.4);
+    for (let r = 0; r < rec.n; r++) {
+      const i = rec.idx[r], cy = (i / cols) | 0, cx = i - cy * cols;
+      const x = cx + sx, y = cy + sy;
+      if (x >= cols || y >= rows) continue;
+      const j = y * cols + x;
+      const a = rec.cov[r] * k * (rec.part[r] ? 0.45 : 1);
+      if (a > shadowB[j]) shadowB[j] = a;
+    }
+  }
+
+  draw() {
+    const rec = this.rec, K = this.kind, dep = this.depth * 0.35;
+    const fin = [K.fin[0] + (C.deepTint[0] - K.fin[0]) * dep, K.fin[1] + (C.deepTint[1] - K.fin[1]) * dep,
+                 K.fin[2] + (C.deepTint[2] - K.fin[2]) * dep];
+    const finG = [fin[0] * 0.86, fin[1] * 0.86, fin[2] * 0.86];
+    for (let r = 0; r < rec.n; r++) {
+      const i = rec.idx[r], cov = rec.cov[r];
+      if (rec.part[r] === 1) {
+        tOver(i, fin, cov * this.finAlpha);
+        if (cov > 0.45) gBlend(i, rec.g[r], finG, 0.9);
+        continue;
+      }
+      const u = rec.u[r], v = rec.v[r];
+      this.colorAt(u, v, tmp);
+      tOver(i, tmp, cov >= 0.98 ? 1 : cov * 0.9);
+      const l = tmp[0] * 0.3 + tmp[1] * 0.59 + tmp[2] * 0.11;
+      if (l > 110) { tmp[0] *= 0.8; tmp[1] *= 0.8; tmp[2] *= 0.8; }
+      else { tmp[0] = tmp[0] * 0.6 + 62; tmp[1] = tmp[1] * 0.6 + 60; tmp[2] = tmp[2] * 0.6 + 62; }
+      let g;
+      if (cov < 0.62) g = G[':'];
+      else g = BODY_G[(hash2(Math.floor(u * this.bodyLen * 0.8 + this.seed), Math.floor((v + 1) * 1.6)) * BODY_G.length) | 0];
+      gBlend(i, g, tmp, cov >= 0.98 ? 1 : 0.7);
+    }
+
+    // eyes, and an open mouth while eating
+    const rp = this.rp, rr = this.rr;
+    const ei = 0.08 * (this.n - 1);
+    const Px = rp[0] + (rp[2] - rp[0]) * ei, Py = rp[1] + (rp[3] - rp[1]) * ei;
+    let Fx = rp[0] - rp[2], Fy = rp[1] - rp[3];
+    const fl = Math.hypot(Fx, Fy) || 1; Fx /= fl; Fy /= fl;
+    const re = (rr[0] + (rr[1] - rr[0]) * ei) * 0.6;
+    const eye = [C.eye[0] + (C.deepTint[0] - C.eye[0]) * dep, C.eye[1] + (C.deepTint[1] - C.eye[1]) * dep,
+                 C.eye[2] + (C.deepTint[2] - C.eye[2]) * dep];
+    for (const sd of [-1, 1]) {
+      const ex = Math.floor(Px - Fy * sd * re), ey = Math.floor(Py + Fx * sd * re);
+      if (ex >= 0 && ey >= 0 && ex < cols && ey < rows) gSet(ey * cols + ex, G['•'], eye);
+    }
+    if (this.gulp > 0) {
+      const mx = Math.floor(rp[0] + Fx * rr[0] * 0.8), my = Math.floor(rp[1] + Fy * rr[0] * 0.8);
+      if (mx >= 0 && my >= 0 && mx < cols && my < rows) gSet(my * cols + mx, G['O'], eye);
+    }
+  }
+}
+
+// lily pads -----------------------------------------------------------------
+const PS = { d: 0, dx: 0, dy: 0 };
+function padCover(p, x, y) {
+  const dx = x - p.x, dy = y - p.y;
+  const R = p.R * (1 + 0.03 * p.bob * Math.sin(p.bobPh));
+  const d = Math.sqrt(dx * dx + dy * dy);
+  let cov = R - d + 0.5;
+  if (cov <= 0) return 0;
+  if (cov > 1) cov = 1;
+  const a = wrap(Math.atan2(dy, dx) - p.rot);
+  const along = Math.cos(a) * d;
+  if (along > 0) cov *= clamp(Math.abs(Math.sin(a)) * d - (0.05 + along * 0.3) + 0.5, 0, 1);   // the notch
+  PS.d = d / R; PS.dx = dx; PS.dy = dy;
+  return cov;
+}
+
+function padShadow(p) {
+  const ox = 1.4, oy = 2.3, R = p.R + 1;
+  const x0 = Math.max(0, Math.floor(p.x + ox - R)), x1 = Math.min(cols - 1, Math.ceil(p.x + ox + R));
+  const y0 = Math.max(0, Math.floor(p.y + oy - R)), y1 = Math.min(rows - 1, Math.ceil(p.y + oy + R));
+  for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+    const c = padCover(p, cx + 0.5 - ox, cy + 0.5 - oy) * 0.6;
+    const i = cy * cols + cx;
+    if (c > shadowB[i]) shadowB[i] = c;
+  }
+}
+
+function drawPad(p) {
+  const R = p.R + 1;
+  const x0 = Math.max(0, Math.floor(p.x - R)), x1 = Math.min(cols - 1, Math.ceil(p.x + R));
+  const y0 = Math.max(0, Math.floor(p.y - R)), y1 = Math.min(rows - 1, Math.ceil(p.y + R));
+  const cr = Math.cos(p.rot), sr = Math.sin(p.rot);
+  const step = TAU / 12, alpha = TH.padAlpha, rimAt = 1 - 1.1 / p.R;
+  for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+    const cov = padCover(p, cx + 0.5, cy + 0.5);
+    if (cov <= 0) continue;
+    const i = cy * cols + cx, dx = PS.dx, dy = PS.dy, dn = PS.d, d = dn * p.R;
+    const rx = dx * cr + dy * sr, ry = -dx * sr + dy * cr;
+    const hv = vnoise(rx * 0.3 + p.seed, ry * 0.3 + p.seed * 0.7) + (-dx - dy) / p.R * 0.18;
+    let base = hv > 0.62 && dn < 0.84 ? C.padHi : C.pad;
+    if (TH.padRim && (dn > rimAt || cov < 1)) base = C.padRim;
+    Tb[i * 4 + 3] = 0;
+    // a see-through pad lets what is underneath tint it, so mix with the water first
+    if (alpha < 1) tOver(i, Wb.subarray(i * 4, i * 4 + 3), cov);
+    tOver(i, base, cov * alpha);
+    const b = Math.atan2(dy, dx) - p.rot - step * 0.5;
+    const da = b - Math.round(b / step) * step;
+    if (d < 0.75) gBlend(i, G['+'], C.padVein, 0.9);
+    else if (Math.abs(Math.sin(da)) * d < 0.42 && dn > 0.14 && dn < 0.88) gBlend(i, lineGlyph(dx, dy), C.padVein, alpha < 1 ? 0.7 : 1);
+    else if (cov > 0.5) Fb[i * 4 + 3] = 0;
+  }
+}
+
+// grass on the pond floor -------------------------------------------------------
+function plantWeeds() {
+  const clusters = Math.round(cols * rows / TH.weeds);
+  for (let k = 0; k < clusters; k++) {
+    const x = rng() * cols, y = rng() * rows, blades = [];
+    const nb = 3 + ((rng() * 4) | 0);
+    for (let j = 0; j < nb; j++) {
+      blades.push({ ox: gauss() * 1.6, oy: gauss() * 1.0, a: -Math.PI / 2 - 0.25 + gauss() * 0.7,
+                    L: 3 + rng() * 6, curl: gauss() * 0.3, ph: rng() * TAU });
+    }
+    weeds.push({ x, y, blades });
+  }
+}
+
+function drawWeeds() {
+  for (const w of weeds) {
+    for (const b of w.blades) {
+      let x = w.x + b.ox, y = w.y + b.oy;
+      const sway = 0.35 * Math.sin(t * 0.9 + b.ph + w.x * 0.05) + 0.12 * Math.sin(t * 2.1 + b.ph * 1.7);
+      const steps = Math.ceil(b.L * 2);
+      for (let s = 0; s < steps; s++) {
+        const f = s / steps;
+        const a = b.a + sway * f * f + b.curl * f;
+        const dx = Math.cos(a), dy = Math.sin(a);
+        x += dx * 0.5; y += dy * 0.5;
+        const cx = Math.floor(x), cy = Math.floor(y);
+        if (cx < 0 || cy < 0 || cx >= cols || cy >= rows) continue;
+        const i = cy * cols + cx;
+        wMix(i, C.weed, 0.25 * (1 - 0.5 * f));
+        gBlend(i, lineGlyph(dx, dy), C.weedHi, 0.65 * (1 - 0.4 * f));
+      }
+    }
+  }
+}
+
+// ripples, food ---------------------------------------------------------------
+function addRipple(x, y, amp = 1, speed = 6.5, life = 2.6) {
+  if (ripples.length > 80) ripples.shift();
+  ripples.push({ x, y, amp, speed, life, age: 0, hit: [] });
+}
+
+function feed(x, y) {
+  addRipple(x, y, 1);
+  const k = 3 + ((rng() * 3) | 0);
+  for (let i = 0; i < k; i++) {
+    pellets.push({ x: x + gauss() * 1.3, y: y + gauss() * 1.3, life: 30, born: t, seed: rng() * 100, dead: false });
+  }
+  while (pellets.length > 60) pellets.shift();
+}
+
+function padAt(x, y) {
+  for (let i = pads.length - 1; i >= 0; i--) if (padCover(pads[i], x, y) > 0.5) return pads[i];
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// setup
+// ---------------------------------------------------------------------------
+function populate() {
+  const area = cols * rows;
+  const nPads = clamp(Math.round(area / 1700), 2, 5);
+  const R0 = clamp(Math.min(cols, rows) * 0.12, 4.5, 10);
+  for (let k = 0; k < nPads; k++) {
+    for (let tries = 0; tries < 80; tries++) {
+      const R = Math.max(3, R0 * (TH.padSize[0] + rng() * TH.padSize[1]));
+      const x = R * 0.6 + rng() * (cols - R * 1.2), y = R * 0.6 + rng() * (rows - R * 1.2);
+      if (pads.every(o => Math.hypot(o.x - x, o.y - y) > o.R + R + 3)) {
+        pads.push({ x, y, R, vx: 0, vy: 0, rot: rng() * TAU, spin: (rng() - 0.5) * 0.05,
+                    seed: rng() * 100, bob: 0, bobPh: 0, held: false });
+        break;
+      }
+    }
+  }
+  if (TH.weeds) plantWeeds();
+  const nKoi = clamp(Math.round(area / TH.fishPerCells), 3, TH.maxFish);
+  const L0 = clamp(Math.min(cols, rows) * TH.fishSize, 14, 32);
+  for (let i = 0; i < nKoi; i++) {
+    const len = L0 * (0.8 + rng() * 0.35);
+    koi.push(new Koi(TH.order[i % TH.order.length], 4 + rng() * (cols - 8), 4 + rng() * (rows - 8),
+                     rng() * TAU, len, rng() * 0.45));
+  }
+  koi.sort((a, b) => b.depth - a.depth);
+  document.getElementById('nKoi').textContent = koi.length;
+}
+
+function rescaleWorld(sx, sy) {
+  for (const f of koi) for (let i = 0; i < f.n; i++) { f.p[2 * i] *= sx; f.p[2 * i + 1] *= sy; }
+  for (const p of pads) { p.x *= sx; p.y *= sy; }
+  for (const p of pellets) { p.x *= sx; p.y *= sy; }
+  for (const r of ripples) { r.x *= sx; r.y *= sy; }
+  for (const w of weeds) { w.x *= sx; w.y *= sy; }
+}
+
+// ---------------------------------------------------------------------------
+// simulation step
+// ---------------------------------------------------------------------------
+function step(dt) {
+  for (const f of koi) f.update(dt);
+
+  for (let i = pellets.length - 1; i >= 0; i--) {
+    const f = pellets[i];
+    f.life -= dt;
+    if (f.dead || f.life <= 0) { pellets.splice(i, 1); continue; }
+    f.x += (vnoise(t * 0.3, f.seed) - 0.5) * 0.6 * dt;
+    f.y += (vnoise(f.seed, t * 0.3) - 0.5) * 0.6 * dt;
+    for (const p of pads) {                          // food floats, so a pad pushes it aside
+      const dx = f.x - p.x, dy = f.y - p.y, d = Math.hypot(dx, dy) || 1, R = p.R + 0.6;
+      if (d < R) { f.x = p.x + dx / d * R; f.y = p.y + dy / d * R; }
+    }
+  }
+
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i];
+    r.age += dt;
+    if (r.age > r.life) { ripples.splice(i, 1); continue; }
+    const rad = r.age * r.speed, fade = 1 - r.age / r.life;
+    for (const p of pads) {
+      if (r.hit.includes(p)) continue;
+      const dx = p.x - r.x, dy = p.y - r.y, d = Math.hypot(dx, dy) || 1;
+      if (rad > d - p.R) {
+        r.hit.push(p);
+        const k = 0.9 * r.amp * fade * clamp(1.4 - d / 30, 0.2, 1);
+        p.vx += dx / d * k; p.vy += dy / d * k;
+        p.bob = Math.max(p.bob, r.amp * fade);
+      }
+    }
+  }
+
+  for (const p of pads) {
+    if (p.held) {
+      p.vx = (pointer.x + pointer.ox - p.x) * 10;
+      p.vy = (pointer.y + pointer.oy - p.y) * 10;
+    } else {
+      p.vx += (vnoise(t * 0.07, p.seed) - 0.5) * 0.35 * dt;
+      p.vy += (vnoise(p.seed, t * 0.07) - 0.5) * 0.35 * dt;
+      const m = p.R * 0.2;
+      if (p.x < m) p.vx += (m - p.x) * 0.8 * dt; else if (p.x > cols - m) p.vx -= (p.x - cols + m) * 0.8 * dt;
+      if (p.y < m) p.vy += (m - p.y) * 0.8 * dt; else if (p.y > rows - m) p.vy -= (p.y - rows + m) * 0.8 * dt;
+      const damp = Math.exp(-0.6 * dt);
+      p.vx *= damp; p.vy *= damp;
+    }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.rot += p.spin * dt;
+    p.bob *= Math.exp(-dt * 1.5);
+    p.bobPh += dt * 6;
+  }
+  for (let a = 0; a < pads.length; a++) for (let b = a + 1; b < pads.length; b++) {
+    const A = pads[a], B = pads[b];
+    const dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1, o = A.R + B.R + 0.8 - d;
+    if (o > 0) {
+      const nx = dx / d, ny = dy / d;
+      const wa = A.held ? 0 : B.held ? 1 : 0.5, wb = 1 - wa;
+      A.x -= nx * o * wa; A.y -= ny * o * wa; B.x += nx * o * wb; B.y += ny * o * wb;
+      const rv = (B.vx - A.vx) * nx + (B.vy - A.vy) * ny;
+      if (rv < 0) { A.vx += nx * rv * wa; A.vy += ny * rv * wa; B.vx -= nx * rv * wb; B.vy -= ny * rv * wb; }
+    }
+  }
+
+  ambientClock -= dt;
+  if (ambientClock < 0) {
+    ambientClock = 3 + rng() * 5;
+    addRipple(rng() * cols, rng() * rows, 0.4, 4.5, 1.8);
+  }
+  if (rain) {
+    rainClock -= dt;
+    while (rainClock < 0) {
+      rainClock += 0.05 + rng() * 0.12;
+      addRipple(rng() * cols, rng() * rows, 0.55, 5.5, 1.5);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// render
+// ---------------------------------------------------------------------------
+// light-line network: borders of a drifting, warped Voronoi diagram
+function causticField() {
+  const inv = 1 / CS;
+  for (let j = 0; j < SH; j++) for (let i = 0; i < SW; i++) {
+    const gi = i - COFF, gj = j - COFF, k = j * SW + i;
+    const h1 = hash2(gi, gj), h2 = hash2(gi + 31, gj + 17), h3 = hash2(gi + 7, gj + 71);
+    SX[k] = 0.5 + 0.38 * Math.sin(t * (0.25 + 0.2 * h3) + TAU * h1);
+    SY[k] = 0.5 + 0.38 * Math.cos(t * (0.22 + 0.2 * h1) + TAU * h2);
+  }
+  for (let y = 0; y < rows; y++) {
+    const py = y + 0.5;
+    for (let x = 0; x < cols; x++) {
+      const px = x + 0.5;
+      const wx = px + 1.3 * Math.sin(py * 0.23 + t * 0.6) + 0.6 * Math.sin((px + py) * 0.41 - t * 0.9);
+      const wy = py + 1.3 * Math.sin(px * 0.19 - t * 0.5) + 0.6 * Math.sin((px - py) * 0.37 + t * 0.7);
+      const gx = wx * inv, gy = wy * inv;
+      const ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy;
+      let md = 8, mrx = 0, mry = 0, mi = 0, mj = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+        const s = (iy + j + COFF) * SW + (ix + i + COFF);
+        const rx = i + SX[s] - fx, ry = j + SY[s] - fy, d = rx * rx + ry * ry;
+        if (d < md) { md = d; mrx = rx; mry = ry; mi = i; mj = j; }
+      }
+      md = 8;
+      let bx = 0, by = 0;
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
+        const ci = mi + i, cj = mj + j;
+        const s = (iy + cj + COFF) * SW + (ix + ci + COFF);
+        const rx = ci + SX[s] - fx, ry = cj + SY[s] - fy;
+        const dx = rx - mrx, dy = ry - mry, l2 = dx * dx + dy * dy;
+        if (l2 > 1e-6) {
+          const d = ((mrx + rx) * 0.5 * dx + (mry + ry) * 0.5 * dy) / Math.sqrt(l2);
+          if (d < md) { md = d; bx = dx; by = dy; }
+        }
+      }
+      const dist = md * CS, i = y * cols + x;
+      // let stretches of the network fade out so it reads as separate light lines
+      const flick = clamp((vnoise(px * 0.07 + t * 0.12, py * 0.07 - t * 0.05) - 0.3) * 2.2, 0, 1);
+      if (dist < 0.6 && flick > 0) {
+        cK[i] = (1 - dist / 0.6) * flick;
+        cG[i] = lineGlyph(-by, bx);
+      } else cK[i] = 0;
+    }
+  }
+}
+
+function waterPass() {
+  const bands = TH.bands.map(k => C[k]), at = TH.bandAt;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const i = y * cols + x, k = i * 4;
+      const nx = x * 0.03 + t * 0.01, ny = y * 0.036 - t * 0.007;
+      const n = 0.7 * vnoise(nx, ny) + 0.3 * vnoise(nx * 2.2 + 5.2, ny * 2.2 + 1.3);
+      let b = 0;
+      while (b < at.length && n >= at[b]) b++;
+      const c = bands[b];
+      Wb[k] = c[0]; Wb[k + 1] = c[1]; Wb[k + 2] = c[2]; Wb[k + 3] = 255;
+      if (TH.algae && b > 0) {                       // leafy patches of light-catching algae
+        const a = 0.6 * vnoise(x * 0.14 + t * 0.02, y * 0.17 + 40) + 0.4 * vnoise(x * 0.38 + 9, y * 0.38 - t * 0.03);
+        if (a > 0.76) wMix(i, C.algaeHi, 0.6);
+        else if (a > 0.66) wMix(i, C.algae, 0.45);
+      }
+    }
+  }
+
+  if (weeds.length) drawWeeds();
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const i = y * cols + x;
+      if (TH.light === 'network' && x >= 1 && y >= 2) {   // dark echo of the light lines on the floor
+        const e = cK[i - 2 * cols - 1];
+        if (e > 0.3 && cK[i] < 0.2) wMix(i, C.causticShade, e * 0.3);
+      }
+      const sh = shadowB[i];
+      if (sh > 0) { wMix(i, C.floorShadow, sh); if (Fb[i * 4 + 3]) fMix(i, C.floorShadow, sh * 0.8); }
+
+      if (TH.light === 'network') {
+        const ck = cK[i];
+        if (ck > 0) {
+          wMix(i, C.caustic, ck * 0.75);
+          gBlend(i, cG[i], C.causticHi, 0.5 + 0.5 * ck);
+        } else {
+          const a = vnoise(x * 0.6 + 3.1, y * 0.8 + t * 0.2);
+          if (a > 0.86) gBlend(i, G['~'], C.causticHi, (a - 0.86) * 3);
+        }
+      } else {
+        // sunlight flecks that twinkle in and out
+        const h = hash2(x + 101, y + 7);
+        if (h > 0.93) {
+          const tw = vnoise(x * 0.25 + t * 0.55 + h * 9, y * 0.25 - t * 0.35);
+          if (tw > 0.58) {
+            gBlend(i, FLECK_G[(h * 1000 | 0) % FLECK_G.length], C.causticHi, Math.min(1, (tw - 0.58) * 3.2));
+            if (tw > 0.75) wMix(i, C.caustic, (tw - 0.75) * 1.6);
+          }
+        }
+      }
+    }
+  }
+}
+
+// light lines cross the fish as a lighter band, leaving the fish's own glyphs readable
+function causticOverFish() {
+  for (let i = 0; i < N; i++) {
+    const ck = cK[i];
+    if (ck < 0.15 || Tb[i * 4 + 3] === 0) continue;
+    tMix(i, C.causticHi, ck * 0.32);
+    fMix(i, C.causticHi, ck * 0.3);
+  }
+}
+
+function drawPellets() {
+  for (const f of pellets) {
+    const x = Math.floor(f.x), y = Math.floor(f.y);
+    if (x < 0 || y < 0 || x >= cols || y >= rows) continue;
+    const a = Math.min(1, f.life / 3) * Math.min(1, (t - f.born) * 4);
+    gBlend(y * cols + x, G['o'], C.pellet, a);
+  }
+}
+
+function drawRipples() {
+  for (const r of ripples) {
+    const fade = Math.pow(1 - r.age / r.life, 1.6) * r.amp;
+    const r1 = r.age * r.speed, r2 = r1 - 1.8;
+    const R = r1 + 1;
+    const x0 = Math.max(0, Math.floor(r.x - R)), x1 = Math.min(cols - 1, Math.ceil(r.x + R));
+    const y0 = Math.max(0, Math.floor(r.y - R)), y1 = Math.min(rows - 1, Math.ceil(r.y + R));
+    for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+      const dx = cx + 0.5 - r.x, dy = cy + 0.5 - r.y, d = Math.sqrt(dx * dx + dy * dy);
+      let e = Math.abs(d - r1);
+      if (r2 > 0.5) e = Math.min(e, Math.abs(d - r2) + 0.15);
+      if (e >= 0.6) continue;
+      const k = Math.min(1, (1 - e / 0.6) * fade * 1.4);
+      if (k < 0.12) continue;
+      const i = cy * cols + cx;
+      wMix(i, C.causticHi, k * 0.45);
+      if (Tb[i * 4 + 3]) tMix(i, C.ripple, k * 0.3);
+      gBlend(i, lineGlyph(-dy, dx), C.ripple, k);
+    }
+  }
+}
+
+function render() {
+  Tb.fill(0); Fb.fill(0); shadowB.fill(0);
+  for (const f of koi) f.raster();
+  for (const p of pads) padShadow(p);
+  for (const f of koi) f.castShadow();
+  if (TH.light === 'network') causticField();
+  waterPass();
+  for (const f of koi) f.draw();
+  if (TH.light === 'network') causticOverFish();
+  drawPellets();
+  drawRipples();
+  for (const p of pads) drawPad(p);
+
+  gl.activeTexture(gl.TEXTURE0);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RGBA, gl.UNSIGNED_BYTE, Wb);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RGBA, gl.UNSIGNED_BYTE, Tb);
+  gl.activeTexture(gl.TEXTURE2);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RGBA, gl.UNSIGNED_BYTE, Fb);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+// ---------------------------------------------------------------------------
+// input
+// ---------------------------------------------------------------------------
+function toCell(e) { return [e.clientX * dpr / cp, e.clientY * dpr / cp]; }
+
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  const [x, y] = toCell(e);
+  Object.assign(pointer, { x, y, down: true, moved: 0, stirX: x, stirY: y, vx: 0, vy: 0, lastT: performance.now() });
+  const p = padAt(x, y);
+  if (p) {
+    pointer.pad = p; pointer.ox = p.x - x; pointer.oy = p.y - y;
+    p.held = true;
+    canvas.className = 'grabbing';
+  }
+});
+
+canvas.addEventListener('pointermove', e => {
+  const [x, y] = toCell(e);
+  const now = performance.now(), dtm = Math.max(1, now - pointer.lastT) / 1000;
+  pointer.vx = pointer.vx * 0.6 + (x - pointer.x) / dtm * 0.4;
+  pointer.vy = pointer.vy * 0.6 + (y - pointer.y) / dtm * 0.4;
+  pointer.moved += Math.hypot(x - pointer.x, y - pointer.y);
+  pointer.x = x; pointer.y = y; pointer.lastT = now; pointer.inside = true;
+  if (pointer.down && !pointer.pad && pointer.moved > 1 && Math.hypot(x - pointer.stirX, y - pointer.stirY) > 1.6) {
+    pointer.stirX = x; pointer.stirY = y;
+    addRipple(x, y, 0.6, 5, 1.5);
+    for (const f of koi) {
+      const dx = f.p[0] - x, dy = f.p[1] - y, d = Math.hypot(dx, dy);
+      if (d < 9) { f.fear = 1; f.fx = dx / (d || 1); f.fy = dy / (d || 1); }
+    }
+  }
+  if (!pointer.down) canvas.className = padAt(x, y) ? 'grab' : '';
+});
+
+function release() {
+  if (!pointer.down) return;
+  if (pointer.pad) {
+    pointer.pad.held = false;
+    pointer.pad.vx = clamp(pointer.vx, -25, 25) * 0.5;
+    pointer.pad.vy = clamp(pointer.vy, -25, 25) * 0.5;
+    pointer.pad.bob = 1;
+    pointer.pad = null;
+    canvas.className = 'grab';
+  } else if (pointer.moved < 1) {
+    feed(pointer.x, pointer.y);
+  }
+  pointer.down = false;
+}
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+canvas.addEventListener('pointerleave', () => { pointer.inside = false; });
+
+addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') {
+    rain = !rain;
+    document.getElementById('rainTag').textContent = rain ? 'rain' : '';
+  } else if (e.key === 't' || e.key === 'T') {
+    nextTheme();
+  }
+});
+addEventListener('resize', resize);
+
+// ---------------------------------------------------------------------------
+// go
+// ---------------------------------------------------------------------------
+resize();
+populate();
+const nFed = document.getElementById('nFed');
+let shownFed = -1, last = performance.now();
+function frame(now) {
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 0.05) dt = 0.05;
+  if (reduceMotion) dt *= 0.6;
+  t += dt;
+  step(dt);
+  render();
+  if (fed !== shownFed) { shownFed = fed; nFed.textContent = fed; }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__pond = { koi, pads, pellets, ripples, feed, addRipple, get t() { return t; } };
+})();
+</script>
+</body>
+</html>

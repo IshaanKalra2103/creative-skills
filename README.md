@@ -45,6 +45,7 @@
 | [photoreal-spot](skills/photoreal-spot) | Photoreal product and sports spots cut to a soundtrack's hits, rendered in code with fframes: photoreal stills turned into AI video plates (Vizard or Wan), framed snap cuts (picture cards on a backdrop gradient, smears, black frames, thin white boxes that track the product with trailing boxes, found by Jev and cached), whips, lens kicks, flashes, a mono HUD, a tagline slam and a logo lockup. One `spot.json` per spot; tools study a reference's cuts and its track's onsets, unpack clips, build plates and snaps, render, and score the cut against the reference with Jev. An adidas x NBA spec spot is the worked example. |
 | [dimensional-drawing](skills/dimensional-drawing) | Any UI component (or physical product) as a one-page Apple-style dimensional drawing: a title block with the key variables, then one dense monochrome sheet with notes, a plan view with chained dimensions and radius callouts, an exploded view of the layer stack, detail circles (nested corner, radii, body) and variable tables. It draws architecture, not content (`TITLE SLOT · FLEX`, `ACTION · HUG`), every dimension is a code with its formula (`H1 = 2·S1 + H3`, `R2 = R1 − B − S6`), nothing is branded and unknown values stay `[TBD]`. Measures the real component in Playwright; ships an SVG drawing kit and card and dialog sheets as examples. By [Enes Ozturk](https://github.com/enesozturk/dimensional-drawing). |
 | [dimensional-drawing-motion](skills/dimensional-drawing-motion) | A finished dimensional drawing as a ~10 s film, like a pen drawing the sheet while a camera moves over the paper: the header draws in close up, the camera pulls back to the plan, layers lift off it into the exploded view (strokes first, fills after) and the full sheet resolves. The scene is a pure function of time, so it runs in Claude's Motion artifact or headless with Playwright + ffmpeg. By [Enes Ozturk](https://github.com/enesozturk/dimensional-drawing). |
+| [ascii-tiles](skills/ascii-tiles) | Anything as a grid of monospace cells: flat banded colour crossed by line glyphs, with the subject drawn as gapped square tiles that each carry a glyph and cast a one-cell shadow. Live, it is a WebGL2 page for heroes, backgrounds, title cards and ambient scenes at 120 fps, with five looks (water, dusk, night, meadow, paper) and a word or logo in tiles. For footage, a uv script converts any video, GIF or still: a palette fitted to the clip, tiles only where a cell stands out, no flicker, seamless loops, kept audio. A koi pond with a converted koi video is the worked example. |
 
 ## Install
 
@@ -91,6 +92,7 @@ ln -s ~/src/claude-skills/skills/rossark-motion-skill ~/.claude/skills/rossark-m
 ln -s ~/src/claude-skills/skills/photoreal-spot ~/.claude/skills/photoreal-spot
 ln -s ~/src/claude-skills/skills/dimensional-drawing ~/.claude/skills/dimensional-drawing
 ln -s ~/src/claude-skills/skills/dimensional-drawing-motion ~/.claude/skills/dimensional-drawing-motion
+ln -s ~/src/claude-skills/skills/ascii-tiles ~/.claude/skills/ascii-tiles
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -200,7 +202,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan), colorfigures (MIT, April Zhu; its demo figures and previews are hers too) rossark-motion-skill (MIT, Ross; its demo scenes and videos are theirs too) and dimensional-drawing and dimensional-drawing-motion (MIT, Enes Ozturk; their demo sheets and film are theirs too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT).
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan), colorfigures (MIT, April Zhu; its demo figures and previews are hers too) rossark-motion-skill (MIT, Ross; its demo scenes and videos are theirs too) and dimensional-drawing and dimensional-drawing-motion (MIT, Enes Ozturk; their demo sheets and film are theirs too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT). The koi video in ascii-tiles' example is converted from Ruurd Zeinstra's "Koi carp in Chinese pond", CC BY 2.0.
 
 ## pixel-showcase
 
@@ -688,3 +690,20 @@ node render.mjs --scene ../../templates/scene-dialog.js --css ../../templates/ba
 ```
 
 Copied unchanged from [enesozturk/dimensional-drawing](https://github.com/enesozturk/dimensional-drawing) (`5c45743`), with its MIT `LICENSE` in each skill. The demo sheets and film are from that repo's `assets/`. By Enes Ozturk ([@enesozturk](https://github.com/enesozturk)), after [Apple's accessory dimensional drawings](https://developer.apple.com/accessories/dimensional-drawings/) and a post by [Andreas Storm](https://x.com/avstorm).
+
+## ascii-tiles
+
+![The template's five looks and its word mode](skills/ascii-tiles/assets/looks.jpg)
+
+![The koi pond example](skills/ascii-tiles/assets/koi-pond.jpg)
+
+*Top: `template/index.html` in its five looks and with `?text=TILES`. Bottom: `examples/koi-pond/`, a live pond where `t` switches to a green pond and to a converted video.*
+
+- `SKILL.md`: the eight rules of the look (one colour per cell, bands not gradients, tiles only on the subject, glyphs for form, contrast glyph colours, whole-cell shadows, light as a tint over tiles, restraint), the live route and the conversion route with tuning by source type.
+- `template/`: the live scene to copy. `?look=`, `?text=`, `?seed=&t=` for stills, `l` cycles looks.
+- `scripts/ascii_video.py`: video, GIF or still to the look (`--cell`, `--tile`, `--seamless`, `--audio`, `--keep` for signatures, `--preview`). `scripts/motion_check.py` catches flicker and loop jumps.
+- `examples/koi-pond/`: the full pond with steering koi, food, rain and lily pads, and `koi-carp-ascii.mp4`.
+
+**Use:** "make an ascii tiles hero with our logo", "convert this clip to the ascii pond style", "a night-sky background in glyph tiles". Conversion needs `uv` and `ffmpeg`.
+
+The idea of a cell-grid pond comes from daoho.dev; the code is original. The example video is converted from "Koi carp in Chinese pond" by Ruurd Zeinstra, CC BY 2.0, via Wikimedia Commons (credit in the example's README and on screen).
