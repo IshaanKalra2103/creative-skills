@@ -46,6 +46,7 @@
 | [dimensional-drawing](skills/dimensional-drawing) | Any UI component (or physical product) as a one-page Apple-style dimensional drawing: a title block with the key variables, then one dense monochrome sheet with notes, a plan view with chained dimensions and radius callouts, an exploded view of the layer stack, detail circles (nested corner, radii, body) and variable tables. It draws architecture, not content (`TITLE SLOT · FLEX`, `ACTION · HUG`), every dimension is a code with its formula (`H1 = 2·S1 + H3`, `R2 = R1 − B − S6`), nothing is branded and unknown values stay `[TBD]`. Measures the real component in Playwright; ships an SVG drawing kit and card and dialog sheets as examples. By [Enes Ozturk](https://github.com/enesozturk/dimensional-drawing). |
 | [dimensional-drawing-motion](skills/dimensional-drawing-motion) | A finished dimensional drawing as a ~10 s film, like a pen drawing the sheet while a camera moves over the paper: the header draws in close up, the camera pulls back to the plan, layers lift off it into the exploded view (strokes first, fills after) and the full sheet resolves. The scene is a pure function of time, so it runs in Claude's Motion artifact or headless with Playwright + ffmpeg. By [Enes Ozturk](https://github.com/enesozturk/dimensional-drawing). |
 | [ascii-tiles](skills/ascii-tiles) | Anything as a grid of monospace cells: flat banded colour crossed by line glyphs, with the subject drawn as gapped square tiles that each carry a glyph and cast a one-cell shadow. Live, it is a WebGL2 page for heroes, backgrounds, title cards and ambient scenes at 120 fps, with five looks (water, dusk, night, meadow, paper) and a word or logo in tiles. For footage, a uv script converts any video, GIF or still: a palette fitted to the clip, tiles only where a cell stands out, no flicker, seamless loops, kept audio. A koi pond with a converted koi video is the worked example. |
+| [motionsites-web-builder](skills/motionsites-web-builder) | Cinematic landing pages and hero sections instead of average AI layouts: it reads the 2–3 closest of 40 top MotionSites prompts, picks real hero videos and 3D cut-outs off a media shelf of contact sheets, writes a precise build spec, builds a single `index.html` (or your stack), then screenshots it on desktop and mobile and fixes it until it scores 8+. 55+ technique recipes (seamless video loops, liquid glass, blur-in headlines, mouse-scrubbed video, scroll stories, three.js models) and a prompt mode for Lovable, Bolt, v0 and Cursor. By [MotionSites](https://motionsites.ai). |
 
 ## Install
 
@@ -93,6 +94,7 @@ ln -s ~/src/claude-skills/skills/photoreal-spot ~/.claude/skills/photoreal-spot
 ln -s ~/src/claude-skills/skills/dimensional-drawing ~/.claude/skills/dimensional-drawing
 ln -s ~/src/claude-skills/skills/dimensional-drawing-motion ~/.claude/skills/dimensional-drawing-motion
 ln -s ~/src/claude-skills/skills/ascii-tiles ~/.claude/skills/ascii-tiles
+ln -s ~/src/claude-skills/skills/motionsites-web-builder ~/.claude/skills/motionsites-web-builder
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -202,7 +204,7 @@ Made by rebuilding the "How it works" section of meuze.ai from its live behaviou
 
 ## License
 
-MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan), colorfigures (MIT, April Zhu; its demo figures and previews are hers too) rossark-motion-skill (MIT, Ross; its demo scenes and videos are theirs too) and dimensional-drawing and dimensional-drawing-motion (MIT, Enes Ozturk; their demo sheets and film are theirs too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT). The koi video in ascii-tiles' example is converted from Ruurd Zeinstra's "Koi carp in Chinese pond", CC BY 2.0.
+MIT, except skills that ship their own `LICENSE`: hand-drawn-canvas-animation (MIT, Alexey Fateev), scientific-figure-making (CC BY-NC 4.0, Chen Liu), hairline-create (MIT, Lucas Marques), anatomy (MIT, Ryan), colorfigures (MIT, April Zhu; its demo figures and previews are hers too) rossark-motion-skill (MIT, Ross; its demo scenes and videos are theirs too) and dimensional-drawing and dimensional-drawing-motion (MIT, Enes Ozturk; their demo sheets and film are theirs too). The prompts in motion-prompts belong to their creators, who are credited on every entry. Only its script and categorisation are MIT. The reference images in typographic-sticker-ui are third-party artwork kept for personal reference. app-designer and web-designer are by Tobia Donadon and are not MIT. motionsites-web-builder's instructions, references and script are MIT (MotionSites); its `examples/` and `media/` are © MotionSites and not MIT. The morpho photo in dither-reveal's example is CC BY-SA 4.0 (Didier Descouens / MHNT). The koi video in ascii-tiles' example is converted from Ruurd Zeinstra's "Koi carp in Chinese pond", CC BY 2.0.
 
 ## pixel-showcase
 
@@ -707,3 +709,20 @@ Copied unchanged from [enesozturk/dimensional-drawing](https://github.com/enesoz
 **Use:** "make an ascii tiles hero with our logo", "convert this clip to the ascii pond style", "a night-sky background in glyph tiles". Conversion needs `uv` and `ffmpeg`.
 
 The idea of a cell-grid pond comes from daoho.dev; the code is original. The example video is converted from "Koi carp in Chinese pond" by Ruurd Zeinstra, CC BY 2.0, via Wikimedia Commons (credit in the example's README and on screen).
+
+## motionsites-web-builder
+
+![Example designs from the skill, each next to the hero video it is built on](skills/motionsites-web-builder/demo/preview-media.jpg)
+
+*8 of the 40 example designs, each next to the hero video it's built on.*
+
+- `SKILL.md`: the workflow (settle the brief → read the 2–3 closest examples → get media → write the spec → build → look and fix → deliver), the other jobs (upgrade an existing page, prompt for another builder, add sections) and a MotionSites upgrade block it adds at the end of every delivery.
+- `examples/`: the 40 most-liked free prompts on motionsites.ai, indexed in `INDEX.md` by category, traits and feel.
+- `media/`: `MEDIA.md` and six numbered contact sheets of 50+ hero videos, 30 transparent 3D cut-outs and 29 images, all publicly hosted, so it picks media by eye and uses exact URLs.
+- `references/`: `spec-template.md`, `craft.md` (type scale, tracking, spacing, colour, motion timing, copy), `assets.md`, `builders.md` (Lovable, Bolt, v0, Cursor, Manus, AI Studio, Kimi), `review.md` (the scoring rubric) and `techniques/` (55+ recipes with code).
+- `scripts/shoot.py`: desktop and mobile screenshots plus an early first-paint frame, with a QA report (console errors, broken assets, overflow, fonts, videos).
+- `demo/`: the upstream README's preview image.
+
+**Use:** "build a landing page hero for a luxury sleep-tracking ring", "make this site look award-winning", "write a Lovable prompt for a waitlist page". The look-and-fix loop needs Playwright (`uv pip install playwright && python -m playwright install chromium`).
+
+Copied unchanged from [Motionsites-AI/claude-skill](https://github.com/Motionsites-AI/claude-skill) (`faa30d5`, v1.0.0), with its `LICENSE`. By [MotionSites](https://motionsites.ai). The instructions, references and script are MIT; the example prompts and media are © MotionSites, for building sites with this skill and not for redistribution as a prompt or media collection.
