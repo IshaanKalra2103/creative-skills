@@ -1,0 +1,13 @@
+Generate two short AI video shots (5 seconds each) for a football boot commercial (a Nike Hypervenom spec spot, my own work).
+
+These are raw plates I will edit and score myself, so deliver only the generated footage: no music, no voiceover, no sound effects, no captions, no titles, no logos added, no transitions other than hard cuts, and no extra colour grade. Please ALSO give me every shot as its own separate downloadable file, exactly as the video model output it (no re-encode, crop or trim), in addition to any combined video.
+
+Look (match the start images exactly): photoreal night football stadium in rain under hard white floodlights, wet dark grass, deep blacks, citrus orange the only saturated colour, high-end football commercial cinematography, shallow depth of field, fine film grain.
+
+The boots are the product and must keep their exact design and colours in every frame: low-cut, black upper with a fine raised hexagonal texture, a bright citrus orange lower side panel and swoosh, an orange soleplate with translucent tipped studs, black laces. One anonymous player in a plain black kit with no badge, number or sponsor; no face visible. Legs and feet must stay anatomically correct (exactly two legs, no swapping, melting or extra feet). Exactly one football, a plain white ball with black pentagons, which must stay a single solid round ball.
+
+Shot 1 (0-5 s), starts from d_strike.png: a low side angle at grass level, in dramatic slow motion like a high-speed camera (about one quarter speed). The start frame is the instant of contact: his laces strike the middle of the ball. The ball squashes slightly, then launches forward and upward out of the frame to the right, trailing a ring of spray. His striking leg follows through toward the target and he lands on that foot. Water and bits of turf burst from the point of contact and hang in the floodlight. The camera is almost locked off with a very slow push toward the boot.
+
+Shot 2 (5-10 s), starts from e_net2.png: from behind the goal looking out through the net, in slow motion (about one third speed). The ball has just hit the top corner: it drives the net back toward the camera, the mesh stretches into a deep bulge, raindrops shake off every strand in a glittering spray, then the ball loses pace and drops down inside the net while the net shivers and settles. Floodlights flare behind. Locked-off camera with a subtle push-in. No people in this shot.
+
+4:5 portrait. Do not ask follow-up questions. If a video model is blocked or unavailable, switch to another one yourself and keep going. Make reasonable choices and deliver.

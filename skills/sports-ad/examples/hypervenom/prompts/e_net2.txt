@@ -1,0 +1,8 @@
+Use case: photorealistic-natural
+Asset type: start frame for an AI video shot in a football boot commercial, 4:5 portrait
+Input images: Image 1 is an earlier frame from the same film. Use it only for the ball (a classic white football with black pentagon panels, wet, no logos or graphics) and for the look: the night stadium in rain, the grade, the grain. Ignore the player and the boot.
+Primary request: from behind the goal looking out through the white goal net at night: that same ball has just hit the top corner and the net bulges toward the camera, raindrops shaking off the net in a spray, floodlights flaring behind, the pitch out of focus. No players, no boots, no people in frame.
+Composition: the bulge and ball in the upper third, net mesh filling the frame.
+Lighting: low-key; hard white back light from the floodlights, a faint warm orange glow low in the frame, everything else near-black; raindrops lit as bright streaks.
+Style: high-end football commercial cinematography, anamorphic 35mm look, shallow depth of field, subtle film grain, deep blacks.
+Avoid: any text, numbers, logos, swooshes or coloured graphics on the ball; club badges, sponsors, crowd, people, faces, feet, legs, extra balls.

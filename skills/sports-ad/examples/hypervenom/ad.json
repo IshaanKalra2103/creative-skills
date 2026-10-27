@@ -1,0 +1,387 @@
+{
+  "title": "Nike Hypervenom Phantom 1 - Strike First (spec)",
+  "sport": "soccer",
+  "product": "Nike Hypervenom Phantom 1 FG, Black/Bright Citrus",
+  "size": [
+    1080,
+    1350
+  ],
+  "fps": 30,
+  "bpm": 140,
+  "audio": "build/score.wav",
+  "fade_in": 10,
+  "fade_out": 8,
+  "look": {
+    "contrast": 1.12,
+    "crush": 0.03,
+    "sat": 0.82,
+    "keep": {
+      "hue": 24,
+      "width": 20,
+      "sat": 1.12
+    },
+    "split": {
+      "shadows": "#0b1a22",
+      "highlights": "#ffe8d2",
+      "amount": 0.12
+    },
+    "bloom": 0.35,
+    "vignette": 0.35,
+    "grain": 0.035
+  },
+  "shots": [
+    {
+      "id": "A",
+      "src": "clips/a_macro.mp4",
+      "len": "4b",
+      "shot": "macro push-in",
+      "note": "Boot planted on wet turf in the rain; it pushes off out of frame, turf flying, into the whip.",
+      "move": {
+        "zoom": [
+          1.0,
+          1.08
+        ],
+        "pan": [
+          0.5,
+          0.45
+        ],
+        "shake": 1
+      },
+      "out": {
+        "type": "whip",
+        "dir": "left",
+        "len": 6
+      },
+      "in": 1.6,
+      "speed": 1.2
+    },
+    {
+      "id": "B",
+      "src": "clips/b_track.mp4",
+      "len": "4b",
+      "shot": "ground-level tracking shot",
+      "note": "Camera low beside the dribble, matching his speed; a touch every two strides.",
+      "move": {
+        "zoom": [
+          1.02,
+          1.06
+        ],
+        "pan": [
+          0.5,
+          0.55
+        ],
+        "shake": 3,
+        "ease": "linear"
+      },
+      "qa": {
+        "movement": "dribbling at speed: body leaning forward, short strides near the ball, the ball close to the foot"
+      },
+      "out": {
+        "type": "smash",
+        "len": 6
+      },
+      "in": 0.3,
+      "speed": 1.3
+    },
+    {
+      "id": "C",
+      "src": "clips/c_cut.mp4",
+      "len": "8b",
+      "shot": "low front, speed ramp",
+      "note": "Ball dragged between the feet at speed, then slow motion through the bar where the bass is out as it's cut across; hard cut to contact on the drop.",
+      "speed": [
+        [
+          0,
+          1.6
+        ],
+        [
+          46,
+          1.6
+        ],
+        [
+          54,
+          0.62
+        ],
+        [
+          103,
+          0.62
+        ]
+      ],
+      "move": {
+        "zoom": [
+          1.0,
+          1.12
+        ],
+        "pan": [
+          0.5,
+          0.6
+        ],
+        "shake": 2
+      },
+      "hits": [
+        {
+          "at": 50,
+          "fx": "ca shake",
+          "len": 8,
+          "amt": 0.5
+        }
+      ],
+      "qa": {
+        "movement": "a cut inside: the plant foot wide, hips low, leaning into the turn, the ball dragged with the inside of the foot"
+      },
+      "in": 0.75
+    },
+    {
+      "id": "D",
+      "src": "clips/d_strike.mp4",
+      "len": "3b",
+      "shot": "low side, contact on the drop, slow motion",
+      "note": "Starts on contact, on the drop: flash, chromatic kick, punch-in; the ball leaves in slow motion.",
+      "speed": [
+        [
+          0,
+          0.35
+        ],
+        [
+          10,
+          0.35
+        ],
+        [
+          16,
+          1.0
+        ],
+        [
+          39,
+          1.0
+        ]
+      ],
+      "move": {
+        "zoom": [
+          1.0,
+          1.08
+        ],
+        "pan": [
+          0.5,
+          0.55
+        ]
+      },
+      "hits": [
+        {
+          "at": 0,
+          "fx": "flash ca shake punch pop",
+          "len": 10,
+          "amt": 1
+        }
+      ],
+      "qa": {
+        "movement": "a laces strike: plant foot beside the ball, knee over the ball, toe pointed down, contact with the laces, arms out for balance"
+      },
+      "out": {
+        "type": "match",
+        "subject": "the football",
+        "len": 8
+      },
+      "in": 0
+    },
+    {
+      "id": "E",
+      "src": "clips/e_net.mp4",
+      "len": "3b",
+      "shot": "behind the goal, through the net",
+      "note": "Match cut on the ball: it lands in the top corner where it left the boot. Net bulges, spray.",
+      "move": {
+        "zoom": [
+          1.0,
+          1.06
+        ],
+        "pan": [
+          0.5,
+          0.45
+        ]
+      },
+      "hits": [
+        {
+          "at": 0,
+          "fx": "shake",
+          "len": 8,
+          "amt": 0.6
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "len": 6
+      },
+      "in": 0,
+      "speed": 1.2
+    },
+    {
+      "id": "F",
+      "src": "clips/f_walk.mp4",
+      "len": "4b",
+      "shot": "low behind, slow push",
+      "note": "He walks away toward the floodlights; orange soles the only colour.",
+      "move": {
+        "zoom": [
+          1.0,
+          1.05
+        ],
+        "pan": [
+          0.5,
+          0.6
+        ]
+      },
+      "out": {
+        "type": "zoom",
+        "len": 8
+      },
+      "in": 0
+    },
+    {
+      "id": "G",
+      "src": "clips/g_pack.mp4",
+      "len": "5b",
+      "shot": "packshot",
+      "note": "The boot alone on black, rim-lit. Name rises under it.",
+      "move": {
+        "zoom": [
+          1.0,
+          1.04
+        ],
+        "pan": [
+          0.5,
+          0.45
+        ]
+      },
+      "in": 0.3
+    },
+    {
+      "id": "END",
+      "color": "#000000",
+      "len": "4b",
+      "shot": "end card",
+      "note": "Tagline slams on the hit, the swoosh fades in under it."
+    }
+  ],
+  "overlays": [
+    {
+      "at": "A+1b",
+      "len": "2.5b",
+      "text": "HYPERVENOM PHANTOM 1",
+      "font": "IBMPlexMono-Medium.ttf",
+      "size": 24,
+      "track": 0.3,
+      "pos": [
+        0.5,
+        0.93
+      ],
+      "style": "type",
+      "rate": 1
+    },
+    {
+      "at": "G+1b",
+      "text": "HYPERVENOM",
+      "font": "Anton-Regular.ttf",
+      "size": 124,
+      "track": 0.02,
+      "pos": [
+        0.5,
+        0.76
+      ],
+      "style": "rise"
+    },
+    {
+      "at": "G+1.5b",
+      "text": "PHANTOM 1",
+      "font": "BarlowCondensed-ExtraBold.ttf",
+      "size": 46,
+      "track": 0.35,
+      "pos": [
+        0.5,
+        0.84
+      ],
+      "color": "#ff7a1a",
+      "style": "rise"
+    },
+    {
+      "at": "END",
+      "text": "STRIKE FIRST.",
+      "font": "Anton-Regular.ttf",
+      "size": 112,
+      "track": 0.02,
+      "pos": [
+        0.5,
+        0.44
+      ],
+      "style": "slam"
+    },
+    {
+      "at": "END+1b",
+      "image": "media/swoosh_white.png",
+      "width": 0.22,
+      "pos": [
+        0.5,
+        0.57
+      ],
+      "style": "fade"
+    }
+  ],
+  "score": {
+    "music": {
+      "file": "music/stomp_b.wav",
+      "in": 13.726,
+      "gain": 0,
+      "mute": [
+        {
+          "at": "END",
+          "len": "8b"
+        }
+      ]
+    },
+    "bed": "rain",
+    "bed_level": 0.5,
+    "sfx": [
+      {
+        "at": "B",
+        "kind": "studs",
+        "len": "4b",
+        "rate": 7
+      },
+      {
+        "at": "C",
+        "kind": "studs",
+        "len": "1b",
+        "rate": 8
+      },
+      {
+        "at": "D",
+        "kind": "thump"
+      },
+      {
+        "at": "E",
+        "kind": "net"
+      },
+      {
+        "at": "END",
+        "kind": "impact",
+        "level": 0.9
+      },
+      {
+        "at": "END",
+        "kind": "subdrop"
+      }
+    ],
+    "tail": 1.2
+  },
+  "qa": {
+    "product": [
+      "refs/product/hv1_1.jpg",
+      "refs/product/hv1_9.jpg",
+      "refs/product/hv1_16.jpeg"
+    ],
+    "questions": {
+      "extra_ball": "Is more than one football visible in `frame`?",
+      "face": "Is a person's face visible in `frame`?",
+      "stray_text": "Is there text, a number or a logo in `frame` other than the maker's own marks printed on the boots?"
+    }
+  }
+}

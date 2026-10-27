@@ -1,0 +1,71 @@
+{
+ "video": "out/hypervenom_v2.mp4",
+ "results": {
+  "A": {
+   "real": 1.13,
+   "anatomy": 0.16,
+   "present": 0.94,
+   "product": 1.48,
+   "extra_ball": 0.02,
+   "face": 0.02,
+   "stray_text": 0.97
+  },
+  "B": {
+   "real": 0.9,
+   "anatomy": 0.53,
+   "present": 0.86,
+   "product": 1.28,
+   "extra_ball": 0.05,
+   "face": 0.03,
+   "stray_text": 0.13,
+   "form": 1.04
+  },
+  "C": {
+   "real": 0.92,
+   "anatomy": 0.64,
+   "present": 0.86,
+   "product": 1.11,
+   "extra_ball": 0.04,
+   "face": 0.03,
+   "stray_text": 0.18,
+   "form": 0.75
+  },
+  "D": {
+   "real": 0.95,
+   "anatomy": 0.67,
+   "present": 0.84,
+   "product": 1.1,
+   "extra_ball": 0.07,
+   "face": 0.02,
+   "stray_text": 0.16,
+   "form": 0.78
+  },
+  "E": {
+   "real": 1.79,
+   "anatomy": 0.1,
+   "present": 0.07,
+   "product": 0.15,
+   "extra_ball": 0.04,
+   "face": 0.03,
+   "stray_text": 0.32
+  },
+  "F": {
+   "real": 1.0,
+   "anatomy": 0.35,
+   "present": 0.85,
+   "product": 1.15,
+   "extra_ball": 0.03,
+   "face": 0.05,
+   "stray_text": 0.17
+  },
+  "G": {
+   "real": 1.01,
+   "anatomy": 0.06,
+   "present": 0.95,
+   "product": 1.43,
+   "extra_ball": 0.06,
+   "face": 0.02,
+   "stray_text": 0.98
+  }
+ }
+}

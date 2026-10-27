@@ -1,0 +1,15 @@
+Generate three short AI video shots (5 seconds each) for a football boot commercial (a Nike Hypervenom spec spot, my own work).
+
+These are raw plates I will edit and score myself, so deliver only the generated footage: no music, no voiceover, no sound effects, no captions, no titles, no logos added, no transitions other than hard cuts, and no extra colour grade. Please ALSO give me every shot as its own separate downloadable file, exactly as the video model output it (no re-encode, crop or trim), in addition to any combined video.
+
+Look (match the start images exactly): photoreal night football stadium in rain under hard white floodlights, wet dark grass, deep blacks, citrus orange the only saturated colour, high-end football commercial cinematography, shallow depth of field, fine film grain.
+
+The boots are the product and must keep their exact design and colours in every frame: low-cut, black upper with a fine raised hexagonal texture, a bright citrus orange lower side panel and swoosh, an orange soleplate with translucent tipped studs, black laces. One anonymous player in a plain black kit with no badge, number or sponsor; no face visible. Legs and feet must stay anatomically correct (exactly two legs, no swapping, melting or extra feet). Exactly one football, a plain white ball with black pentagons, which must stay a single solid round ball.
+
+Shot 1 (0-5 s), starts from a_macro.png: extreme low macro at grass level on the planted boot, in gentle slow motion (about half speed). Raindrops fall and burst on the hexagonal texture of the upper. The camera pushes in slowly and slides a little to the right along the boot. In the last two seconds the heel lifts as the player pushes off, the studs tear out of the wet turf throwing up small clods and a spray of water, and the boot lifts out of frame toward the top.
+
+Shot 2 (5-10 s), starts from b_track.png: a ground-level tracking shot in real time. The camera sits just above the grass and travels sideways to the right alongside the player at his full sprint speed, keeping his boots and the ball in the centre of frame. He dribbles at speed: every second or third stride he nudges the ball forward with the outside of his right boot, the ball never more than a stride ahead. Each footfall throws a small spray of water. The floodlights and stands stream past behind him with motion blur.
+
+Shot 3 (10-15 s), starts from c_cut2.png: a low front three-quarter angle on the grass, in slow motion (about one third speed). He has planted his left foot wide with his knee bent deep over it; he sweeps the ball across his body to his left with the inside of his right boot (the sole never steps on the ball), then drives off the planted left foot and accelerates out of frame to camera left. The plant and the push-off throw an arc of water and turf through the light. The camera holds low and pans slightly to follow.
+
+4:5 portrait. Do not ask follow-up questions. If a video model is blocked or unavailable, switch to another one yourself and keep going. Make reasonable choices and deliver.

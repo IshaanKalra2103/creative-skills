@@ -1,0 +1,10 @@
+Use case: photorealistic-natural
+Asset type: start frame for an AI video shot in a Nike football boot commercial, 4:5 portrait
+Input images: the attached photos are references for the boot only (Nike Hypervenom Phantom 1, black and bright citrus orange). Match it exactly: the low-cut shape, the black upper with its fine raised hexagonal texture, the large bright citrus orange swoosh and orange lower side panel, the orange soleplate with translucent tipped studs, black laces, the small HYPERVENOM wordmark on the side. Ignore their backgrounds.
+Scene: an empty floodlit football stadium pitch at night in light rain: wet dark green grass, fine mist, floodlights behind the subject, the stands deep black with no crowd visible.
+Lighting: low-key; one hard white back rim light from the floodlights, a warm citrus orange accent glow, everything else falling to near-black; raindrops lit as bright streaks.
+Style: high-end Nike football commercial cinematography, anamorphic 35mm look, shallow depth of field, crisp detail on the boot, subtle film grain, deep blacks, citrus orange as the only saturated colour.
+Avoid: any text or numbers other than the boot's own branding, extra logos, club badges, sponsors, crowd, other players, referee, a visible face, distorted or extra feet and legs, extra balls.
+Player: one anonymous athletic male footballer in a plain matte black kit (no badge, no number, no sponsor) and black socks, wearing the reference boots on both feet.
+Primary request: the footballer sprinting with the ball at his feet along the touchline, seen side-on from ground level as if from a camera car tracking alongside him: frame from mid-thigh down, his right boot reaching to push the ball forward, his left boot driving off the turf, water and grass spraying from the studs, the wet ball spinning with spray; the floodlights behind streak horizontally with motion blur while the boots and ball stay sharp.
+Composition: boots and ball across the lower third, centred; the streaked floodlit stadium behind.
