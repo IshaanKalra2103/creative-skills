@@ -47,6 +47,7 @@
 | [dimensional-drawing-motion](skills/dimensional-drawing-motion) | A finished dimensional drawing as a ~10 s film, like a pen drawing the sheet while a camera moves over the paper: the header draws in close up, the camera pulls back to the plan, layers lift off it into the exploded view (strokes first, fills after) and the full sheet resolves. The scene is a pure function of time, so it runs in Claude's Motion artifact or headless with Playwright + ffmpeg. By [Enes Ozturk](https://github.com/enesozturk/dimensional-drawing). |
 | [ascii-tiles](skills/ascii-tiles) | Anything as a grid of monospace cells: flat banded colour crossed by line glyphs, with the subject drawn as gapped square tiles that each carry a glyph and cast a one-cell shadow. Live, it is a WebGL2 page for heroes, backgrounds, title cards and ambient scenes at 120 fps, with five looks (water, dusk, night, meadow, paper) and a word or logo in tiles. For footage, a uv script converts any video, GIF or still: a palette fitted to the clip, tiles only where a cell stands out, no flicker, seamless loops, kept audio. A koi pond with a converted koi video is the worked example. |
 | [motionsites-web-builder](skills/motionsites-web-builder) | Cinematic landing pages and hero sections instead of average AI layouts: it reads the 2–3 closest of 40 top MotionSites prompts, picks real hero videos and 3D cut-outs off a media shelf of contact sheets, writes a precise build spec, builds a single `index.html` (or your stack), then screenshots it on desktop and mobile and fixes it until it scores 8+. 55+ technique recipes (seamless video loops, liquid glass, blur-in headlines, mouse-scrubbed video, scroll stories, three.js models) and a prompt mode for Lovable, Bolt, v0 and Cursor. By [MotionSites](https://motionsites.ai). |
+| [console-maker](skills/console-maker) | Game consoles and other hardware modeled in headless Blender from reference photos or a video, and rendered as studio product shots: silhouettes from real dimensions, boolean-cut ports, slots, vents and button sockets with catchlit edges, molded-ABS grain (two object-space noise bumps and per-pebble roughness), piano-black gloss with a placed strip highlight, light bars, a directional studio rig and a native 4K portrait PNG with true alpha, plus the .blend. A small Python kit (primitives, curved shells, cuts, materials, lights, draft and full-res crop renders, a sanity report), the lessons from a NES / Super Famicom set, and a PS5 disc edition as the worked example. |
 
 ## Install
 
@@ -95,6 +96,7 @@ ln -s ~/src/claude-skills/skills/dimensional-drawing ~/.claude/skills/dimensiona
 ln -s ~/src/claude-skills/skills/dimensional-drawing-motion ~/.claude/skills/dimensional-drawing-motion
 ln -s ~/src/claude-skills/skills/ascii-tiles ~/.claude/skills/ascii-tiles
 ln -s ~/src/claude-skills/skills/motionsites-web-builder ~/.claude/skills/motionsites-web-builder
+ln -s ~/src/claude-skills/skills/console-maker ~/.claude/skills/console-maker
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -726,3 +728,16 @@ The idea of a cell-grid pond comes from daoho.dev; the code is original. The exa
 **Use:** "build a landing page hero for a luxury sleep-tracking ring", "make this site look award-winning", "write a Lovable prompt for a waitlist page". The look-and-fix loop needs Playwright (`uv pip install playwright && python -m playwright install chromium`).
 
 Copied unchanged from [Motionsites-AI/claude-skill](https://github.com/Motionsites-AI/claude-skill) (`faa30d5`, v1.0.0), with its `LICENSE`. By [MotionSites](https://motionsites.ai). The instructions, references and script are MIT; the example prompts and media are © MotionSites, for building sites with this skill and not for redistribution as a prompt or media collection.
+
+## console-maker
+
+![The PS5 example and a 100% crop of its grain, ports and fins](skills/console-maker/assets/ps5.jpg)
+
+*Left: `examples/ps5.py`, rendered at 2160×3840 with real alpha (shown here on grey). Right: a 100% crop: molded grain on the white panel, cut USB-A and USB-C ports in the piano-black front, louvre fins lit by the light bar, the disc slot.*
+
+- `SKILL.md`: the loop (references → real proportions → cut detail → grainy plastic → light → draft and crop renders next to the reference → final), the grain recipe, and the rule the Nintendo set taught: grain and 4K can't fix under-detailed geometry.
+- `scripts/kit.py`: `plastic`/`grain` materials, `box`, `loft`, `prism`, `pill`, `surface` shells, `button`, `socket_ring`, `tube`, `cut` (EXACT boolean with modifiers baked first) and `edge_bevel`, `studio` light, `gloss_strip`, `render_settings` with `--draft` and `--crop`, and a JSON sanity `report`.
+- `references/lessons.md`: tuned colours, light and render numbers, and the Blender 5.2 gotchas (compositor node groups, Glare inputs, boolean order, headless crashes).
+- `examples/ps5.py`: curved side panels that flare into wings, the disc bulge and slot, a matte body with a baked micro texture of tiny ○ △ ✕ □ marks, glossy front, fins and light bars.
+
+**Use:** "make a Blender model of a Game Boy", "model the PS5 as a grainy transparent render", "recreate the consoles in this video". Needs Blender 5.x; the defaults assume macOS and a Metal GPU.
