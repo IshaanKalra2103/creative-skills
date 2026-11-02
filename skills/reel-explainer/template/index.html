@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>reel</title>
+<link rel="stylesheet" href="src/style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }</script>
+</head>
+<body>
+<div id="stage"></div>
+<script src="film.js"></script>
+<script src="vo_words.js"></script>
+<script src="src/lib.js"></script>
+<script src="src/reel.js"></script>
+<script src="src/core.js"></script>
+<script type="module" src="src/gl.js"></script>
+<script src="src/caption.js"></script>
+<!-- one file per scene; order doesn't matter (scenes sort by z, then t0) -->
+<script src="src/scenes/set.js"></script>
+<script src="src/scenes/labels.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>

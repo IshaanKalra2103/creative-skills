@@ -1,0 +1,89 @@
+@font-face { font-family: Inter; src: url(../fonts/InterVariable.woff2) format('woff2'); font-weight: 100 900; }
+@font-face { font-family: Mono; src: url(../fonts/SpaceMono-normal-400.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: Mono; src: url(../fonts/SpaceMono-normal-700.woff2) format('woff2'); font-weight: 700; }
+
+:root {
+  --bg: #0d0d0d; --ink: #f2f2f2; --dim: #6f6f6f; --signal: #f5b83d; --anti: #4aa8ff; --bad: #ff5a4f; --good: #3ddc84;
+  --select: #0d99ff; --light: #f3f2ee; --mute: #8d8d8d; --line: rgba(255,255,255,.14);
+  --emoji: 'Apple Color Emoji';
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: var(--W, 1080px); height: var(--H, 1920px); overflow: hidden; background: #000; }
+body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+#stage { position: absolute; inset: 0; width: var(--W, 1080px); height: var(--H, 1920px); overflow: hidden; background: var(--bg);
+  font-family: Inter, var(--emoji), sans-serif; color: var(--ink); }
+.abs { position: absolute; }
+.full { position: absolute; inset: 0; }
+.scene { position: absolute; inset: 0; overflow: hidden; }
+#gl { position: absolute; left: 0; top: 0; width: var(--W, 1080px); height: var(--H, 1920px); }
+svg { overflow: visible; }
+
+/* the canvas: near-black, faint grid, vignette. .bg-light is the occasional white scene */
+.bg-dark { position: absolute; inset: 0; background: var(--bg); }
+.bg-dark::before { content: ''; position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 60px 60px; background-position: 30px 30px; }
+.bg-dark::after, .bg-light::after { content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 75% 60% at 50% 48%, transparent 40%, rgba(0,0,0,.6) 100%); }
+.bg-light { position: absolute; inset: 0; background: var(--light); }
+.bg-light::before { content: ''; position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(0,0,0,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.045) 1px, transparent 1px);
+  background-size: 60px 60px; background-position: 30px 30px; }
+.bg-light::after { background: radial-gradient(ellipse 80% 65% at 50% 48%, transparent 50%, rgba(0,0,0,.12) 100%); }
+
+/* caption (caption.js): one script line, word being spoken white, the rest grey, keyword in a selection box */
+.cap { position: absolute; text-align: center; font-weight: 600; line-height: 1.16; letter-spacing: -.02em; color: var(--dim); white-space: nowrap;
+  text-shadow: 0 2px 18px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); }
+.cap .cw.on, .cap .key.lit .cw { font-weight: 700; }
+.cap .cw { display: inline; }
+.cap .cw.on { color: var(--ink); }
+.cap .key { position: relative; display: inline-block; }
+.cap .key.lit .cw { color: var(--ink); }
+.cap .box { position: absolute; inset: -4px -12px -2px -12px; border: 3px solid var(--select); pointer-events: none; }
+.cap .box i { position: absolute; width: 14px; height: 14px; background: #fff; border: 3px solid var(--select); }
+.cap .box i:nth-child(1) { left: -9px; top: -9px; } .cap .box i:nth-child(2) { right: -9px; top: -9px; }
+.cap .box i:nth-child(3) { left: -9px; bottom: -9px; } .cap .box i:nth-child(4) { right: -9px; bottom: -9px; }
+.cap.light { color: #9a9a96; text-shadow: none; } .cap.light .cw.on, .cap.light .key.lit .cw { color: #141414; }
+
+/* labels: small letter-spaced caps, thin leader line, dot */
+.lbl { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.lbl svg { position: absolute; left: 0; top: 0; }
+.lbl line { stroke: rgba(242,242,242,.7); stroke-width: 2; }
+.lbl circle { fill: var(--ink); }
+.lbl-t { position: absolute; font: 700 27px Mono; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); white-space: nowrap; text-shadow: 0 2px 10px rgba(0,0,0,.75); }
+.lbl-n { color: var(--signal); }
+.lbl line { filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
+.chip { transform: translate(-100%, -50%); font: 700 26px Mono; letter-spacing: .14em; color: #8d8d8d; padding: 10px 18px; border: 2px solid #555; border-radius: 30px; background: rgba(0,0,0,.45); white-space: nowrap; }
+.chip.on { color: #fff; border-color: #fff; }
+.lbl.light line { stroke: rgba(20,20,20,.6); } .lbl.light circle { fill: #141414; } .lbl.light .lbl-t { color: #141414; }
+
+/* numbers that live on objects */
+.num { font: 700 30px Mono; color: var(--ink); letter-spacing: -.02em; white-space: nowrap; }
+.big { font: 800 120px Inter; letter-spacing: -.05em; line-height: 1; }
+
+/* honesty footnotes + source credits: bottom-left, tiny, grey, above IG's bottom UI */
+.note { position: absolute; left: 64px; font: 500 22px Inter; color: #8a8a8a; line-height: 1.35; }
+.note.light { color: #77756f; }
+.legend { position: absolute; left: 64px; display: flex; gap: 26px; font: 700 20px Mono; letter-spacing: .12em; text-transform: uppercase; color: #bcbcbc; }
+.legend span { display: inline-flex; align-items: center; gap: 10px; }
+.legend b { width: 16px; height: 16px; border-radius: 50%; }
+
+/* the ending: Instagram-style share sheet */
+.sheet { position: absolute; left: 0; right: 0; top: 840px; bottom: -40px; background: #1f1f21; border-radius: 44px 44px 0 0;
+  box-shadow: 0 -30px 80px rgba(0,0,0,.6); font-family: Inter; color: #f5f5f5; }
+.sheet .grab { position: absolute; left: 50%; top: 18px; width: 90px; height: 9px; margin-left: -45px; border-radius: 6px; background: #4a4a4c; }
+.sheet .search { position: absolute; left: 48px; right: 48px; top: 52px; height: 76px; border-radius: 20px; background: #2c2c2e;
+  font: 500 32px Inter; color: #8e8e93; padding: 19px 28px; }
+.sheet .grid { position: absolute; left: 48px; right: 48px; top: 170px; display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 30px; }
+.sheet .who { display: flex; flex-direction: column; align-items: center; gap: 12px; height: 166px; font: 500 26px Inter; color: #d8d8d8; position: relative; }
+.sheet .av { width: 124px; height: 124px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 46px Inter; color: #111; position: relative; }
+.sheet .tick { position: absolute; right: 2px; bottom: 2px; width: 50px; height: 50px; border-radius: 50%; background: #0095f6; border: 5px solid #1f1f21;
+  display: flex; align-items: center; justify-content: center; font: 800 26px Inter; color: #fff; }
+.sheet .send { position: absolute; left: 48px; right: 48px; top: 560px; height: 96px; border-radius: 22px; background: #0095f6;
+  font: 700 36px Inter; color: #fff; display: flex; align-items: center; justify-content: center; }
+.tap { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 5px solid rgba(255,255,255,.9); }
+
+#grain { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: overlay; z-index: 9999; }
+
+.credit { transform: translate(-50%, 0); text-align: center; font: 500 22px Inter, sans-serif; line-height: 1.35; color: var(--dim); white-space: nowrap; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+.credit b { font: 700 24px Mono; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }

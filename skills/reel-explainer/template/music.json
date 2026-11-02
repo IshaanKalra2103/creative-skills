@@ -1,0 +1,10 @@
+{
+  "model": "music_v2_5",
+  "base": ["calm curious documentary underscore", "minimal electronic", "soft analog synth pulse", "warm sub bass", "light glassy plucks",
+           "92 BPM", "instrumental", "sits quietly under a voiceover", "clean modern mix"],
+  "negative": ["vocals", "singing", "choir", "spoken word", "drops", "epic orchestra", "dubstep", "trap", "heavy drums", "lo-fi crackle"],
+  "sections": [
+    {"name": "Main", "until": 11.0, "styles": ["steady gentle pulse", "slowly building curiosity"], "negative": ["silence"]},
+    {"name": "Outro", "until": 14.5, "styles": ["resolves on a warm chord", "rings out and fades"], "negative": ["new melody"]}
+  ]
+}

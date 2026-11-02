@@ -1,0 +1,13 @@
+{
+  "voice": "EXAVITQu4vr4xnSDxMaL",
+  "model": "eleven_multilingual_v2",
+  "settings": {"stability": 0.4, "similarity_boost": 0.8, "style": 0.25, "use_speaker_boost": true, "speed": 1.1},
+  "say_voice": "Samantha",
+  "say_rate": 195,
+  "lines": [
+    [0.15, "During a call, your screen goes dark the instant it touches your *ear*."],
+    [4.1, "Next to the speaker, a light you can't see is always *blinking*."],
+    [7.75, "Your cheek bounces it back, and a tiny sensor counts the *glow*."],
+    [11.55, "Send this to the friend who keeps hanging up with their *face*."]
+  ]
+}
