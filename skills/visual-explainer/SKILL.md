@@ -1,9 +1,9 @@
 ---
-name: reel-explainer
-description: Make short vertical (1080×1920, 60–90 s) animated explainer reels that show the invisible mechanism inside an everyday thing, in the dark-canvas style of the viral speedy_devv / KEY FRAMES reels. Real 3D models (three.js: PBR, shadows, DOF, bloom) in one set with one continuous camera move, a cutaway to see inside, a gold signal colour for the invisible actor, labels and numbers pinned to the parts, real web images (sourced from Google Images in Chrome) placed in the scene, chunked captions with a blue keyword box, and a share-sheet ending. It covers the whole job, from topic check, research and a hook-first script to voiceover (free Kokoro + Parakeet word timings, or ElevenLabs), scenes keyed to words, render and QA, delivering mp4 + cover.jpg + caption.txt as local files. Use it whenever someone wants an explainer reel, short, TikTok or Instagram video on how something works ("make a reel explaining how X works", "full visual of X", "do one like the touchscreen video", "turn this topic into a short"), or wants to make videos in that creator's style, even if they never say "reel-explainer". Not for product launch films (launch-promo), interactive 3D explainers (3d-deep-explainer), or AI-generated footage (wan-video).
+name: visual-explainer
+description: Make short vertical (1080×1920, 60–90 s) animated explainer reels that show the invisible mechanism inside an everyday thing, in the dark-canvas style of the viral speedy_devv / KEY FRAMES reels. Real 3D models (three.js: PBR, shadows, DOF, bloom) in one set with one continuous camera move, a cutaway to see inside, a gold signal colour for the invisible actor, labels and numbers pinned to the parts, real web images (sourced from Google Images in Chrome) placed in the scene, chunked captions with a blue keyword box, and a share-sheet ending. It covers the whole job, from topic check, research and a hook-first script to voiceover (free Kokoro + Parakeet word timings, or ElevenLabs), scenes keyed to words, render and QA, delivering mp4 + cover.jpg + caption.txt as local files. Use it whenever someone wants an explainer reel, short, TikTok or Instagram video on how something works ("make a reel explaining how X works", "full visual of X", "do one like the touchscreen video", "turn this topic into a short"), or wants to make videos in that creator's style, even if they never say "visual-explainer". Not for product launch films (launch-promo), interactive 3D explainers (3d-deep-explainer), or AI-generated footage (wan-video).
 ---
 
-# Reel explainer
+# Visual explainer
 
 Short vertical explainers where an invisible mechanism inside something the viewer touches every day becomes visible. The style and the rules come from 25 reels analysed frame by frame, by speedy_devv, made with his KEY FRAMES pack. The top two did 667K and 482K likes, with flops at 2 and 78. Per-reel notes: `~/Documents/projects/reel-explainers/LEARNINGS.md`.
 
@@ -24,7 +24,7 @@ Work in `~/Documents/projects/reel-explainers/reels/<slug>/` unless the user nam
 
 **0. Copy the template.**
 ```bash
-SK=~/Documents/projects/creative-skills/skills/reel-explainer
+SK=~/Documents/projects/creative-skills/skills/visual-explainer
 mkdir -p ~/Documents/projects/reel-explainers/reels && cp -R $SK/template ~/Documents/projects/reel-explainers/reels/<slug>
 cd ~/Documents/projects/reel-explainers/reels/<slug> && rm -rf build
 ```
