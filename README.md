@@ -49,6 +49,7 @@
 | [ascii-tiles](skills/ascii-tiles) | Anything as a grid of monospace cells: flat banded colour crossed by line glyphs, with the subject drawn as gapped square tiles that each carry a glyph and cast a one-cell shadow. Live, it is a WebGL2 page for heroes, backgrounds, title cards and ambient scenes at 120 fps, with five looks (water, dusk, night, meadow, paper) and a word or logo in tiles. For footage, a uv script converts any video, GIF or still: a palette fitted to the clip, tiles only where a cell stands out, no flicker, seamless loops, kept audio. A koi pond with a converted koi video is the worked example. |
 | [motionsites-web-builder](skills/motionsites-web-builder) | Cinematic landing pages and hero sections instead of average AI layouts: it reads the 2–3 closest of 40 top MotionSites prompts, picks real hero videos and 3D cut-outs off a media shelf of contact sheets, writes a precise build spec, builds a single `index.html` (or your stack), then screenshots it on desktop and mobile and fixes it until it scores 8+. 55+ technique recipes (seamless video loops, liquid glass, blur-in headlines, mouse-scrubbed video, scroll stories, three.js models) and a prompt mode for Lovable, Bolt, v0 and Cursor. By [MotionSites](https://motionsites.ai). |
 | [console-maker](skills/console-maker) | Game consoles and other hardware modeled in headless Blender from reference photos or a video, and rendered as studio product shots: silhouettes from real dimensions, boolean-cut ports, slots, vents and button sockets with catchlit edges, molded-ABS grain (two object-space noise bumps and per-pebble roughness), piano-black gloss with a placed strip highlight, light bars, a directional studio rig and a native 4K portrait PNG with true alpha, plus the .blend. A small Python kit (primitives, curved shells, cuts, materials, lights, draft and full-res crop renders, a sanity report), the lessons from a NES / Super Famicom set, and a PS5 disc edition as the worked example. |
+| [painted-anime-film](skills/painted-anime-film) | Wordless 45–75 s anime shorts in the Studio Ghibli style, drawn in code as one HTML canvas page and rendered to mp4 with a score and sound effects: gouache background plates painted once with a brush kit, characters as simple meshes drawn as flat cels with hand-wobbled ink, timing on twos, and a two-state reveal for a world that changes (night to dawn, grey to colour). References for the whole job: story (beat sheet, signature moment, a no-copy check), cinematography, colour script, engine, characters, animation, frame-by-frame QA and sound (ElevenLabs score + SFX, a mix on the film's own clock). Two worked examples with the prompts that made them: a moss-covered giant robot rising from a forest, and a small ghost rising from a shadow pool to bring the dawn. |
 
 ## Install
 
@@ -99,6 +100,7 @@ ln -s ~/src/claude-skills/skills/dimensional-drawing-motion ~/.claude/skills/dim
 ln -s ~/src/claude-skills/skills/ascii-tiles ~/.claude/skills/ascii-tiles
 ln -s ~/src/claude-skills/skills/motionsites-web-builder ~/.claude/skills/motionsites-web-builder
 ln -s ~/src/claude-skills/skills/console-maker ~/.claude/skills/console-maker
+ln -s ~/src/claude-skills/skills/painted-anime-film ~/.claude/skills/painted-anime-film
 ```
 
 Then ask Claude Code for one (e.g. "make an animated intro for my name") or run `/logo-intro`, `/riso-rooms`.
@@ -743,3 +745,17 @@ Copied unchanged from [Motionsites-AI/claude-skill](https://github.com/Motionsit
 - `examples/ps5.py`: curved side panels that flare into wings, the disc bulge and slot, a matte body with a baked micro texture of tiny ○ △ ✕ □ marks, glossy front, fins and light bars.
 
 **Use:** "make a Blender model of a Game Boy", "model the PS5 as a grainy transparent render", "recreate the consoles in this video". Needs Blender 5.x; the defaults assume macOS and a Metal GPU.
+
+## painted-anime-film
+
+![Three frames from each example: the robot kneeling under moss with its chest light on, its eyes lighting under the canopy, its jets igniting; the ghost's eyes opening in the shadow pool, the ghost with its wick lit, the valley turning from night to dawn as the ghost dissolves into petals](skills/painted-anime-film/assets/preview.jpg)
+
+*Top: The Guardian of the Morning Forest (73 s, 15 shots). Bottom: The Lantern Ghost (61.5 s, 11 shots), the first film made with the skill.*
+
+- `SKILL.md`: the workflow (story → shot list and colour script → scaffold → character turnaround → shots in order, each checked on a contact sheet → QA → sound → render) and the mistakes that make it look like software instead of film.
+- `references/`: `story.md` (beat sheets, the signature moment, a witness, the no-copy check against the reference), `cinematography.md`, `look.md` (palettes and the colour script), `engine.md`, `characters.md`, `animation.md` (twos, key poses, holds, weight, effects as drawn shapes), `qa.md` (a failure table: what you see in a frame → the fix) and `sound.md`.
+- `template/`: the engine (plates and brushes, cel renderer, ink boil, two-state reveal, fx), `build.mjs` for the single-file page, tools for stills, contact sheets and the mp4 (frames piped straight into ffmpeg), and a uv audio project: `gen.py` (Eleven Music composition plan cut on shot lengths, SFX), `mix.py`, `analyze.py`, `qa_plot.py`. `scripts/new_film.sh` scaffolds a new film.
+- `examples/forest-guardian/` and `examples/lantern-ghost/`: each film's own source (characters, worlds, every shot) and audio scripts. The lantern ghost has its beat sheet in `STORY.md`.
+- `prompts.md`: a fill-in prompt for a new film, premises that fit, and the exact prompts and follow-ups that made both examples.
+
+**Use:** "make an anime short where a paper crane flies the first letter out into the snow", "another one like the ghost film, but a stone fox at a mountain shrine", "add a score and render it". Needs Node (`puppeteer-core`), Google Chrome and ffmpeg; the sound needs an ElevenLabs key, and the skill shows the cue sheet and the credit cost before spending any.

@@ -1,0 +1,13 @@
+[project]
+name = "film-audio"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "numpy>=2.5.4",
+    "pedalboard>=0.9.26",
+    "pyloudnorm>=0.2.0",
+    "scipy>=1.18.1",
+    "soundfile>=0.14.0",
+]
